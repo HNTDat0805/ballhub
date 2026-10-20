@@ -1,0 +1,33 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Ballhub API-First Architecture Security Rules:
+    // Direct client reads and writes to tournament subsystem collections are prohibited.
+    // All read/write operations must go through the authenticated and authorized
+    // Cloud Functions REST API layer (/api/v1/...) using Firebase Admin SDK.
+    match /tournaments/{tournamentId} {
+      allow read, write: if false;
+
+      match /registrations/{registrationId} {
+        allow read, write: if false;
+      }
+
+      match /matches/{matchId} {
+        allow read, write: if false;
+      }
+
+      match /standings/{teamId} {
+        allow read, write: if false;
+      }
+
+      match /audits/{auditId} {
+        allow read, write: if false;
+      }
+    }
+
+    // Default deny for all other documents
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

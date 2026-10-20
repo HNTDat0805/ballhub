@@ -1,0 +1,49 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "tournaments": {
+      ".read": true,
+      "$tournamentId": {
+        ".write": "auth != null && (!data.exists() || data.child('organizerId').val() === auth.uid)",
+        ".validate": "newData.hasChildren(['id', 'name', 'startDate', 'endDate', 'maxTeams', 'format', 'status', 'organizerId']) && newData.child('maxTeams').isNumber() && newData.child('maxTeams').val() >= 2"
+      }
+    },
+    "tournament_teams": {
+      "$tournamentId": {
+        ".read": true,
+        "$teamRegistrationId": {
+          ".write": "auth != null",
+          ".validate": "newData.hasChildren(['id', 'tournamentId', 'teamId', 'teamName', 'captainId', 'status', 'registeredAt'])"
+        }
+      }
+    },
+    "matches": {
+      "$tournamentId": {
+        ".read": true,
+        "$matchId": {
+          ".write": "auth != null && (root.child('tournaments').child($tournamentId).child('organizerId').val() === auth.uid || auth.token.admin === true)",
+          ".validate": "newData.hasChildren(['id', 'tournamentId', 'round', 'homeTeamId', 'awayTeamId', 'status']) && (!newData.hasChild('homeScore') || (newData.child('homeScore').isNumber() && newData.child('homeScore').val() >= 0)) && (!newData.hasChild('awayScore') || (newData.child('awayScore').isNumber() && newData.child('awayScore').val() >= 0))"
+        }
+      }
+    },
+    "standings": {
+      "$tournamentId": {
+        ".read": true,
+        "$teamId": {
+          ".write": "auth != null && (root.child('tournaments').child($tournamentId).child('organizerId').val() === auth.uid || auth.token.admin === true)",
+          ".validate": "newData.hasChildren(['teamId', 'teamName', 'played', 'won', 'drawn', 'lost', 'goalsFor', 'goalsAgainst', 'points', 'rank']) && newData.child('played').val() >= 0 && newData.child('points').val() >= 0"
+        }
+      }
+    },
+    "match_audit": {
+      "$tournamentId": {
+        ".read": "auth != null",
+        "$auditId": {
+          ".write": "auth != null && (root.child('tournaments').child($tournamentId).child('organizerId').val() === auth.uid || auth.token.admin === true)",
+          ".validate": "newData.hasChildren(['id', 'tournamentId', 'matchId', 'action', 'updatedBy', 'updatedAt'])"
+        }
+      }
+    }
+  }
+}
