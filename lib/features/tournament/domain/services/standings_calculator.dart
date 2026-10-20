@@ -2,14 +2,24 @@ import '../models/match.dart';
 import '../models/standings_row.dart';
 import '../models/tournament_team.dart';
 
+/// Bộ tính toán bảng xếp hạng giải đấu (Standings Calculator).
+///
+/// Hoạt động như một hàm thuần túy (Pure Function), tính toán hoàn toàn xác định
+/// dựa trên các trận đấu đã có kết quả chính thức:
+/// - Thắng: 3 điểm, Hòa: 1 điểm, Thua: 0 điểm.
+/// - Tiêu chí xếp hạng ưu tiên:
+///   1. Tổng điểm (Points)
+///   2. Hiệu số bàn thắng - thua (Goal Difference)
+///   3. Tổng số bàn thắng ghi được (Goals For)
+///   4. Thành tích đối đầu trực tiếp (Head-to-Head) giữa các đội bằng điểm
+///   5. Tên đội theo thứ tự bảng chữ cái (Alphabetical)
 class StandingsCalculator {
-  /// Pure function: computes tournament standings deterministically
-  /// from all official, confirmed matches.
+  /// Tính toán bảng xếp hạng giải đấu từ danh sách đội bóng và các trận đấu chính thức.
   static List<StandingsRow> compute({
     required List<TournamentTeam> teams,
     required List<TournamentMatch> matches,
   }) {
-    // 1. Initialize stats table for each approved team
+    // 1. Khởi tạo bảng thống kê cho từng đội bóng đã duyệt
     final stats = <String, _MutableTeamStats>{};
     for (final team in teams) {
       stats[team.teamId] = _MutableTeamStats(
@@ -19,7 +29,7 @@ class StandingsCalculator {
       );
     }
 
-    // 2. Accumulate results from official confirmed matches only
+    // 2. Tích lũy kết quả từ những trận đã có kết quả chính thức (official confirmed)
     final confirmedMatches = matches.where((m) => m.isOfficialResult).toList();
 
     for (final match in confirmedMatches) {

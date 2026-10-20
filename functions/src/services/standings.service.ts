@@ -1,5 +1,13 @@
 import { MatchEntity, MatchStatus, StandingsRowEntity, TournamentRegistrationEntity } from '../types/tournament.types';
 
+/**
+ * Dịch vụ tính toán bảng xếp hạng giải đấu phía Backend (Standings Service).
+ *
+ * Tính toán thuần túy (Pure Function) đảm bảo:
+ * - Thắng 3 điểm, Hòa 1 điểm, Thua 0 điểm.
+ * - Sắp xếp theo thứ tự: Điểm -> Hiệu số bàn thắng/bại -> Tổng bàn thắng -> Đối đầu trực tiếp -> Tên đội.
+ * - Bảng xếp hạng luôn luôn phản ánh chính xác kết quả các trận đấu chính thức đã diễn ra.
+ */
 export class StandingsService {
   static compute(
     teams: TournamentRegistrationEntity[],

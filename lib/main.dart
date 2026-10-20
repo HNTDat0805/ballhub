@@ -7,6 +7,13 @@ import 'features/tournament/presentation/controllers/tournament_controller.dart'
 import 'features/tournament/presentation/screens/tournament_list_screen.dart';
 import 'firebase_options.dart';
 
+/// Điểm khởi nhập (Entry Point) của ứng dụng Ballhub.
+///
+/// Trình tự khởi động:
+/// 1. Khởi tạo ràng buộc Flutter framework qua [WidgetsFlutterBinding.ensureInitialized].
+/// 2. Khởi tạo Firebase SDK (bọc trong try-catch để phòng ngừa lỗi cấu hình nền tảng).
+/// 3. Khởi tạo [ApiTournamentRepository] tuân thủ kiến trúc API-first.
+/// 4. Đưa [TournamentRepository] vào [TournamentController] và khởi chạy [BallhubApp].
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -20,7 +27,7 @@ void main() async {
     debugPrint('Firebase initialization notice: $e');
   }
 
-  // API-First architecture: initialize REST API repository
+  // Khởi tạo Repository gọi REST API Backend
   final TournamentRepository repository = ApiTournamentRepository();
   final controller = TournamentController(repository: repository);
 
@@ -31,6 +38,7 @@ void main() async {
   ));
 }
 
+/// Widget gốc của ứng dụng Ballhub
 class BallhubApp extends StatelessWidget {
   final TournamentController controller;
   final TournamentRepository repository;

@@ -5,6 +5,15 @@ import { TournamentRepository } from '../repositories/tournament.repository';
 import { RegistrationStatus, TournamentRegistrationEntity, TournamentStatus } from '../types/tournament.types';
 import { AuthUser, UserRole } from '../types/auth.types';
 
+/**
+ * Dịch vụ nghiệp vụ đăng ký và quản lý đội tham gia giải đấu (Registration Service).
+ *
+ * Đảm bảo:
+ * 1. Chống đăng ký trùng lặp đội bóng trong cùng một giải đấu.
+ * 2. Kiểm tra giới hạn số đội tối đa (maxTeams) đồng thời bằng Firestore Transaction / Memory lock.
+ * 3. Kiểm tra thời hạn đăng ký (registrationDeadline) và trạng thái giải đấu.
+ * 4. Phân quyền duyệt/từ chối đơn đăng ký (chỉ Organizer hoặc Admin).
+ */
 export class RegistrationService {
   constructor(
     private regRepo: RegistrationRepository = new RegistrationRepository(),

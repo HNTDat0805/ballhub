@@ -3,6 +3,7 @@ import '../../domain/models/match.dart';
 import '../../domain/models/tournament.dart';
 import '../../domain/models/tournament_team.dart';
 
+/// Huy hiệu hiển thị trạng thái của giải đấu bóng đá (Chuẩn bị, Mở đăng ký, Đang diễn ra,...)
 class TournamentStatusBadge extends StatelessWidget {
   final TournamentStatus status;
 
@@ -37,6 +38,7 @@ class TournamentStatusBadge extends StatelessWidget {
   }
 }
 
+/// Huy hiệu trạng thái duyệt đơn đăng ký của đội bóng (Chờ duyệt, Đã duyệt, Từ chối,...)
 class RegistrationStatusBadge extends StatelessWidget {
   final RegistrationStatus status;
 
@@ -69,6 +71,7 @@ class RegistrationStatusBadge extends StatelessWidget {
   }
 }
 
+/// Huy hiệu trạng thái trận đấu (Chưa diễn ra, Đang diễn ra, Chờ xác nhận, Kết quả chính thức,...)
 class MatchStatusBadge extends StatelessWidget {
   final MatchStatus status;
   final bool isConfirmed;

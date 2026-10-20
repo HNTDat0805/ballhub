@@ -1,8 +1,11 @@
 import * as admin from 'firebase-admin';
 
-// Initialize Firebase Admin SDK if not already initialized
+/**
+ * Khởi tạo Firebase Admin SDK.
+ * Khi chạy trên Cloud Functions hoặc môi trường Emulator / Local,
+ * SDK sẽ sử dụng GOOGLE_APPLICATION_CREDENTIALS hoặc cấu hình projectId mặc định.
+ */
 if (admin.apps.length === 0) {
-  // If running in development with projectId or emulator
   admin.initializeApp({
     projectId: process.env.GCLOUD_PROJECT || 'ballhub-ac5a7',
   });

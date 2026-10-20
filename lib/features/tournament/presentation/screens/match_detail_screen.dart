@@ -7,6 +7,13 @@ import '../widgets/role_selector_widget.dart';
 import '../widgets/score_confirmation_dialog.dart';
 import '../widgets/status_badge.dart';
 
+/// Màn hình quản lý chi tiết trận đấu và nhập kết quả tỷ số.
+///
+/// Tính năng:
+/// - Xem thông tin chi tiết: sân đấu, thời gian diễn ra, trạng thái trận đấu.
+/// - Nhập tỷ số đội nhà và đội khách (yêu cầu quyền Organizer / Admin).
+/// - Phê duyệt kết quả chính thức thông qua hộp thoại xác nhận [ScoreConfirmationDialog].
+/// - Xem lịch sử kiểm toán (Audit Trail) các lần chỉnh sửa kết quả kèm lý do.
 class MatchDetailScreen extends StatefulWidget {
   final TournamentMatch match;
   final Tournament tournament;

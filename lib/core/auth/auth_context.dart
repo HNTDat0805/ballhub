@@ -1,12 +1,23 @@
 import 'package:flutter/foundation.dart';
 
+/// Vai trò người dùng trong hệ thống Ballhub theo kiến trúc RBAC (Role-Based Access Control).
 enum UserRole {
+  /// Quản trị viên hệ thống: có toàn quyền trên toàn bộ giải đấu, đội bóng, lịch và kết quả
   admin,
+
+  /// Người tổ chức giải đấu: tạo và quản lý giải đấu thuộc sở hữu của mình, duyệt đội, lên lịch, nhập tỷ số
   organizer,
+
+  /// Đội trưởng đội bóng: đăng ký đội tham gia giải đấu, quản lý thông tin thành viên đội
   teamCaptain,
+
+  /// Cầu thủ tham gia thi đấu
   player,
+
+  /// Khán giả / Người dùng vãng lai: chỉ có quyền xem thông tin công khai (giải đấu, lịch thi đấu, bảng xếp hạng)
   viewer;
 
+  /// Tên hiển thị thân thiện trên giao diện tiếng Việt
   String get displayName => switch (this) {
         UserRole.admin => 'Quản trị viên (Admin)',
         UserRole.organizer => 'Người tổ chức (Organizer)',
@@ -16,6 +27,7 @@ enum UserRole {
       };
 }
 
+/// Thực thể người dùng đang hoạt động trong phiên làm việc.
 class AppUser {
   final String id;
   final String name;
@@ -31,8 +43,13 @@ class AppUser {
     this.teamId,
   });
 
+  /// Kiểm tra có phải là Admin hệ thống
   bool get isAdmin => role == UserRole.admin;
+
+  /// Kiểm tra có quyền hạn của Người tổ chức (bao gồm cả Admin)
   bool get isOrganizer => role == UserRole.organizer || isAdmin;
+
+  /// Kiểm tra có quyền hạn của Đội trưởng (bao gồm cả Organizer và Admin)
   bool get isCaptain => role == UserRole.teamCaptain || isOrganizer;
 
   AppUser copyWith({
@@ -52,7 +69,10 @@ class AppUser {
   }
 }
 
-/// Manages active user authentication session and role-based permissions.
+/// Quản lý trạng thái phiên đăng nhập và phân quyền (RBAC) phía Flutter Client.
+///
+/// Hỗ trợ chuyển đổi nhanh giữa các Persona (Admin, BTC, Đội trưởng, Khán giả)
+/// để kiểm thử trực tiếp hành vi phân quyền trên giao diện và backend API.
 class AuthContext extends ChangeNotifier {
   static final AuthContext instance = AuthContext._internal();
   AuthContext._internal();

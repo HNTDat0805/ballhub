@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import '../../domain/models/match.dart';
 import 'status_badge.dart';
 
+/// Thẻ hiển thị tóm tắt trận đấu bóng đá (Match Card).
+///
+/// Thể hiện: Đội nhà, đội khách, tỷ số (hoặc 'vs'), thời gian thi đấu,
+/// địa điểm sân bóng và huy hiệu trạng thái (Chưa diễn ra, Đang diễn ra, Đã kết thúc).
 class MatchCardWidget extends StatelessWidget {
   final TournamentMatch match;
   final VoidCallback? onTap;

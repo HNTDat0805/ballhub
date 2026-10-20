@@ -5,10 +5,20 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../auth/auth_context.dart';
 
+/// Đại diện cho lỗi trả về từ hệ thống REST API Backend của Ballhub.
+/// Chứa mã lỗi máy tính (code), thông báo thân thiện (message),
+/// mã HTTP trạng thái (statusCode) và chi tiết lỗi xác thực dữ liệu (details).
 class ApiException implements Exception {
+  /// Mã định danh lỗi (ví dụ: 'UNAUTHORIZED', 'MAX_TEAMS_REACHED', 'NOT_FOUND')
   final String code;
+
+  /// Thông điệp lỗi chi tiết hiển thị cho người dùng
   final String message;
+
+  /// Mã trạng thái HTTP (400, 401, 403, 404, 409, 500,...)
   final int statusCode;
+
+  /// Chi tiết bổ sung (ví dụ: danh sách trường bị lỗi từ Zod validator)
   final dynamic details;
 
   ApiException({
@@ -22,8 +32,18 @@ class ApiException implements Exception {
   String toString() => message;
 }
 
+/// HTTP REST Client trung tâm của ứng dụng Ballhub.
+///
+/// Chịu trách nhiệm:
+/// 1. Tự động nhận diện Base URL (Localhost cho Web/Desktop, 10.0.2.2 cho Android Emulator).
+/// 2. Gắn kèm Authorization Bearer Token và User Persona Headers vào từng request.
+/// 3. Mã hóa/Giải mã JSON, chuẩn hóa phản hồi và bọc lỗi mạng thành [ApiException].
+/// 4. Đặt thời gian chờ (timeout) 10 giây để chống treo kết nối phía client.
 class ApiClient {
+  /// Đường dẫn gốc của API Backend (mặc định: http://localhost:5001/api/v1 hoặc 10.0.2.2:5001/api/v1)
   final String baseUrl;
+
+  /// Instance http.Client để thực hiện các cuộc gọi mạng HTTP
   final http.Client _client;
 
   ApiClient({
@@ -32,25 +52,27 @@ class ApiClient {
   })  : baseUrl = baseUrl ?? _resolveDefaultBaseUrl(),
         _client = client ?? http.Client();
 
+  /// Tự động phân giải Base URL phù hợp với nền tảng đang chạy
   static String _resolveDefaultBaseUrl() {
     if (kIsWeb) {
       return 'http://localhost:5001/api/v1';
     }
     try {
       if (Platform.isAndroid) {
-        // Android Emulator loops 10.0.2.2 back to host localhost
+        // Android Emulator sử dụng 10.0.2.2 để trỏ về localhost của máy chủ host
         return 'http://10.0.2.2:5001/api/v1';
       }
     } catch (_) {}
     return 'http://localhost:5001/api/v1';
   }
 
+  /// Xây dựng headers chuẩn cho request bao gồm Content-Type, Accept và Authentication
   Map<String, String> _buildHeaders() {
     final user = AuthContext.instance.currentUser;
     return {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      // Send persona / ID headers for development and authenticated requests
+      // Gửi token xác thực cùng thông tin định danh (persona) đang hoạt động
       'Authorization': 'Bearer mock-token-${user.id}-${user.role.name}',
       'x-user-id': user.id,
       'x-user-role': user.role.name,
@@ -59,6 +81,7 @@ class ApiClient {
     };
   }
 
+  /// Gửi HTTP GET request với các query parameters tùy chọn
   Future<dynamic> get(String path, {Map<String, dynamic>? queryParams}) async {
     Uri uri = Uri.parse('$baseUrl$path');
     if (queryParams != null && queryParams.isNotEmpty) {
@@ -78,6 +101,7 @@ class ApiClient {
     }
   }
 
+  /// Gửi HTTP POST request kèm JSON body
   Future<dynamic> post(String path, {dynamic body}) async {
     final uri = Uri.parse('$baseUrl$path');
     try {
@@ -94,6 +118,7 @@ class ApiClient {
     }
   }
 
+  /// Gửi HTTP PATCH request để cập nhật một phần dữ liệu
   Future<dynamic> patch(String path, {dynamic body}) async {
     final uri = Uri.parse('$baseUrl$path');
     try {
@@ -110,6 +135,7 @@ class ApiClient {
     }
   }
 
+  /// Gửi HTTP PUT request để thay thế hoặc xác nhận dữ liệu (ví dụ: cập nhật kết quả trận đấu)
   Future<dynamic> put(String path, {dynamic body}) async {
     final uri = Uri.parse('$baseUrl$path');
     try {
@@ -126,6 +152,7 @@ class ApiClient {
     }
   }
 
+  /// Gửi HTTP DELETE request để xóa tài nguyên
   Future<dynamic> delete(String path) async {
     final uri = Uri.parse('$baseUrl$path');
     try {
@@ -138,6 +165,8 @@ class ApiClient {
     }
   }
 
+  /// Xử lý phản hồi từ server: bóc tách wrapper {success: true, data: ...}
+  /// hoặc ném ra [ApiException] khi server trả về mã lỗi >= 400.
   dynamic _processResponse(http.Response response) {
     dynamic jsonBody;
     try {
@@ -175,6 +204,8 @@ class ApiClient {
     );
   }
 
+  /// Chuẩn hóa tất cả các ngoại lệ mạng (TimeoutException, SocketException, ClientException)
+  /// thành [ApiException] rõ ràng để UI có thể hiển thị thông báo phù hợp.
   Never _handleNetworkError(dynamic error, String operation) {
     if (error is ApiException) {
       throw error;

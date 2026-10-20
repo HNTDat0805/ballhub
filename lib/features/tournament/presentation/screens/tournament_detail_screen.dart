@@ -13,6 +13,14 @@ import '../widgets/team_registration_dialog.dart';
 import 'create_edit_tournament_screen.dart';
 import 'match_detail_screen.dart';
 
+/// Màn hình chi tiết giải đấu đa chức năng (Tournament Detail Screen).
+///
+/// Bao gồm 5 Tab điều khiển:
+/// 1. Thông tin chung: mô tả, thể thức, số đội, thời gian, địa điểm, các hành động quản trị.
+/// 2. Đội tham gia: danh sách đăng ký, phê duyệt/từ chối (dành cho BTC), đăng ký đội mới.
+/// 3. Lịch thi đấu: xem lịch theo vòng, tự động sinh lịch (Berger / Knockout).
+/// 4. Kết quả & Trận đấu: xem tỷ số, điều hướng nhập kết quả [MatchDetailScreen].
+/// 5. Bảng xếp hạng: bảng xếp hạng tự động tính điểm theo thời gian thực từ kết quả các trận.
 class TournamentDetailScreen extends StatefulWidget {
   final String tournamentId;
   final TournamentController controller;

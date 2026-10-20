@@ -1,3 +1,6 @@
+/// Một dòng dữ liệu trong bảng xếp hạng giải đấu (Standings / Leaderboard).
+/// Thể hiện đầy đủ các chỉ số thống kê: Trận đã đấu (P), Thắng (W), Hòa (D), Thua (L),
+/// Bàn thắng (GF), Bàn thua (GA), Hiệu số (GD), Điểm số (PTS) và Thứ hạng (Rank).
 class StandingsRow {
   final String teamId;
   final String teamName;

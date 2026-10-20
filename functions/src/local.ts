@@ -1,3 +1,8 @@
+/**
+ * Script chạy máy chủ HTTP Node/Express độc lập tại local (cổng 5001).
+ * Cho phép lập trình viên kiểm thử và chạy ứng dụng Flutter với API backend
+ * mà không cần cài đặt hoặc khởi động Firebase Emulator Suite.
+ */
 import { app } from './app';
 
 const PORT = process.env.PORT || 5001;

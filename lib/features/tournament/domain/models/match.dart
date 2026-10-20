@@ -1,8 +1,18 @@
+/// Trạng thái diễn ra của trận đấu bóng đá
 enum MatchStatus {
+  /// Trận đấu theo lịch sắp xếp, chưa bắt đầu
   scheduled,
+
+  /// Trận đấu đang diễn ra trên sân
   inProgress,
+
+  /// Trận đấu đã kết thúc thời gian thi đấu chính thức
   finished,
+
+  /// Trận đấu tạm hoãn (do thời tiết hoặc sự cố)
   postponed,
+
+  /// Trận đấu đã bị hủy bỏ
   cancelled;
 
   String get displayName => switch (this) {
@@ -14,6 +24,7 @@ enum MatchStatus {
       };
 }
 
+/// Mô hình một trận đấu trong giải bóng đá
 class TournamentMatch {
   final String id;
   final String tournamentId;
@@ -53,14 +64,17 @@ class TournamentMatch {
     this.notes,
   });
 
+  /// Kiểm tra xem tỷ số đã được nhập hợp lệ (không null và không âm) hay chưa
   bool get hasValidScore =>
       homeScore != null &&
       awayScore != null &&
       homeScore! >= 0 &&
       awayScore! >= 0;
 
+  /// Kết quả chính thức: trận đấu đã kết thúc, tỷ số hợp lệ và đã được Ban tổ chức phê duyệt
   bool get isOfficialResult => status == MatchStatus.finished && isConfirmed && hasValidScore;
 
+  /// Chuỗi hiển thị tỷ số ngắn gọn ('3 - 1' hoặc 'vs' nếu chưa có tỷ số)
   String get scoreDisplay {
     if (homeScore != null && awayScore != null) {
       return '$homeScore - $awayScore';

@@ -1,3 +1,5 @@
+/// Ghi nhận nhật ký kiểm toán (Audit Trail) cho mọi lần cập nhật hoặc điều chỉnh tỷ số trận đấu.
+/// Đảm bảo tính minh bạch, lưu lại tỷ số cũ, tỷ số mới, người thực hiện và lý do sửa đổi.
 class MatchAudit {
   final String id;
   final String tournamentId;

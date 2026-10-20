@@ -6,6 +6,10 @@ import { registrationRouter } from './routes/registration.routes';
 import { matchRouter } from './routes/match.routes';
 import { standingsRouter } from './routes/standings.routes';
 
+/**
+ * Cấu hình ứng dụng Express trung tâm cho Ballhub REST API v1.
+ * Thiết lập các middleware bảo mật, CORS, xác thực người dùng và định tuyến tài nguyên.
+ */
 export const app = express();
 
 // Middlewares

@@ -3,6 +3,12 @@ import '../../../../core/auth/auth_context.dart';
 import '../../domain/models/tournament.dart';
 import '../../domain/models/tournament_team.dart';
 
+/// Hộp thoại biểu mẫu đăng ký đội bóng mới tham gia giải đấu.
+///
+/// Hỗ trợ:
+/// - Thu thập thông tin đội bóng (tên đội, người liên hệ, số điện thoại, email, số lượng thành viên).
+/// - Điền sẵn thông tin đội trưởng từ tài khoản [AuthContext] đang đăng nhập.
+/// - Kiểm tra tính hợp lệ của dữ liệu trước khi gửi lên API Backend.
 class TeamRegistrationDialog extends StatefulWidget {
   final Tournament tournament;
   final Function(TournamentTeam team) onRegister;

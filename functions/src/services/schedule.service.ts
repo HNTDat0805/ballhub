@@ -6,6 +6,16 @@ import {
   TournamentRegistrationEntity,
 } from '../types/tournament.types';
 
+/**
+ * Dịch vụ thuật toán tạo lịch thi đấu Backend (Schedule Service).
+ *
+ * Triển khai thuật toán:
+ * 1. Thuật toán vòng tròn Berger (Berger Round Robin System) với xoay vòng vị trí.
+ * 2. Xử lý số đội lẻ thông qua lượt nghỉ (BYE).
+ * 3. Hỗ trợ lượt về (Double Round Robin) đảo sân nhà/khách và dãn cách ngày.
+ * 4. Thuật toán phân nhánh giải đấu loại trực tiếp (Knockout Bracket).
+ * 5. Cơ chế sáp nhập an toàn (Safe Merge) bảo vệ các trận đã có kết quả chính thức.
+ */
 export class ScheduleService {
   static generate(
     tournament: TournamentEntity,

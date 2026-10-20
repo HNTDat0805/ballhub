@@ -14,6 +14,15 @@ import { AuthUser, UserRole } from '../types/auth.types';
 import { ScheduleService } from './schedule.service';
 import { StandingsService } from './standings.service';
 
+/**
+ * Dịch vụ quản lý trận đấu, cập nhật kết quả và kiểm toán (Match Service).
+ *
+ * Chịu trách nhiệm:
+ * 1. Kiểm tra quyền hạn cập nhật kết quả trận đấu (Người tổ chức giải hoặc Quản trị viên).
+ * 2. Xác thực tỷ số (không âm, trạng thái hợp lệ).
+ * 3. Ghi vết kiểm toán (Audit Trail) cho mọi lần cập nhật kết quả.
+ * 4. Tự động kích hoạt tính toán lại Bảng xếp hạng nhất quán ngay sau khi có kết quả chính thức.
+ */
 export class MatchService {
   constructor(
     private matchRepo: MatchRepository = new MatchRepository(),

@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 
+/// Hộp thoại xác nhận kết quả tỷ số trận đấu bóng đá.
+///
+/// Yêu cầu người phê duyệt xác nhận tỷ số chính thức, đồng thời bắt buộc
+/// nhập lý do giải trình nếu tỷ số được điều chỉnh lại sau khi đã từng chốt kết quả trước đó.
 class ScoreConfirmationDialog extends StatefulWidget {
   final int homeScore;
   final int awayScore;

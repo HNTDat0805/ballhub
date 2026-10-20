@@ -5,6 +5,12 @@ import '../../domain/models/standings_row.dart';
 import '../../domain/models/tournament.dart';
 import '../../domain/models/tournament_team.dart';
 
+/// Quản lý trạng thái giao diện (Presentation State Controller) của phân hệ giải đấu.
+///
+/// Chịu trách nhiệm:
+/// 1. Quản lý bộ lọc tìm kiếm (search query), bộ lọc trạng thái (status filter).
+/// 2. Quản lý trạng thái đang tải (isLoading) và thông báo lỗi (errorMessage).
+/// 3. Gọi các hành vi nghiệp vụ thông qua [TournamentRepository] và cập nhật UI qua `notifyListeners()`.
 class TournamentController extends ChangeNotifier {
   final TournamentRepository repository;
 
@@ -15,21 +21,31 @@ class TournamentController extends ChangeNotifier {
 
   TournamentController({required this.repository});
 
+  /// Trạng thái đang thực thi tác vụ mạng hoặc bất đồng bộ
   bool get isLoading => _isLoading;
+
+  /// Thông báo lỗi gần nhất cần hiển thị lên giao diện (nếu có)
   String? get errorMessage => _errorMessage;
+
+  /// Từ khóa tìm kiếm giải đấu theo tên hoặc địa điểm
   String get searchQuery => _searchQuery;
+
+  /// Bộ lọc trạng thái giải đấu đang được chọn
   TournamentStatus? get selectedStatusFilter => _selectedStatusFilter;
 
+  /// Đặt từ khóa tìm kiếm giải đấu
   void setSearchQuery(String query) {
     _searchQuery = query;
     notifyListeners();
   }
 
+  /// Đặt bộ lọc trạng thái giải đấu
   void setStatusFilter(TournamentStatus? status) {
     _selectedStatusFilter = status;
     notifyListeners();
   }
 
+  /// Xóa thông báo lỗi hiện tại
   void clearError() {
     _errorMessage = null;
     notifyListeners();

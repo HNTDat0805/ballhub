@@ -8,6 +8,14 @@ import '../widgets/status_badge.dart';
 import 'create_edit_tournament_screen.dart';
 import 'tournament_detail_screen.dart';
 
+/// Màn hình danh sách giải đấu bóng đá (Tournament List Screen).
+///
+/// Tính năng:
+/// - Tìm kiếm theo tên hoặc địa điểm tổ chức.
+/// - Lọc theo trạng thái giải (Chuẩn bị, Mở đăng ký, Đang diễn ra, Đã kết thúc).
+/// - Chuyển đổi nhanh Persona kiểm thử RBAC qua [RoleSelectorWidget].
+/// - Nút tạo giải đấu mới (dành riêng cho Organizer / Admin).
+/// - Điều hướng đến màn hình chi tiết giải đấu [TournamentDetailScreen].
 class TournamentListScreen extends StatefulWidget {
   final TournamentController controller;
   final TournamentRepository repository;

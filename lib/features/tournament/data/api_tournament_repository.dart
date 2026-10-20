@@ -7,6 +7,13 @@ import '../domain/models/tournament.dart';
 import '../domain/models/tournament_team.dart';
 import 'tournament_repository.dart';
 
+/// Triển khai thực tế của [TournamentRepository] theo kiến trúc API-first.
+///
+/// Mọi thao tác quản trị giải đấu, đăng ký đội, duyệt đội, tạo lịch,
+/// cập nhật kết quả và tính bảng xếp hạng đều được thực hiện qua các endpoint REST API.
+///
+/// Các StreamController kiểu broadcast được sử dụng để phát lại danh sách dữ liệu mới nhất
+/// cho các màn hình Flutter khi có sự thay đổi (invalidation & automatic refresh).
 class ApiTournamentRepository implements TournamentRepository {
   final ApiClient _api;
 

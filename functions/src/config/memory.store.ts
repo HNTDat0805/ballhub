@@ -6,6 +6,10 @@ import {
   MatchAuditEntity,
 } from '../types/tournament.types';
 
+/**
+ * Kho lưu trữ bộ nhớ đệm In-Memory (MemoryStore) phục vụ kiểm thử đơn vị,
+ * chạy headless và tự động fallback khi không có Firestore Emulator hoặc Cloud credentials.
+ */
 export class MemoryStore {
   static tournaments = new Map<string, TournamentEntity>();
   static registrations = new Map<string, Map<string, TournamentRegistrationEntity>>();

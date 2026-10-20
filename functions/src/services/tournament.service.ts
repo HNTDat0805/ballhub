@@ -2,6 +2,14 @@ import { TournamentRepository } from '../repositories/tournament.repository';
 import { TournamentEntity, TournamentFormat, TournamentStatus } from '../types/tournament.types';
 import { AuthUser, UserRole } from '../types/auth.types';
 
+/**
+ * Dịch vụ nghiệp vụ quản lý vòng đời giải đấu (Tournament Service).
+ *
+ * Đảm bảo:
+ * 1. Xác thực khoảng thời gian hợp lệ (ngày kết thúc > ngày bắt đầu, hạn đăng ký <= ngày bắt đầu).
+ * 2. Phân quyền: chỉ người tạo giải (Organizer) hoặc Quản trị viên (Admin) mới có quyền sửa/xóa giải.
+ * 3. Ngăn chặn chỉnh sửa thông số cốt lõi hoặc xóa giải khi các trận đấu đã diễn ra.
+ */
 export class TournamentService {
   constructor(private repo: TournamentRepository = new TournamentRepository()) {}
 

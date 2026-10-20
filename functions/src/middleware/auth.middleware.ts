@@ -2,6 +2,14 @@ import { Request, Response, NextFunction } from 'express';
 import { auth } from '../config/firebase';
 import { UserRole } from '../types/auth.types';
 
+/**
+ * Middleware xác thực danh tính người dùng (Authentication Middleware).
+ *
+ * Kiểm tra theo thứ tự ưu tiên:
+ * 1. Headers phát triển/kiểm thử (x-user-id, x-user-role, x-user-name).
+ * 2. Token kiểm thử cục bộ ("Bearer mock-token-...").
+ * 3. Firebase ID Token thực tế qua Firebase Admin Auth (auth.verifyIdToken).
+ */
 export async function authenticate(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     // 1. Dev / Test header support for development & integration tests
@@ -76,6 +84,9 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
   }
 }
 
+/**
+ * Bắt buộc request phải được xác thực danh tính (đã đăng nhập).
+ */
 export function requireAuth(req: Request, res: Response, next: NextFunction): void {
   if (!req.user) {
     res.status(401).json({
@@ -90,6 +101,10 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
   next();
 }
 
+/**
+ * Kiểm tra quyền hạn RBAC của người dùng.
+ * Cho phép các vai trò được chỉ định hoặc Admin hệ thống (Superuser).
+ */
 export function requireRoles(...allowedRoles: UserRole[]) {
   return (req: Request, res: Response, next: NextFunction): void => {
     if (!req.user) {

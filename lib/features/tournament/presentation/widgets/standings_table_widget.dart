@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../domain/models/standings_row.dart';
 
+/// Bảng hiển thị thứ hạng giải đấu (Standings / Leaderboard Table).
+///
+/// Trình bày dữ liệu chuẩn bóng đá chuyên nghiệp:
+/// - Xếp hạng nổi bật (Top 1 màu vàng cúp vô địch, Top 2-3 màu bạc/đồng).
+/// - Các cột thống kê: Đội bóng, Trận (P), Thắng (W), Hòa (D), Thua (L),
+///   Bàn thắng (GF), Bàn thua (GA), Hiệu số (GD) và Điểm (PTS).
 class StandingsTableWidget extends StatelessWidget {
   final List<StandingsRow> standings;
 

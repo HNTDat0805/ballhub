@@ -10,6 +10,13 @@ import '../domain/services/schedule_generator.dart';
 import '../domain/services/standings_calculator.dart';
 import 'tournament_repository.dart';
 
+/// Triển khai [TournamentRepository] sử dụng Firebase Realtime Database và bộ đệm In-Memory.
+///
+/// LƯU Ý KIẾN TRÚC:
+/// Lớp này đóng vai trò Fallback dự phòng offline hoặc thử nghiệm trực tiếp trên thiết bị
+/// khi không có kết nối đến máy chủ Backend API.
+/// Trong kiến trúc chuẩn API-First của Ballhub, hệ thống sử dụng [ApiTournamentRepository]
+/// để đảm bảo toàn bộ nghiệp vụ được bảo vệ và xử lý tập trung trên Server.
 class FirebaseTournamentRepository implements TournamentRepository {
   final FirebaseDatabase? _db;
   final bool _isFirebaseReady;

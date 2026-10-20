@@ -2,9 +2,16 @@ import '../models/match.dart';
 import '../models/tournament.dart';
 import '../models/tournament_team.dart';
 
+/// Bộ tạo lịch thi đấu tự động cho giải đấu bóng đá (Schedule Generator).
+///
+/// Hỗ trợ:
+/// 1. Vòng tròn 1 lượt (Single Round Robin - thuật toán Berger xoay vòng).
+/// 2. Vòng tròn 2 lượt (Double Round Robin - lượt đi và lượt về).
+/// 3. Loại trực tiếp (Single Elimination Knockout).
+/// 4. Bảo toàn kết quả: không ghi đè hoặc làm mất các trận đấu đã có kết quả chính thức.
 class ScheduleGenerator {
-  /// Generates tournament matches based on approved teams and format.
-  /// If existing matches are provided, any confirmed/finished matches are preserved.
+  /// Sinh danh sách các trận đấu dựa trên thể thức giải và danh sách đội đã duyệt.
+  /// Nếu đã có các trận đấu trước đó có kết quả chính thức, chúng sẽ được giữ nguyên an toàn.
   static List<TournamentMatch> generate({
     required Tournament tournament,
     required List<TournamentTeam> approvedTeams,

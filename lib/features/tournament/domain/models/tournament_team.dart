@@ -1,7 +1,15 @@
+/// Trạng thái đăng ký tham gia giải đấu của một đội bóng
 enum RegistrationStatus {
+  /// Đang chờ Ban tổ chức xem xét và duyệt
   pending,
+
+  /// Đã được Ban tổ chức chấp thuận tham gia thi đấu
   approved,
+
+  /// Đã bị Ban tổ chức từ chối (có kèm lý do reviewNote)
   rejected,
+
+  /// Đội trưởng đã chủ động hủy đơn đăng ký
   cancelled;
 
   String get displayName => switch (this) {
@@ -12,6 +20,7 @@ enum RegistrationStatus {
       };
 }
 
+/// Đại diện cho một đội bóng đã đăng ký hoặc tham gia vào giải đấu
 class TournamentTeam {
   final String id;
   final String tournamentId;
@@ -47,7 +56,10 @@ class TournamentTeam {
     this.reviewNote,
   });
 
+  /// Kiểm tra đội đã được duyệt chính thức vào giải
   bool get isApproved => status == RegistrationStatus.approved;
+
+  /// Kiểm tra đội đang trong trạng thái chờ duyệt
   bool get isPending => status == RegistrationStatus.pending;
 
   TournamentTeam copyWith({

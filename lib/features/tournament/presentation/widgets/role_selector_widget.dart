@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../../core/auth/auth_context.dart';
 
+/// Widget cho phép chuyển đổi tức thời giữa các vai trò (Admin, BTC, Đội trưởng, Khán giả)
+/// trên thanh AppBar để kiểm chứng và đánh giá trực tiếp cơ chế phân quyền RBAC.
 class RoleSelectorWidget extends StatelessWidget {
   const RoleSelectorWidget({super.key});
 

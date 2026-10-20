@@ -3,6 +3,12 @@ import '../../../../core/auth/auth_context.dart';
 import '../../domain/models/tournament.dart';
 import '../controllers/tournament_controller.dart';
 
+/// Màn hình biểu mẫu tạo mới hoặc chỉnh sửa thông tin giải đấu.
+///
+/// Hỗ trợ:
+/// - Xác thực dữ liệu đầu vào (tên giải, địa điểm, ngày bắt đầu, ngày kết thúc, số đội).
+/// - Khóa chỉnh sửa các thông số cốt lõi (thể thức, số đội tối đa) khi giải đã bắt đầu thi đấu.
+/// - Gửi dữ liệu thông qua REST API Backend.
 class CreateEditTournamentScreen extends StatefulWidget {
   final TournamentController controller;
   final Tournament? tournament;
