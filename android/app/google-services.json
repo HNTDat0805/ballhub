@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "756451917358",
+    "project_id": "ballhub-ac5a7",
+    "storage_bucket": "ballhub-ac5a7.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:756451917358:android:d071a98cbb81ea9c05e9bf",
+        "android_client_info": {
+          "package_name": "com.example.ballhub"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCQ3si8bILqjw_FS0cDeUZ8y8v2S1ELigs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
