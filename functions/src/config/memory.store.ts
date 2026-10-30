@@ -26,10 +26,20 @@ export class MemoryStore {
   }
 
   static isMemoryMode(): boolean {
+    // Tuyệt đối KHÔNG sử dụng In-Memory Mode trên môi trường Production hoặc Google Cloud Functions Runtime
+    if (
+      process.env.NODE_ENV === 'production' ||
+      Boolean(process.env.K_SERVICE) ||
+      Boolean(process.env.FUNCTION_TARGET) ||
+      Boolean(process.env.FIREBASE_CONFIG)
+    ) {
+      return false;
+    }
+
     return (
       process.env.USE_MEMORY_STORE === 'true' ||
       process.env.NODE_ENV === 'test' ||
-      !process.env.FIRESTORE_EMULATOR_HOST && !process.env.GOOGLE_APPLICATION_CREDENTIALS
+      (!process.env.FIRESTORE_EMULATOR_HOST && !process.env.GOOGLE_APPLICATION_CREDENTIALS)
     );
   }
 }

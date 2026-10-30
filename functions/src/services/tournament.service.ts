@@ -98,6 +98,20 @@ export class TournamentService {
       }
     }
 
+    // Validate date consistency if any date fields are modified
+    if (data.startDate || data.endDate || data.registrationDeadline) {
+      const finalStart = new Date(data.startDate ?? existing.startDate).getTime();
+      const finalEnd = new Date(data.endDate ?? existing.endDate).getTime();
+      const finalDeadline = new Date(data.registrationDeadline ?? existing.registrationDeadline).getTime();
+
+      if (finalEnd < finalStart) {
+        throw new Error('Thời gian kết thúc giải đấu phải sau thời gian bắt đầu.');
+      }
+      if (finalDeadline > finalStart) {
+        throw new Error('Hạn chót đăng ký phải trước hoặc bằng ngày bắt đầu giải đấu.');
+      }
+    }
+
     const updatedData = {
       ...data,
       updatedAt: new Date().toISOString(),
