@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "103468414442",
+    "project_id": "damobile-ae3b8",
+    "storage_bucket": "damobile-ae3b8.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:103468414442:android:ac28a8c645145c03c02e93",
+        "android_client_info": {
+          "package_name": "com.example.streetball"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB_2U9liodvsvEzX0lwlAk_qUGMMVcnINI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
