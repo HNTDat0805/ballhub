@@ -1,0 +1,29 @@
+class AppUser {
+  final String userId;
+  final String fullName;
+  final String email;
+  final String? phone;
+  final String? avatarBase64;
+  final String? position;
+  final String? area;
+
+  AppUser({
+    required this.userId,
+    required this.fullName,
+    required this.email,
+    this.phone,
+    this.avatarBase64,
+    this.position,
+    this.area,
+  });
+
+  factory AppUser.fromMap(Map<String, dynamic> m) => AppUser(
+        userId: m['userId'] ?? '',
+        fullName: m['fullName'] ?? '',
+        email: m['email'] ?? '',
+        phone: m['phone'],
+        avatarBase64: m['avatarBase64'],
+        position: m['position'],
+        area: m['area'],
+      );
+}

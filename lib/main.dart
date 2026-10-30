@@ -4,8 +4,8 @@ import 'core/theme/app_theme.dart';
 import 'features/tournament/data/api_tournament_repository.dart';
 import 'features/tournament/data/tournament_repository.dart';
 import 'features/tournament/presentation/controllers/tournament_controller.dart';
-import 'features/tournament/presentation/screens/tournament_list_screen.dart';
 import 'firebase_options.dart';
+import 'screens/auth_gate.dart';
 
 /// Điểm khởi nhập (Entry Point) của ứng dụng Ballhub.
 ///
@@ -57,10 +57,8 @@ class BallhubApp extends StatelessWidget {
       title: 'Ballhub - Tournament & Football Management',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      home: TournamentListScreen(
-        controller: controller,
-        repository: repository,
-      ),
+      home: const AuthGate(),
     );
   }
 }
+
