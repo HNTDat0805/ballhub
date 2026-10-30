@@ -22,10 +22,20 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
         ? (devUserRole as UserRole)
         : UserRole.viewer;
 
+      let devUserName = devUserId;
+      const rawHeaderName = req.headers['x-user-name'] as string | undefined;
+      if (rawHeaderName) {
+        try {
+          devUserName = decodeURIComponent(rawHeaderName);
+        } catch (_) {
+          devUserName = rawHeaderName;
+        }
+      }
+
       req.user = {
         uid: devUserId,
         email: (req.headers['x-user-email'] as string) || `${devUserId}@ballhub.vn`,
-        name: (req.headers['x-user-name'] as string) || devUserId,
+        name: devUserName,
         role: role,
         teamId: req.headers['x-user-team'] as string | undefined,
       };
