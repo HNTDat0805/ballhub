@@ -46,7 +46,6 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
-
 # Node / Firebase Functions
 node_modules/
 functions/node_modules/
@@ -61,4 +60,21 @@ ui-debug.log*
 # Environment & local credentials
 .env
 .env.*
-service-account*.json
+!.env.example
+*.env
+functions/.runtimeconfig.json
+
+# Service Accounts, Private Keys & Certificates
+*service-account*.json
+*service_account*.json
+*.pem
+*.key
+*.p12
+*.mobileprovision
+
+# Android Signing Keystore & Properties
+android/key.properties
+key.properties
+*.keystore
+*.jks
+

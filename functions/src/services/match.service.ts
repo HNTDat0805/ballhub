@@ -161,6 +161,12 @@ export class MatchService {
     const match = await this.matchRepo.findById(tournamentId, matchId);
     if (!match) throw new Error('Không tìm thấy trận đấu.');
 
+    // Bắt buộc giải trình lý do khi điều chỉnh tỷ số trận đấu đã chốt trước đó
+    const isScoreChanged = match.isConfirmed && (match.homeScore !== data.homeScore || match.awayScore !== data.awayScore);
+    if (isScoreChanged && (!data.reason || data.reason.trim().length < 5)) {
+      throw new Error('Vui lòng nhập lý do giải trình cụ thể (tối thiểu 5 ký tự) khi điều chỉnh tỷ số đã công bố.');
+    }
+
     const now = new Date().toISOString();
     const isConfirmed = data.isConfirmed ?? true;
     const matchStatus = data.status ?? MatchStatus.finished;

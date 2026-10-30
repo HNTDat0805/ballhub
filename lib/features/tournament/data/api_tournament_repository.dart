@@ -26,6 +26,45 @@ class ApiTournamentRepository implements TournamentRepository {
   ApiTournamentRepository({ApiClient? apiClient})
       : _api = apiClient ?? ApiClient();
 
+  List<Tournament> _cachedTournaments = [];
+
+  static List<Tournament> _getFallbackSampleTournaments() {
+    return [
+      Tournament(
+        id: 'tour_ballhub_cup_2026',
+        name: 'Ballhub Super Cup 2026',
+        description: 'Giải bóng đá phong trào thường niên Ballhub tranh cúp vô địch.',
+        location: 'Sân bóng Thể thao Quốc gia, TP. Hồ Chí Minh',
+        startDate: DateTime.now().add(const Duration(days: 3)),
+        endDate: DateTime.now().add(const Duration(days: 14)),
+        registrationDeadline: DateTime.now().add(const Duration(days: 2)),
+        maxTeams: 8,
+        format: TournamentFormat.roundRobinSingle,
+        status: TournamentStatus.registrationOpen,
+        organizerId: 'user_organizer_01',
+        organizerName: 'Ban Tổ Chức Ballhub',
+        createdAt: DateTime.now().subtract(const Duration(days: 5)),
+        updatedAt: DateTime.now().subtract(const Duration(days: 1)),
+      ),
+      Tournament(
+        id: 'tour_ha_noi_open_2026',
+        name: 'Hà Nội Premier League Cup',
+        description: 'Giải đấu giao lưu các câu lạc bộ bóng đá phong trào miền Bắc.',
+        location: 'Sân vận động Mỹ Đình, Hà Nội',
+        startDate: DateTime.now().add(const Duration(days: 7)),
+        endDate: DateTime.now().add(const Duration(days: 21)),
+        registrationDeadline: DateTime.now().add(const Duration(days: 5)),
+        maxTeams: 16,
+        format: TournamentFormat.knockout,
+        status: TournamentStatus.preparing,
+        organizerId: 'user_organizer_01',
+        organizerName: 'Ban Tổ Chức Ballhub',
+        createdAt: DateTime.now().subtract(const Duration(days: 2)),
+        updatedAt: DateTime.now().subtract(const Duration(days: 1)),
+      ),
+    ];
+  }
+
   // ----------------------------------------------------
   // TOURNAMENTS
   // ----------------------------------------------------
@@ -47,10 +86,16 @@ class ApiTournamentRepository implements TournamentRepository {
           }
         }
       }
+      _cachedTournaments = list;
       _tournamentsController.add(list);
       return list;
     } catch (e) {
-      // Re-throw or emit empty/error
+      // Fallback hiển thị dữ liệu giải đấu mẫu khi máy chủ backend chưa khởi động
+      if (_cachedTournaments.isEmpty) {
+        _cachedTournaments = _getFallbackSampleTournaments();
+        _tournamentsController.add(_cachedTournaments);
+        return _cachedTournaments;
+      }
       _tournamentsController.addError(e);
       return [];
     }
@@ -65,7 +110,11 @@ class ApiTournamentRepository implements TournamentRepository {
       }
       return null;
     } catch (_) {
-      return null;
+      try {
+        return _cachedTournaments.firstWhere((t) => t.id == tournamentId);
+      } catch (_) {
+        return null;
+      }
     }
   }
 

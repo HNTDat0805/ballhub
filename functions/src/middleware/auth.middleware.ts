@@ -12,18 +12,30 @@ import { UserRole } from '../types/auth.types';
  */
 export async function authenticate(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    // 1. Dev / Test header support for development & integration tests
+    const isDevOrTest = process.env.NODE_ENV !== 'production';
+
+    // 1. Dev / Test header support (CHỈ cho phép trong môi trường Development & Test cục bộ)
     const devUserId = req.headers['x-user-id'] as string | undefined;
     const devUserRole = req.headers['x-user-role'] as string | undefined;
-    if (devUserId) {
+    if (isDevOrTest && devUserId) {
       const role = (devUserRole && Object.values(UserRole).includes(devUserRole as UserRole))
         ? (devUserRole as UserRole)
         : UserRole.viewer;
 
+      let devUserName = devUserId;
+      const rawHeaderName = req.headers['x-user-name'] as string | undefined;
+      if (rawHeaderName) {
+        try {
+          devUserName = decodeURIComponent(rawHeaderName);
+        } catch (_) {
+          devUserName = rawHeaderName;
+        }
+      }
+
       req.user = {
         uid: devUserId,
         email: (req.headers['x-user-email'] as string) || `${devUserId}@ballhub.vn`,
-        name: (req.headers['x-user-name'] as string) || devUserId,
+        name: devUserName,
         role: role,
         teamId: req.headers['x-user-team'] as string | undefined,
       };
@@ -43,8 +55,8 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
       return next();
     }
 
-    // Check mock dev token format (e.g. "mock-token-user_organizer_01-organizer")
-    if (token.startsWith('mock-token-')) {
+    // Check mock dev token format (CHỈ cho phép trong môi trường Development & Test cục bộ)
+    if (isDevOrTest && token.startsWith('mock-token-')) {
       const parts = token.replace('mock-token-', '').split('-');
       const uid = parts[0] || 'dev_user';
       const roleStr = parts[1] || 'viewer';

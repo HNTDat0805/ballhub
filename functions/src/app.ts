@@ -16,7 +16,27 @@ import { slotRouter } from './routes/slot.routes';
 export const app = express();
 
 // Middlewares
-app.use(cors({ origin: true }));
+const isProduction = process.env.NODE_ENV === 'production';
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim())
+  : ['https://ballhub.vn', 'https://ballhub-ac5a7.web.app', 'https://ballhub-ac5a7.firebaseapp.com'];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Cho phép requests không có origin (ví dụ: Flutter Mobile Client qua Http, Postman)
+      if (!origin) return callback(null, true);
+      // Môi trường development & local emulator cho phép toàn bộ origin
+      if (!isProduction) return callback(null, true);
+      // Trên Production, bắt buộc origin phải nằm trong whitelist được cấp phép
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error('Chính sách bảo mật CORS chặn truy cập từ Origin này.'));
+    },
+    credentials: true,
+  })
+);
 app.use(express.json());
 app.use(authenticate);
 

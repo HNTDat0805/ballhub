@@ -6,8 +6,8 @@ import 'features/booking/presentation/screens/booking_home_screen.dart';
 import 'features/tournament/data/api_tournament_repository.dart';
 import 'features/tournament/data/tournament_repository.dart';
 import 'features/tournament/presentation/controllers/tournament_controller.dart';
-import 'features/tournament/presentation/screens/tournament_list_screen.dart';
 import 'firebase_options.dart';
+import 'screens/auth_gate.dart';
 
 /// Điểm khởi nhập (Entry Point) của ứng dụng Ballhub.
 ///
@@ -158,3 +158,4 @@ class _AppBottomNav extends StatelessWidget {
     );
   }
 }
+

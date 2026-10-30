@@ -76,7 +76,8 @@ class ApiClient {
       'Authorization': 'Bearer mock-token-${user.id}-${user.role.name}',
       'x-user-id': user.id,
       'x-user-role': user.role.name,
-      'x-user-name': user.name,
+      // Mã hóa URI component để tránh lỗi ISO-8859-1 của trình duyệt web khi tên chứa ký tự tiếng Việt
+      'x-user-name': Uri.encodeComponent(user.name),
       if (user.teamId != null) 'x-user-team': user.teamId!,
     };
   }
