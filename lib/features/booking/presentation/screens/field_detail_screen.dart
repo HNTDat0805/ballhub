@@ -1,13 +1,22 @@
 import 'package:flutter/material.dart';
-import '../../../../core/auth/auth_context.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../data/booking_repository.dart';
 import '../../domain/models/field_slot.dart';
-import '../controllers/booking_controllers.dart';
-import '../widgets/booking_widgets.dart';
-import 'slot_selection_screen.dart';
+import '../../domain/models/football_field.dart';
 
-/// Màn hình chi tiết sân bóng — hiển thị thông tin đầy đủ và danh sách slot
+/// Màn hình Chi tiết Sân bóng & Chọn lịch đặt sân (Page 8 - figma.pdf)
+///
+/// Bố cục chuẩn Figma Material 3:
+/// - AppBar: `← Chi tiết sân` + Icon yêu thích 🤍
+/// - Hero Image: Ảnh sân thực tế từ Database / Fallback gradient
+/// - Thông tin: Tên sân, Đánh giá, Địa chỉ thực tế
+/// - Tiện ích: Đèn LED, Giữ xe, Phòng tắm (lấy từ field.amenities)
+/// - Chọn lịch trống:
+///   - Horizontal Date Picker: 7 ngày tiếp theo tính từ thời điểm hiện tại
+///   - Chú thích: `□ Còn trống` | `✓ Đang chọn` | `▧ Đã đặt`
+///   - Ma trận khung giờ (Slot Matrix): Dữ liệu lấy từ API/Database
+/// - Bottom Sticky Booking Bar:
+///   - Giá, mô tả khung giờ chọn, chính sách hủy 24h, Nút `→ Đặt sân`
 class FieldDetailScreen extends StatefulWidget {
   final String fieldId;
   final BookingRepository repository;
@@ -23,445 +32,738 @@ class FieldDetailScreen extends StatefulWidget {
 }
 
 class _FieldDetailScreenState extends State<FieldDetailScreen> {
-  late final FieldDetailController _controller;
-  late final SlotSelectionController _slotCtrl;
-  late final PageController _imageController;
+  FootballField? _field;
+  List<FieldSlot> _slots = [];
+  bool _isLoadingField = true;
+  bool _isLoadingSlots = false;
+  String? _errorMessage;
+  bool _isSubmitting = false;
+
+  int _selectedDayIndex = 0;
+  String? _selectedSlotId;
+  bool _isFavorite = false;
+
+  late final List<DateTime> _days;
 
   @override
   void initState() {
     super.initState();
-    _controller = FieldDetailController(repository: widget.repository);
-    _slotCtrl = SlotSelectionController();
-    _imageController = PageController();
-    _controller.addListener(_onUpdate);
-    _slotCtrl.addListener(_onUpdate);
-    _controller.loadField(widget.fieldId);
+    final now = DateTime.now();
+    _days = List.generate(7, (i) => DateTime(now.year, now.month, now.day + i));
+    _loadField();
   }
 
-  void _onUpdate() {
-    if (mounted) setState(() {});
+  String _formatDateKey(DateTime dt) {
+    return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
   }
 
-  @override
-  void dispose() {
-    _controller.removeListener(_onUpdate);
-    _slotCtrl.removeListener(_onUpdate);
-    _controller.dispose();
-    _slotCtrl.dispose();
-    _imageController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_controller.isLoading) {
-      return Scaffold(
-        appBar: AppBar(),
-        body: const BookingLoadingState(message: 'Đang tải thông tin sân...'),
-      );
+  String _weekdayLabel(int weekday) {
+    switch (weekday) {
+      case DateTime.monday:
+        return 'T2';
+      case DateTime.tuesday:
+        return 'T3';
+      case DateTime.wednesday:
+        return 'T4';
+      case DateTime.thursday:
+        return 'T5';
+      case DateTime.friday:
+        return 'T6';
+      case DateTime.saturday:
+        return 'T7';
+      case DateTime.sunday:
+        return 'CN';
+      default:
+        return '';
     }
-
-    if (_controller.errorMessage != null && _controller.field == null) {
-      return Scaffold(
-        appBar: AppBar(),
-        body: BookingErrorState(
-          message: _controller.errorMessage!,
-          onRetry: () => _controller.loadField(widget.fieldId),
-        ),
-      );
-    }
-
-    final field = _controller.field;
-    if (field == null) return const SizedBox.shrink();
-
-    return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          // App bar with cover image
-          SliverAppBar(
-            expandedHeight: 240,
-            pinned: true,
-            flexibleSpace: FlexibleSpaceBar(
-              background: _buildImageCarousel(field.imageUrls.isNotEmpty
-                  ? field.imageUrls
-                  : field.coverImageUrl.isNotEmpty
-                      ? [field.coverImageUrl]
-                      : []),
-            ),
-            title: Text(
-              field.name,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                shadows: [Shadow(color: Colors.black54, blurRadius: 4)],
-              ),
-            ),
-            leading: const BackButton(color: Colors.white),
-          ),
-          // Content
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Name + status row
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          field.name,
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.textPrimary,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      FieldStatusBadge(status: field.status),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  // Address
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(Icons.location_on_rounded, size: 16, color: AppTheme.primaryGreen),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          field.address,
-                          style: const TextStyle(fontSize: 14, color: AppTheme.textSecondary),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  // Key info chips
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      _InfoChip(icon: Icons.people_rounded, label: 'Sân ${field.fieldType}'),
-                      _InfoChip(icon: Icons.group_rounded, label: '${field.capacity} người'),
-                      _InfoChip(
-                        icon: Icons.payments_outlined,
-                        label: '${_fmtPrice(field.basePrice)} ${field.currency}/giờ',
-                        color: AppTheme.primaryGreen,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  // Description
-                  if (field.description.isNotEmpty) ...[
-                    const Text(
-                      'Mô tả',
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(field.description, style: const TextStyle(color: AppTheme.textSecondary, height: 1.5)),
-                    const SizedBox(height: 16),
-                  ],
-                  // Amenities
-                  if (field.amenities.isNotEmpty) ...[
-                    const Text(
-                      'Tiện nghi',
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: field.amenities.map((a) => _AmenityChip(label: a)).toList(),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                  const Divider(),
-                  const SizedBox(height: 8),
-                  // Date selector
-                  const Text(
-                    'Chọn khung giờ',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 10),
-                  _DateSelector(
-                    selectedDateKey: _controller.selectedDateKey,
-                    onDateSelected: (dateKey) {
-                      _slotCtrl.clearSelection();
-                      _controller.selectDate(dateKey);
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  // Slot list
-                  _buildSlotList(),
-                  // Bottom padding
-                  const SizedBox(height: 100),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-      // Bottom CTA
-      bottomNavigationBar: _slotCtrl.hasSelection
-          ? PriceSelectionBar(
-              totalAmount: _slotCtrl.totalAmount,
-              currency: _slotCtrl.currency,
-              slotCount: _slotCtrl.selectedSlots.length,
-              totalMinutes: _slotCtrl.totalMinutes,
-              onContinue: _goToBooking,
-            )
-          : const _BookingHintBar(),
-    );
   }
 
-  Widget _buildImageCarousel(List<String> urls) {
-    if (urls.isEmpty) {
-      return Container(
-        color: AppTheme.primaryGreen.withValues(alpha: 0.2),
-        child: Center(
-          child: Icon(
-            Icons.sports_soccer,
-            size: 80,
-            color: AppTheme.primaryGreen.withValues(alpha: 0.4),
-          ),
-        ),
-      );
-    }
-    return PageView.builder(
-      controller: _imageController,
-      itemCount: urls.length,
-      itemBuilder: (_, index) => Image.network(
-        urls[index],
-        fit: BoxFit.cover,
-        errorBuilder: (ctx, err, st) => Container(
-          color: AppTheme.primaryGreen.withValues(alpha: 0.2),
-          child: const Icon(Icons.sports_soccer, size: 80, color: AppTheme.primaryGreen),
-        ),
-      ),
-    );
+  String _formatMoney(int amount) {
+    return '${amount.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}đ';
   }
 
-  Widget _buildSlotList() {
-    final slots = _controller.slots;
-
-    if (_controller.isLoading) {
-      return const SizedBox(
-        height: 120,
-        child: BookingLoadingState(message: 'Đang tải khung giờ...'),
-      );
-    }
-
-    if (slots.isEmpty) {
-      return const BookingEmptyState(
-        title: 'Chưa có khung giờ nào',
-        subtitle: 'Sân chưa cài đặt lịch cho ngày này.',
-        icon: Icons.event_busy_rounded,
-      );
-    }
-
-    return Column(
-      children: slots.map((slot) {
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: TimeSlotTile(
-            slot: slot,
-            isSelected: _slotCtrl.isSelected(slot.id),
-            onTap: () => _onSlotTap(slot),
-          ),
-        );
-      }).toList(),
-    );
+  String _formatTime(DateTime dt) {
+    return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
   }
 
-  void _onSlotTap(FieldSlot slot) {
-    final error = _slotCtrl.toggleSlot(slot);
-    if (error != null && mounted) {
+  Future<void> _loadField() async {
+    setState(() {
+      _isLoadingField = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final f = await widget.repository.getFieldById(widget.fieldId);
+      if (!mounted) return;
+      setState(() {
+        _field = f;
+        _isLoadingField = false;
+      });
+      _loadSlotsForDay(_selectedDayIndex);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingField = false;
+        _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      });
+    }
+  }
+
+  Future<void> _loadSlotsForDay(int dayIndex) async {
+    final dateKey = _formatDateKey(_days[dayIndex]);
+    setState(() {
+      _isLoadingSlots = true;
+      _selectedSlotId = null;
+    });
+
+    try {
+      final slots = await widget.repository.getFieldSlots(
+        widget.fieldId,
+        dateKey: dateKey,
+      );
+      if (!mounted) return;
+      setState(() {
+        _slots = slots;
+        _isLoadingSlots = false;
+        // Tự động chọn slot còn trống đầu tiên nếu có
+        final available = slots.where((s) => s.status == FieldSlotStatus.available);
+        if (available.isNotEmpty) {
+          _selectedSlotId = available.first.id;
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _slots = [];
+        _isLoadingSlots = false;
+      });
+    }
+  }
+
+  FieldSlot? get _selectedSlot {
+    if (_selectedSlotId == null) return null;
+    final found = _slots.where((s) => s.id == _selectedSlotId);
+    return found.isNotEmpty ? found.first : null;
+  }
+
+  Future<void> _onBookPressed() async {
+    final slot = _selectedSlot;
+    if (slot == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(error),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: AppTheme.warningOrange,
-        ),
-      );
-    }
-  }
-
-  void _goToBooking() {
-    final user = AuthContext.instance.currentUser;
-    if (!user.canBook) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Vui lòng đăng nhập để đặt sân.'),
-          behavior: SnackBarBehavior.floating,
-        ),
+        const SnackBar(content: Text('Vui lòng chọn một khung giờ còn trống')),
       );
       return;
     }
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => SlotSelectionScreen(
-          field: _controller.field!,
-          selectedSlots: _slotCtrl.selectedSlots.toList(),
-          totalAmount: _slotCtrl.totalAmount,
-          currency: _slotCtrl.currency,
-          repository: widget.repository,
+    final field = _field;
+    if (field == null) return;
+
+    final selectedDate = _days[_selectedDayIndex];
+    final dateStr = '${_weekdayLabel(selectedDate.weekday)}, ${selectedDate.day}/${selectedDate.month}/${selectedDate.year}';
+    final timeStr = '${_formatTime(slot.startsAt)} – ${_formatTime(slot.endsAt)}';
+    final priceStr = _formatMoney(slot.basePrice > 0 ? slot.basePrice : field.basePrice);
+
+    final confirmed = await showModalBottomSheet<bool>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Xác nhận đặt ${field.name}',
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Khung giờ: $timeStr ($dateStr)\nLoại sân: ${field.fieldType.isNotEmpty ? field.fieldType : 'Sân tiêu chuẩn'}\nĐịa chỉ: ${field.address.isNotEmpty ? field.address : '${field.district}, ${field.city}'}\nTổng thanh toán: $priceStr',
+              style: const TextStyle(fontSize: 14, height: 1.6, color: AppTheme.textSecondary),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Xác nhận giữ chỗ ngay'),
+            ),
+          ],
         ),
       ),
     );
+
+    if (confirmed != true) return;
+
+    setState(() => _isSubmitting = true);
+    try {
+      await widget.repository.createBooking(
+        fieldId: field.id,
+        slotIds: [slot.id],
+      );
+      if (!mounted) return;
+      setState(() => _isSubmitting = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Đặt sân thành công! Bạn có thể xem lịch trong mục Cá nhân.'),
+          backgroundColor: AppTheme.primaryDarkGreen,
+        ),
+      );
+      _loadSlotsForDay(_selectedDayIndex);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSubmitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: AppTheme.errorRed,
+        ),
+      );
+    }
   }
-
-  static String _fmtPrice(int price) {
-    if (price >= 1000000) return '${(price / 1000000).toStringAsFixed(1)}M';
-    if (price >= 1000) return '${(price / 1000).toStringAsFixed(0)}K';
-    return price.toString();
-  }
-}
-
-class _InfoChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color? color;
-
-  const _InfoChip({required this.icon, required this.label, this.color});
 
   @override
   Widget build(BuildContext context) {
-    final c = color ?? AppTheme.darkNavy;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: c.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: c),
-          const SizedBox(width: 6),
-          Text(label, style: TextStyle(fontSize: 13, color: c, fontWeight: FontWeight.w500)),
+    if (_isLoadingField) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(title: const Text('Chi tiết sân')),
+        body: const Center(
+          child: CircularProgressIndicator(color: AppTheme.primaryDarkGreen),
+        ),
+      );
+    }
+
+    if (_errorMessage != null || _field == null) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(title: const Text('Chi tiết sân')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, size: 56, color: AppTheme.errorRed),
+                const SizedBox(height: 16),
+                Text(
+                  _errorMessage ?? 'Không tìm thấy thông tin sân bóng',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 16, color: AppTheme.textPrimary),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: _loadField,
+                  child: const Text('Tải lại'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    final field = _field!;
+    final selectedSlot = _selectedSlot;
+    final slotPrice = selectedSlot != null && selectedSlot.basePrice > 0
+        ? selectedSlot.basePrice
+        : field.basePrice;
+
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: Text(field.name),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
+        actions: [
+          IconButton(
+            icon: Icon(
+              _isFavorite ? Icons.favorite : Icons.favorite_border,
+              color: _isFavorite ? Colors.red : AppTheme.textPrimary,
+            ),
+            onPressed: () => setState(() => _isFavorite = !_isFavorite),
+          ),
         ],
       ),
-    );
-  }
-}
-
-class _AmenityChip extends StatelessWidget {
-  final String label;
-
-  const _AmenityChip({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Chip(
-      label: Text(label, style: const TextStyle(fontSize: 12)),
-      backgroundColor: Colors.white,
-      side: const BorderSide(color: Color(0xFFE0E0E0)),
-      visualDensity: VisualDensity.compact,
-    );
-  }
-}
-
-class _DateSelector extends StatelessWidget {
-  final String selectedDateKey;
-  final ValueChanged<String> onDateSelected;
-
-  const _DateSelector({
-    required this.selectedDateKey,
-    required this.onDateSelected,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final today = DateTime.now();
-    // Show next 7 days
-    final days = List.generate(7, (i) => today.add(Duration(days: i)));
-
-    return SizedBox(
-      height: 72,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: days.length,
-        separatorBuilder: (ctx, idx) => const SizedBox(width: 8),
-        itemBuilder: (_, index) {
-          final day = days[index];
-          final key = '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
-          final isSelected = key == selectedDateKey;
-          final weekDay = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'][day.weekday - 1];
-
-          return GestureDetector(
-            onTap: () => onDateSelected(key),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              width: 52,
-              decoration: BoxDecoration(
-                color: isSelected ? AppTheme.primaryGreen : Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: isSelected ? AppTheme.primaryGreen : const Color(0xFFE0E0E0),
+      body: Column(
+        children: [
+          Expanded(
+            child: ListView(
+              padding: EdgeInsets.zero,
+              children: [
+                // Cover Image
+                Container(
+                  height: 200,
+                  width: double.infinity,
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Color(0xFF15803D), Color(0xFF166534)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  child: field.coverImageUrl.isNotEmpty
+                      ? Image.network(
+                          field.coverImageUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (ctx, err, stack) => const Center(
+                            child: Icon(Icons.stadium, size: 80, color: Colors.white24),
+                          ),
+                        )
+                      : const Center(
+                          child: Icon(Icons.stadium, size: 80, color: Colors.white24),
+                        ),
                 ),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+
+                // Thông tin sân
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Tên & Đánh giá
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              field.name,
+                              style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.textPrimary,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFEF3C7),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(Icons.star, size: 16, color: AppTheme.accentGold),
+                                SizedBox(width: 4),
+                                Text(
+                                  '4.8',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF92400E),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+
+                      // Địa chỉ
+                      Row(
+                        children: [
+                          const Icon(Icons.location_on_outlined, size: 16, color: AppTheme.textMuted),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              field.address.isNotEmpty
+                                  ? field.address
+                                  : '${field.district}, ${field.city}',
+                              style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Hàng tiện ích thực tế
+                      if (field.amenities.isNotEmpty)
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 8,
+                          children: field.amenities.map((a) {
+                            return _AmenityPill(
+                              icon: _mapAmenityIcon(a),
+                              label: a,
+                            );
+                          }).toList(),
+                        )
+                      else
+                        const Row(
+                          children: [
+                            _AmenityPill(icon: Icons.lightbulb_outline, label: 'Đèn chiếu sáng'),
+                            SizedBox(width: 12),
+                            _AmenityPill(icon: Icons.directions_car_outlined, label: 'Chỗ gửi xe'),
+                            SizedBox(width: 12),
+                            _AmenityPill(icon: Icons.sports_soccer, label: 'Bóng & Áo bib'),
+                          ],
+                        ),
+                      const SizedBox(height: 24),
+                      const Divider(height: 1, color: AppTheme.borderColor),
+                      const SizedBox(height: 16),
+
+                      // Header Chọn lịch trống
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Chọn lịch trống',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.textPrimary,
+                            ),
+                          ),
+                          Text(
+                            field.fieldType.isNotEmpty ? field.fieldType : 'Sân tiêu chuẩn',
+                            style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Horizontal Date Picker (7 ngày thực)
+                      SizedBox(
+                        height: 64,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _days.length,
+                          separatorBuilder: (context, index) => const SizedBox(width: 10),
+                          itemBuilder: (context, i) {
+                            final date = _days[i];
+                            final active = _selectedDayIndex == i;
+                            final dayLabel = _weekdayLabel(date.weekday);
+                            final dateLabel = '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}';
+
+                            return GestureDetector(
+                              onTap: () {
+                                setState(() => _selectedDayIndex = i);
+                                _loadSlotsForDay(i);
+                              },
+                              child: Container(
+                                width: 58,
+                                decoration: BoxDecoration(
+                                  color: active ? AppTheme.primaryDarkGreen : Colors.white,
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color: active ? AppTheme.primaryDarkGreen : AppTheme.borderColor,
+                                  ),
+                                ),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      dayLabel,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: active ? Colors.white70 : AppTheme.textSecondary,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      dateLabel,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                        color: active ? Colors.white : AppTheme.textPrimary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Chú thích Status Legend
+                      const Row(
+                        children: [
+                          _LegendItem(color: Colors.white, borderColor: AppTheme.borderColor, label: 'Còn trống'),
+                          SizedBox(width: 16),
+                          _LegendItem(
+                            color: AppTheme.primaryLightGreen,
+                            borderColor: AppTheme.primaryDarkGreen,
+                            label: 'Đang chọn',
+                            hasCheck: true,
+                          ),
+                          SizedBox(width: 16),
+                          _LegendItem(color: Color(0xFFF3F4F6), borderColor: Color(0xFFE5E7EB), label: 'Đã đặt'),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Slot Matrix từ Database
+                      if (_isLoadingSlots)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 24),
+                          child: Center(
+                            child: CircularProgressIndicator(color: AppTheme.primaryDarkGreen),
+                          ),
+                        )
+                      else if (_slots.isEmpty)
+                        Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF9FAFB),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppTheme.borderColor),
+                          ),
+                          child: const Center(
+                            child: Column(
+                              children: [
+                                Icon(Icons.event_busy, size: 36, color: AppTheme.textMuted),
+                                SizedBox(height: 8),
+                                Text(
+                                  'Chưa có khung giờ nào được mở trong ngày này',
+                                  style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      else
+                        GridView.builder(
+                          physics: const NeverScrollableScrollPhysics(),
+                          shrinkWrap: true,
+                          itemCount: _slots.length,
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            childAspectRatio: 2.2,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                          ),
+                          itemBuilder: (context, idx) {
+                            final slot = _slots[idx];
+                            final isAvailable = slot.status == FieldSlotStatus.available;
+                            final isSelected = _selectedSlotId == slot.id;
+                            final timeLabel = '${_formatTime(slot.startsAt)} – ${_formatTime(slot.endsAt)}';
+                            final priceLabel = isAvailable
+                                ? (slot.basePrice > 0 ? _formatMoney(slot.basePrice) : _formatMoney(field.basePrice))
+                                : 'Đã đặt';
+
+                            return GestureDetector(
+                              onTap: isAvailable
+                                  ? () => setState(() => _selectedSlotId = slot.id)
+                                  : null,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? AppTheme.primaryLightGreen
+                                      : !isAvailable
+                                          ? const Color(0xFFF3F4F6)
+                                          : Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? AppTheme.primaryDarkGreen
+                                        : !isAvailable
+                                            ? const Color(0xFFE5E7EB)
+                                            : AppTheme.borderColor,
+                                    width: isSelected ? 1.5 : 1,
+                                  ),
+                                ),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        if (isSelected) ...[
+                                          const Icon(Icons.check, size: 14, color: AppTheme.primaryDarkGreen),
+                                          const SizedBox(width: 4),
+                                        ],
+                                        Expanded(
+                                          child: Text(
+                                            timeLabel,
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.bold,
+                                              color: !isAvailable ? AppTheme.textMuted : AppTheme.textPrimary,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      priceLabel,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: !isAvailable
+                                            ? AppTheme.textMuted
+                                            : isSelected
+                                                ? AppTheme.primaryDarkGreen
+                                                : AppTheme.textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      const SizedBox(height: 24),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Sticky Bottom Bar
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              border: Border(top: BorderSide(color: AppTheme.borderColor)),
+            ),
+            child: SafeArea(
+              child: Row(
                 children: [
-                  Text(
-                    weekDay,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: isSelected ? Colors.white70 : AppTheme.textSecondary,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _formatMoney(slotPrice),
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            color: AppTheme.primaryDarkGreen,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          selectedSlot != null
+                              ? '${_formatTime(selectedSlot.startsAt)} – ${_formatTime(selectedSlot.endsAt)}'
+                              : 'Chưa chọn khung giờ',
+                          style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                        ),
+                        const SizedBox(height: 2),
+                        const Text(
+                          'Hủy miễn phí trước giờ nhận sân 24 giờ.',
+                          style: TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${day.day}',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: isSelected ? Colors.white : AppTheme.textPrimary,
-                    ),
-                  ),
-                  Text(
-                    '/${day.month}',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: isSelected ? Colors.white70 : AppTheme.textSecondary,
-                    ),
+                  ElevatedButton(
+                    onPressed: _isSubmitting || selectedSlot == null ? null : _onBookPressed,
+                    child: _isSubmitting
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.arrow_forward, size: 16),
+                              SizedBox(width: 6),
+                              Text('Đặt sân'),
+                            ],
+                          ),
                   ),
                 ],
               ),
             ),
-          );
-        },
+          ),
+        ],
       ),
+    );
+  }
+
+  IconData _mapAmenityIcon(String name) {
+    final lower = name.toLowerCase();
+    if (lower.contains('đèn') || lower.contains('led') || lower.contains('sáng')) {
+      return Icons.lightbulb_outline;
+    }
+    if (lower.contains('xe') || lower.contains('đỗ')) {
+      return Icons.directions_car_outlined;
+    }
+    if (lower.contains('tắm') || lower.contains('nước')) {
+      return Icons.shower_outlined;
+    }
+    if (lower.contains('wifi')) {
+      return Icons.wifi;
+    }
+    return Icons.check_circle_outline;
+  }
+}
+
+class _AmenityPill extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _AmenityPill({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 16, color: AppTheme.primaryDarkGreen),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+        ),
+      ],
     );
   }
 }
 
-class _BookingHintBar extends StatelessWidget {
-  const _BookingHintBar();
+class _LegendItem extends StatelessWidget {
+  final Color color;
+  final Color borderColor;
+  final String label;
+  final bool hasCheck;
+
+  const _LegendItem({
+    required this.color,
+    required this.borderColor,
+    required this.label,
+    this.hasCheck = false,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-      color: Colors.white,
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: null,
-            icon: const Icon(Icons.touch_app_rounded),
-            label: const Text('Chọn khung giờ để đặt sân'),
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 14),
-            ),
+    return Row(
+      children: [
+        Container(
+          width: 14,
+          height: 14,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(color: borderColor),
           ),
+          child: hasCheck
+              ? const Icon(Icons.check, size: 10, color: AppTheme.primaryDarkGreen)
+              : null,
         ),
-      ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+        ),
+      ],
     );
   }
 }

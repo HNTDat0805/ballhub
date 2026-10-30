@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/auth/auth_context.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../domain/models/match.dart';
 import '../../domain/models/standings_row.dart';
 import '../../domain/models/tournament.dart';
@@ -266,65 +267,271 @@ class _TournamentDetailScreenState extends State<TournamentDetailScreen>
   }
 
   // -----------------------------------------------------------
-  // TAB 1: TỔNG QUAN (OVERVIEW)
+  // TAB 1: TỔNG QUAN (OVERVIEW - FIGMA PAGE 6)
   // -----------------------------------------------------------
   Widget _buildOverviewTab(BuildContext context, Tournament tournament, bool isOrganizer) {
-    final startStr = '${tournament.startDate.day}/${tournament.startDate.month}/${tournament.startDate.year}';
-    final endStr = '${tournament.endDate.day}/${tournament.endDate.month}/${tournament.endDate.year}';
-    final deadlineStr = '${tournament.registrationDeadline.day}/${tournament.registrationDeadline.month}/${tournament.registrationDeadline.year}';
-
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Tournament Header Card
-          Card(
-            margin: EdgeInsets.zero,
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1A237E).withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          tournament.format.displayName,
-                          style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1A237E)),
-                        ),
-                      ),
-                      TournamentStatusBadge(status: tournament.status),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  Text(
-                    tournament.name,
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  if (tournament.description.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Text(tournament.description, style: TextStyle(color: Colors.grey.shade700, height: 1.4)),
-                  ],
-                  const SizedBox(height: 16),
-                  const Divider(height: 1),
-                  const SizedBox(height: 12),
-                  _buildInfoRow(Icons.location_on, 'Địa điểm', tournament.location),
-                  _buildInfoRow(Icons.calendar_today, 'Thời gian giải đấu', '$startStr đến $endStr'),
-                  _buildInfoRow(Icons.how_to_reg, 'Hạn chót đăng ký', deadlineStr),
-                  _buildInfoRow(Icons.person, 'Người tổ chức', '${tournament.organizerName} (ID: ${tournament.organizerId})'),
-                  _buildInfoRow(Icons.groups, 'Quy mô', 'Tối đa ${tournament.maxTeams} đội bóng'),
-                ],
+          // 1. HERO GRADIENT CARD (Chuẩn Trang 6 - figma.pdf)
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryDarkGreen,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CircleAvatar(radius: 3, backgroundColor: Colors.white),
+                          SizedBox(width: 5),
+                          Text(
+                            'Đang diễn ra',
+                            style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.emoji_events_outlined, color: Colors.white24, size: 36),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  tournament.name,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '${tournament.startDate.day}/${tournament.startDate.month}/${tournament.startDate.year} – ${tournament.endDate.day}/${tournament.endDate.month}/${tournament.endDate.year} · ${tournament.location}',
+                  style: const TextStyle(color: Colors.white70, fontSize: 13),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Tối đa ${tournament.maxTeams} đội tham gia · ${tournament.format.displayName}',
+                  style: const TextStyle(color: Colors.white70, fontSize: 13),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
+
+          // 2. BẢNG XẾP HẠNG (Lấy dữ liệu thực từ database)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Bảng xếp hạng',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+              ),
+              GestureDetector(
+                onTap: () => _tabController.animateTo(3),
+                child: const Text(
+                  'Chi tiết →',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.primaryDarkGreen),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          StreamBuilder<List<StandingsRow>>(
+            stream: widget.controller.watchStandings(tournament.id),
+            builder: (context, snap) {
+              final rows = snap.data ?? [];
+              if (rows.isEmpty) {
+                return Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppTheme.borderColor),
+                  ),
+                  child: const Center(
+                    child: Text(
+                      'Chưa có dữ liệu bảng xếp hạng cho giải đấu này',
+                      style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                    ),
+                  ),
+                );
+              }
+
+              return Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppTheme.borderColor),
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFF8F9FA),
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                      ),
+                      child: const Row(
+                        children: [
+                          SizedBox(width: 24, child: Text('#', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.textMuted))),
+                          Expanded(child: Text('ĐỘI THAM GIA', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.textMuted))),
+                          SizedBox(width: 32, child: Text('TR', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.textMuted))),
+                          SizedBox(width: 36, child: Text('HS', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.textMuted))),
+                          SizedBox(width: 32, child: Text('Đ', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.textMuted))),
+                        ],
+                      ),
+                    ),
+                    ...rows.take(5).map((r) => Column(
+                          children: [
+                            _standingsMiniRow(
+                              r.rank.toString(),
+                              r.teamName,
+                              r.played.toString(),
+                              r.goalDifference >= 0 ? '+${r.goalDifference}' : '${r.goalDifference}',
+                              r.points.toString(),
+                              r.rank <= 2 ? AppTheme.primaryDarkGreen : AppTheme.textPrimary,
+                            ),
+                            const Divider(height: 1, indent: 40, color: AppTheme.borderColor),
+                          ],
+                        )),
+                  ],
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 24),
+
+          // 3. TRẬN ĐẤU & KẾT QUẢ TỪ DATABASE
+          StreamBuilder<List<TournamentMatch>>(
+            stream: widget.controller.watchMatches(tournament.id),
+            builder: (context, snap) {
+              final matches = snap.data ?? [];
+              final upcoming = matches.where((m) => m.status == MatchStatus.scheduled).toList();
+              final finished = matches.where((m) => m.status == MatchStatus.finished).toList();
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Trận đấu sắp diễn ra',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                  ),
+                  const SizedBox(height: 8),
+                  if (upcoming.isEmpty)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppTheme.borderColor),
+                      ),
+                      child: const Text('Chưa có lịch thi đấu tiếp theo', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                    )
+                  else
+                    ...upcoming.take(2).map((m) => Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: AppTheme.borderColor),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text('Vòng ${m.round}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.primaryLightGreen,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: const Text('Sắp diễn ra', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.primaryDarkGreen)),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text('${m.homeTeamName} — ${m.awayTeamName}', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                              if (m.venue.isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                Text(m.venue, style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                              ],
+                            ],
+                          ),
+                        )),
+                  const SizedBox(height: 24),
+
+                  const Text(
+                    'Kết quả gần nhất',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                  ),
+                  const SizedBox(height: 8),
+                  if (finished.isEmpty)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppTheme.borderColor),
+                      ),
+                      child: const Text('Chưa có kết quả trận đấu', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                    )
+                  else
+                    ...finished.take(2).map((m) => Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: AppTheme.borderColor),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text('${m.homeTeamName} ${m.scoreDisplay} ${m.awayTeamName}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF3F4F6),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Text('Kết thúc', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.textSecondary)),
+                              ),
+                            ],
+                          ),
+                        )),
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 24),
 
           // Organizer Status Transition Controls
           if (isOrganizer) ...[
@@ -375,26 +582,6 @@ class _TournamentDetailScreenState extends State<TournamentDetailScreen>
             ),
             const SizedBox(height: 16),
           ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(IconData icon, String title, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 16, color: Colors.grey.shade600),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 140,
-            child: Text(title, style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
-          ),
-          Expanded(
-            child: Text(value, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-          ),
         ],
       ),
     );
@@ -794,6 +981,53 @@ class _TournamentDetailScreenState extends State<TournamentDetailScreen>
           },
         );
       },
+    );
+  }
+
+  Widget _standingsMiniRow(String rank, String teamName, String played, String gd, String points, Color rankColor) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 24,
+            child: Text(
+              rank,
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: rankColor),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              teamName,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+            ),
+          ),
+          SizedBox(
+            width: 32,
+            child: Text(
+              played,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+            ),
+          ),
+          SizedBox(
+            width: 36,
+            child: Text(
+              gd,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+            ),
+          ),
+          SizedBox(
+            width: 32,
+            child: Text(
+              points,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

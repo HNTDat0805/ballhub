@@ -9,6 +9,7 @@ class AuthService {
   static CollectionReference<Map<String, dynamic>> get users => _db.collection('users');
 
   static String? get uid => _auth.currentUser?.uid;
+  static User? get currentUser => _auth.currentUser;
 
   // Lắng nghe trạng thái đăng nhập
   static Stream<User?> authChanges() => _auth.authStateChanges();

@@ -1,99 +1,130 @@
 import 'package:flutter/material.dart';
 
-/// Hệ thống thiết kế giao diện (Design System) của Ballhub.
+/// Hệ thống thiết kế giao diện (Design System) chuẩn hóa theo Figma Ballhub.
 ///
-/// Sử dụng bảng màu thể thao hiện đại:
-/// - Xanh lá Emerald chủ đạo (sân cỏ)
-/// - Xanh Navy đậm (chuyên nghiệp, sang trọng)
-/// - Vàng ánh kim (cúp vô địch, điểm nhấn)
-/// - Xám nhạt / Trắng (nền, thẻ hiển thị Material 3)
+/// Bảng màu & Phong cách:
+/// - Xanh lục Emerald chủ đạo (`Color(0xFF0F9D58)` / `Color(0xFF0A7C42)`)
+/// - Xanh Navy đậm thể thao (`Color(0xFF0F1E36)`)
+/// - Vàng ánh kim cúp vô địch (`Color(0xFFFFB300)`)
+/// - Nền trung tính sạch (`Color(0xFFF8F9FA)`)
+/// - Border thẻ mảnh mờ chuẩn Figma (`Color(0xFFE5E7EB)`)
 class AppTheme {
-  /// Màu xanh lá emerald chủ đạo tượng trưng cho sân cỏ
+  // --- Bảng màu chính (Brand Colors) ---
   static const Color primaryGreen = Color(0xFF0F9D58);
+  static const Color primaryDarkGreen = Color(0xFF0A7C42);
+  static const Color primaryLightGreen = Color(0xFFE8F5E9);
 
-  /// Màu xanh navy đậm thể thao cho AppBar và Header
-  static const Color darkNavy = Color(0xFF1A237E);
+  static const Color darkNavy = Color(0xFF0F1E36);
+  static const Color secondaryNavy = Color(0xFF1E293B);
 
-  /// Màu nền bề mặt ứng dụng
-  static const Color surfaceColor = Color(0xFFF8F9FA);
-
-  /// Màu nền thẻ dữ liệu
-  static const Color cardColor = Colors.white;
-
-  /// Màu chữ chính
-  static const Color textPrimary = Color(0xFF212121);
-
-  /// Màu chữ phụ (ghi chú, metadata)
-  static const Color textSecondary = Color(0xFF757575);
-
-  /// Màu vàng ánh kim cho huy hiệu cúp và trạng thái nổi bật
   static const Color accentGold = Color(0xFFFFB300);
+  static const Color accentGoldLight = Color(0xFFFFF8E1);
 
-  /// Màu đỏ cảnh báo / nguy hiểm (xóa giải, hủy trận, thẻ đỏ)
-  static const Color dangerRed = Color(0xFFD32F2F);
+  // --- Nền & Viền ---
+  static const Color surfaceColor = Color(0xFFF8F9FA);
+  static const Color cardColor = Colors.white;
+  static const Color borderColor = Color(0xFFE5E7EB);
+  static const Color dividerColor = Color(0xFFF1F5F9);
 
-  /// Màu cam cảnh báo (chờ duyệt, hoãn trận)
-  static const Color warningOrange = Color(0xFFF57C00);
+  // --- Chữ (Typography Colors) ---
+  static const Color textPrimary = Color(0xFF111827);
+  static const Color textSecondary = Color(0xFF6B7280);
+  static const Color textMuted = Color(0xFF9CA3AF);
 
-  /// Cấu hình ThemeData Material 3 chuẩn cho toàn ứng dụng Ballhub
+  // --- Trạng thái (Status Colors) ---
+  static const Color dangerRed = Color(0xFFDC2626);
+  static const Color dangerLightRed = Color(0xFFFEE2E2);
+
+  static const Color warningOrange = Color(0xFFF59E0B);
+  static const Color warningLightOrange = Color(0xFFFEF3C7);
+
+  static const Color liveRed = Color(0xFFEF4444);
+  static const Color errorRed = Color(0xFFDC2626);
+  static const Color infoBlue = Color(0xFF2563EB);
+  static const Color infoLightBlue = Color(0xFFDBEAFE);
+
+  /// Cấu hình ThemeData Material 3 chuẩn cho ứng dụng Ballhub
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
+      fontFamily: null, // Sử dụng system sans-serif font đẹp
       colorScheme: ColorScheme.fromSeed(
         seedColor: primaryGreen,
         primary: primaryGreen,
         secondary: darkNavy,
         surface: surfaceColor,
+        error: dangerRed,
       ),
       scaffoldBackgroundColor: surfaceColor,
       appBarTheme: const AppBarTheme(
-        backgroundColor: darkNavy,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.white,
+        foregroundColor: textPrimary,
         elevation: 0,
+        scrolledUnderElevation: 0,
         centerTitle: false,
         titleTextStyle: TextStyle(
-          color: Colors.white,
+          color: textPrimary,
           fontSize: 20,
           fontWeight: FontWeight.bold,
-          letterSpacing: 0.3,
+          letterSpacing: -0.3,
         ),
+        iconTheme: IconThemeData(color: textPrimary),
       ),
       cardTheme: CardThemeData(
         color: cardColor,
-        elevation: 1.5,
+        elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: borderColor, width: 1),
         ),
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+        hintStyle: const TextStyle(color: textMuted, fontSize: 14),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: borderColor, width: 1),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: borderColor, width: 1),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: primaryGreen, width: 2),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: primaryGreen, width: 1.8),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: dangerRed),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: dangerRed, width: 1),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: primaryGreen,
+          backgroundColor: primaryDarkGreen,
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 15),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          textStyle: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 15,
+            letterSpacing: 0.2,
+          ),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: primaryDarkGreen,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 15),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
           ),
           textStyle: const TextStyle(
             fontWeight: FontWeight.bold,
@@ -101,11 +132,40 @@ class AppTheme {
           ),
         ),
       ),
-      chipTheme: ChipThemeData(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: textPrimary,
+          side: const BorderSide(color: borderColor, width: 1),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          textStyle: const TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+          ),
         ),
-        labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: Colors.white,
+        side: const BorderSide(color: borderColor, width: 1),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        labelStyle: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+          color: textPrimary,
+        ),
+      ),
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        backgroundColor: Colors.white,
+        selectedItemColor: primaryDarkGreen,
+        unselectedItemColor: textMuted,
+        selectedLabelStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+        unselectedLabelStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+        type: BottomNavigationBarType.fixed,
+        elevation: 8,
       ),
     );
   }

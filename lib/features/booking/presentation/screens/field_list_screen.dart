@@ -3,10 +3,19 @@ import '../../../../core/theme/app_theme.dart';
 import '../../data/booking_repository.dart';
 import '../../domain/models/football_field.dart';
 import '../controllers/booking_controllers.dart';
-import '../widgets/booking_widgets.dart';
 import 'field_detail_screen.dart';
 
-/// Màn hình danh sách sân bóng — cho phép search và filter
+/// Màn hình Danh sách Sân bóng (Page 7 - figma.pdf)
+///
+/// Bố cục:
+/// - Header: "Tìm sân bóng" + Icon bản đồ 🗺️
+/// - Search bar: "🔍 Tìm tên sân, địa chỉ"
+/// - Filter chips: `Bình Thạnh ⌄` (active), `Mức giá ⌄`, `7 người ⌄`
+/// - Hàng thông tin: "3 sân phù hợp · Gần bạn nhất" + Nút "Bản đồ"
+/// - Danh sách sân bóng:
+///   1. Sân Gia Định (★ 4,8, 2,4 km, 300.000đ/giờ, Còn giờ trống)
+///   2. Sân Bình Quới (★ 4,8, 3,8 km, 350.000đ/giờ, Còn giờ trống)
+///   3. Sân Thanh Đa (★ 4,8, 4,2 km, 280.000đ/giờ, Kín sân tối nay)
 class FieldListScreen extends StatefulWidget {
   final BookingRepository repository;
 
@@ -19,10 +28,7 @@ class FieldListScreen extends StatefulWidget {
 class _FieldListScreenState extends State<FieldListScreen> {
   late final FieldListController _controller;
   final _searchController = TextEditingController();
-
-  // Danh sách fieldType phổ biến
-  static const _fieldTypes = ['5 người', '7 người', '11 người'];
-  static const _cities = ['Hà Nội', 'TP. Hồ Chí Minh', 'Đà Nẵng', 'Cần Thơ', 'Hải Phòng'];
+  int _selectedFilter = 0; // 0 = Bình Thạnh, 1 = Mức giá, 2 = 7 người
 
   @override
   void initState() {
@@ -47,224 +53,414 @@ class _FieldListScreenState extends State<FieldListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppTheme.surfaceColor,
       appBar: AppBar(
         title: const Text('Tìm sân bóng'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh_rounded),
-            onPressed: _controller.loadFields,
-            tooltip: 'Làm mới',
+            icon: const Icon(Icons.map_outlined),
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Chế độ xem bản đồ đang mở')),
+              );
+            },
+            tooltip: 'Xem bản đồ',
           ),
         ],
       ),
       body: Column(
         children: [
-          _buildSearchAndFilter(),
-          Expanded(child: _buildBody()),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSearchAndFilter() {
-    return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Search bar
-          TextField(
-            controller: _searchController,
-            decoration: InputDecoration(
-              hintText: 'Tìm tên sân...',
-              prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.textSecondary),
-              suffixIcon: _searchController.text.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear_rounded),
-                      onPressed: () {
-                        _searchController.clear();
-                        _controller.setSearchQuery('');
-                        _controller.loadFields();
-                      },
-                    )
-                  : null,
-            ),
-            onSubmitted: (value) {
-              _controller.setSearchQuery(value);
-              _controller.loadFields();
-            },
-            onChanged: (value) {
-              if (value.isEmpty) {
-                _controller.setSearchQuery('');
+          // Thanh tìm kiếm
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Tìm tên sân, địa chỉ',
+                prefixIcon: const Icon(Icons.search, color: AppTheme.textMuted),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, size: 18),
+                        onPressed: () {
+                          _searchController.clear();
+                          _controller.setSearchQuery('');
+                          _controller.loadFields();
+                        },
+                      )
+                    : null,
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              ),
+              onChanged: (val) {
+                _controller.setSearchQuery(val);
                 _controller.loadFields();
-              }
-            },
+              },
+            ),
           ),
-          const SizedBox(height: 10),
-          // Filter chips
-          SizedBox(
-            height: 36,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
+
+          // Filter Chips
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
               children: [
-                // City filter
-                _buildDropdownChip(
-                  label: _controller.cityFilter ?? 'Tất cả thành phố',
-                  items: _cities,
-                  selected: _controller.cityFilter,
-                  onChanged: (v) {
-                    _controller.setCityFilter(v);
-                    _controller.loadFields();
-                  },
-                  onClear: () {
+                _filterChip(
+                  0,
+                  'Tất cả',
+                  onTap: () {
+                    setState(() => _selectedFilter = 0);
                     _controller.setCityFilter(null);
+                    _controller.setFieldTypeFilter(null);
                     _controller.loadFields();
                   },
                 ),
                 const SizedBox(width: 8),
-                // Field type filter
-                _buildDropdownChip(
-                  label: _controller.fieldTypeFilter ?? 'Loại sân',
-                  items: _fieldTypes,
-                  selected: _controller.fieldTypeFilter,
-                  onChanged: (v) {
-                    _controller.setFieldTypeFilter(v);
+                _filterChip(
+                  1,
+                  'TP. Hồ Chí Minh',
+                  onTap: () {
+                    setState(() => _selectedFilter = 1);
+                    _controller.setCityFilter('Hồ Chí Minh');
+                    _controller.setFieldTypeFilter(null);
                     _controller.loadFields();
                   },
-                  onClear: () {
-                    _controller.setFieldTypeFilter(null);
+                ),
+                const SizedBox(width: 8),
+                _filterChip(
+                  2,
+                  'Sân 7 người',
+                  onTap: () {
+                    setState(() => _selectedFilter = 2);
+                    _controller.setCityFilter(null);
+                    _controller.setFieldTypeFilter('7-a-side');
                     _controller.loadFields();
                   },
                 ),
               ],
             ),
           ),
+          const SizedBox(height: 16),
+
+          // Subheader: Số lượng sân thực tế
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  _controller.isLoading
+                      ? 'Đang tìm kiếm sân bóng...'
+                      : '${_controller.fields.length} sân bóng có sẵn',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Chế độ xem bản đồ đang mở')),
+                    );
+                  },
+                  child: const Text(
+                    'Bản đồ',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.primaryDarkGreen,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Danh sách sân bóng từ Database
+          Expanded(
+            child: _controller.isLoading
+                ? const Center(child: CircularProgressIndicator(color: AppTheme.primaryDarkGreen))
+                : _controller.errorMessage != null
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.error_outline, size: 48, color: AppTheme.errorRed),
+                            const SizedBox(height: 12),
+                            Text(
+                              _controller.errorMessage!,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(color: AppTheme.textSecondary),
+                            ),
+                            const SizedBox(height: 12),
+                            ElevatedButton(
+                              onPressed: () => _controller.loadFields(),
+                              child: const Text('Thử lại'),
+                            ),
+                          ],
+                        ),
+                      )
+                    : _controller.fields.isEmpty
+                        ? Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.sports_soccer,
+                                    size: 64,
+                                    color: AppTheme.textMuted.withValues(alpha: 0.5),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  const Text(
+                                    'Chưa có sân bóng nào',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppTheme.textPrimary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  const Text(
+                                    'Hãy thử xóa bộ lọc hoặc kiểm tra lại sau.',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  OutlinedButton.icon(
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      _controller.setSearchQuery('');
+                                      _controller.loadFields();
+                                    },
+                                    icon: const Icon(Icons.refresh),
+                                    label: const Text('Làm mới'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        : RefreshIndicator(
+                            color: AppTheme.primaryDarkGreen,
+                            onRefresh: () => _controller.loadFields(),
+                            child: ListView.builder(
+                              padding: const EdgeInsets.only(bottom: 24),
+                              itemCount: _controller.fields.length,
+                              itemBuilder: (context, index) {
+                                final f = _controller.fields[index];
+                                return _buildDynamicFieldCard(f);
+                              },
+                            ),
+                          ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildDropdownChip({
-    required String label,
-    required List<String> items,
-    String? selected,
-    required ValueChanged<String?> onChanged,
-    required VoidCallback onClear,
-  }) {
-    final isActive = selected != null;
-    return FilterChip(
-      label: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: isActive ? Colors.white : AppTheme.textPrimary,
-            ),
+  Widget _filterChip(int index, String label, {required VoidCallback onTap}) {
+    final active = _selectedFilter == index;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: active ? AppTheme.primaryLightGreen : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: active ? AppTheme.primaryDarkGreen : AppTheme.borderColor,
+            width: active ? 1.5 : 1,
           ),
-          const SizedBox(width: 4),
-          Icon(
-            Icons.arrow_drop_down_rounded,
-            size: 16,
-            color: isActive ? Colors.white : AppTheme.textSecondary,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: active ? FontWeight.bold : FontWeight.w500,
+            color: active ? AppTheme.primaryDarkGreen : AppTheme.textPrimary,
           ),
-        ],
-      ),
-      selected: isActive,
-      selectedColor: AppTheme.primaryGreen,
-      backgroundColor: Colors.white,
-      side: BorderSide(
-        color: isActive ? AppTheme.primaryGreen : const Color(0xFFE0E0E0),
-      ),
-      onSelected: (_) {
-        _showFilterMenu(items, selected, onChanged, onClear);
-      },
-    );
-  }
-
-  void _showFilterMenu(
-    List<String> items,
-    String? selected,
-    ValueChanged<String?> onChanged,
-    VoidCallback onClear,
-  ) {
-    showModalBottomSheet(
-      context: context,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              title: const Text('Tất cả'),
-              trailing: selected == null ? const Icon(Icons.check, color: AppTheme.primaryGreen) : null,
-              onTap: () {
-                onClear();
-                Navigator.pop(ctx);
-              },
-            ),
-            const Divider(height: 1),
-            ...items.map(
-              (item) => ListTile(
-                title: Text(item),
-                trailing: selected == item ? const Icon(Icons.check, color: AppTheme.primaryGreen) : null,
-                onTap: () {
-                  onChanged(item);
-                  Navigator.pop(ctx);
-                },
-              ),
-            ),
-          ],
         ),
       ),
     );
   }
 
-  Widget _buildBody() {
-    if (_controller.isLoading) {
-      return const BookingLoadingState(message: 'Đang tải danh sách sân...');
-    }
+  Widget _buildDynamicFieldCard(FootballField field) {
+    final priceStr = field.basePrice > 0
+        ? '${field.basePrice.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}đ/giờ'
+        : 'Liên hệ giá';
+    final isActive = field.status == FieldStatus.active;
 
-    if (_controller.errorMessage != null) {
-      return BookingErrorState(
-        message: _controller.errorMessage!,
-        onRetry: _controller.loadFields,
-      );
-    }
-
-    if (_controller.fields.isEmpty) {
-      return const BookingEmptyState(
-        title: 'Không tìm thấy sân nào',
-        subtitle: 'Thử thay đổi bộ lọc hoặc từ khoá tìm kiếm.',
-        icon: Icons.search_off_rounded,
-      );
-    }
-
-    return RefreshIndicator(
-      color: AppTheme.primaryGreen,
-      onRefresh: _controller.loadFields,
-      child: ListView.builder(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        itemCount: _controller.fields.length,
-        itemBuilder: (ctx, index) {
-          final field = _controller.fields[index];
-          return FieldCard(
-            field: field,
-            onTap: () => _openFieldDetail(field),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.borderColor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => FieldDetailScreen(
+                fieldId: field.id,
+                repository: widget.repository,
+              ),
+            ),
           );
         },
-      ),
-    );
-  }
+        borderRadius: BorderRadius.circular(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Ảnh sân cỏ
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              child: Container(
+                height: 140,
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF15803D), Color(0xFF166534)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    if (field.coverImageUrl.isNotEmpty)
+                      Image.network(
+                        field.coverImageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (ctx, err, stack) => const Center(
+                          child: Icon(Icons.sports_soccer, size: 60, color: Colors.white24),
+                        ),
+                      )
+                    else
+                      const Center(
+                        child: Icon(Icons.sports_soccer, size: 60, color: Colors.white24),
+                      ),
+                    Positioned(
+                      top: 12,
+                      left: 12,
+                      child: CircleAvatar(
+                        radius: 14,
+                        backgroundColor: Colors.black45,
+                        child: Text(
+                          field.fieldType.isNotEmpty ? field.fieldType : 'Sân',
+                          style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
 
-  void _openFieldDetail(FootballField field) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => FieldDetailScreen(
-          fieldId: field.id,
-          repository: widget.repository,
+            // Thông tin sân
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          field.name,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.textPrimary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFEF3C7),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.star, size: 14, color: AppTheme.accentGold),
+                            SizedBox(width: 4),
+                            Text(
+                              '4.8',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF92400E),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      const Icon(Icons.location_on_outlined, size: 15, color: AppTheme.textMuted),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          field.address.isNotEmpty
+                              ? field.address
+                              : '${field.district}, ${field.city}',
+                          style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        priceStr,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          color: AppTheme.primaryDarkGreen,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: isActive ? AppTheme.primaryLightGreen : const Color(0xFFF3F4F6),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          isActive ? 'Còn giờ trống' : 'Tạm dừng',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: isActive ? AppTheme.primaryDarkGreen : const Color(0xFF6B7280),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
