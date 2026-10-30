@@ -8,6 +8,9 @@ enum UserRole {
   /// Người tổ chức giải đấu: tạo và quản lý giải đấu thuộc sở hữu của mình, duyệt đội, lên lịch, nhập tỷ số
   organizer,
 
+  /// Chủ sân bóng: quản lý sân, slot và xác nhận/từ chối booking
+  fieldOwner,
+
   /// Đội trưởng đội bóng: đăng ký đội tham gia giải đấu, quản lý thông tin thành viên đội
   teamCaptain,
 
@@ -21,6 +24,7 @@ enum UserRole {
   String get displayName => switch (this) {
         UserRole.admin => 'Quản trị viên (Admin)',
         UserRole.organizer => 'Người tổ chức (Organizer)',
+        UserRole.fieldOwner => 'Chủ sân (Field Owner)',
         UserRole.teamCaptain => 'Đội trưởng (Captain)',
         UserRole.player => 'Cầu thủ (Player)',
         UserRole.viewer => 'Khán giả (Viewer)',
@@ -51,6 +55,13 @@ class AppUser {
 
   /// Kiểm tra có quyền hạn của Đội trưởng (bao gồm cả Organizer và Admin)
   bool get isCaptain => role == UserRole.teamCaptain || isOrganizer;
+
+  /// Kiểm tra có phải là Chủ sân
+  bool get isFieldOwner => role == UserRole.fieldOwner || isAdmin;
+
+  /// Kiểm tra có thể đặt sân (user thông thường)
+  bool get canBook => role == UserRole.viewer || role == UserRole.player ||
+      role == UserRole.teamCaptain || role == UserRole.organizer || isAdmin;
 
   AppUser copyWith({
     String? id,
@@ -100,6 +111,12 @@ class AuthContext extends ChangeNotifier {
       role: UserRole.organizer,
     ),
     const AppUser(
+      id: 'owner_01',
+      name: 'Trần Văn Chủ Sân',
+      email: 'owner@ballhub.vn',
+      role: UserRole.fieldOwner,
+    ),
+    const AppUser(
       id: 'user_captain_01',
       name: 'Trần Đội Trưởng (FC Sao Vàng)',
       email: 'captain1@ballhub.vn',
@@ -136,5 +153,17 @@ class AuthContext extends ChangeNotifier {
   /// Checks if current user can update or confirm match score
   bool canManageMatch(String organizerId) {
     return canManageTournament(organizerId);
+  }
+
+  /// Kiểm tra current user có thể quản lý một field hay không
+  bool canManageField(String ownerId) {
+    if (_currentUser.isAdmin) return true;
+    return _currentUser.isFieldOwner && _currentUser.id == ownerId;
+  }
+
+  /// Kiểm tra current user có thể cancel booking của chính mình
+  bool canCancelBooking(String bookerId) {
+    if (_currentUser.isAdmin) return true;
+    return _currentUser.id == bookerId;
   }
 }

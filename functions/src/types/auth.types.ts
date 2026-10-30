@@ -4,6 +4,7 @@ export enum UserRole {
   teamCaptain = 'teamCaptain',
   player = 'player',
   viewer = 'viewer',
+  fieldOwner = 'fieldOwner',
 }
 
 export interface AuthUser {

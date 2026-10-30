@@ -5,6 +5,9 @@ import { tournamentRouter } from './routes/tournament.routes';
 import { registrationRouter } from './routes/registration.routes';
 import { matchRouter } from './routes/match.routes';
 import { standingsRouter } from './routes/standings.routes';
+import { fieldRouter } from './routes/field.routes';
+import { bookingRouter, ownerBookingRouter } from './routes/booking.routes';
+import { slotRouter } from './routes/slot.routes';
 
 /**
  * Cấu hình ứng dụng Express trung tâm cho Ballhub REST API v1.
@@ -82,6 +85,10 @@ app.use('/api/v1/tournaments', tournamentRouter);
 app.use('/api/v1/tournaments', registrationRouter);
 app.use('/api/v1', matchRouter);
 app.use('/api/v1', standingsRouter);
+app.use('/api/v1/fields', fieldRouter);
+app.use('/api/v1', slotRouter);
+app.use('/api/v1/bookings', bookingRouter);
+app.use('/api/v1/owner', ownerBookingRouter);
 
 // 404 handler
 app.use((req: Request, res: Response) => {

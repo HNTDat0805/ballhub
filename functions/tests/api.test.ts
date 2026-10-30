@@ -3,6 +3,7 @@ import assert from 'node:assert';
 import request from 'supertest';
 import { app } from '../src/app';
 import { TournamentFormat, TournamentStatus, RegistrationStatus } from '../src/types/tournament.types';
+import { FieldSlotStatus } from '../src/types/booking.types';
 
 describe('Ballhub API-First REST API Test Suite', () => {
   let createdTournamentId: string;
@@ -304,5 +305,56 @@ describe('Ballhub API-First REST API Test Suite', () => {
       assert.strictEqual(audit.newHomeScore, 3);
       assert.strictEqual(audit.newAwayScore, 1);
     });
+  });
+});
+
+describe('Booking Management', () => {
+  let fieldId: string;
+  let slotId: string;
+
+  it('creates a field, an available slot, and prevents double booking', async () => {
+    const field = await request(app)
+      .post('/api/v1/fields')
+      .set('x-user-id', 'owner_01')
+      .set('x-user-role', 'fieldOwner')
+      .send({
+        name: 'San 5 nguoi A', address: '1 Nguyen Hue', city: 'Ho Chi Minh',
+        fieldType: '5-a-side', capacity: 10, basePrice: 300000,
+        status: 'active',
+      });
+    assert.strictEqual(field.status, 201);
+    fieldId = field.body.data.id;
+
+    const start = new Date(Date.now() + 86_400_000);
+    start.setUTCHours(12, 0, 0, 0);
+    const end = new Date(start.getTime() + 3_600_000);
+    const slot = await request(app)
+      .post(`/api/v1/fields/${fieldId}/slots`)
+      .set('x-user-id', 'owner_01')
+      .set('x-user-role', 'fieldOwner')
+      .send({
+        dateKey: start.toISOString().slice(0, 10), startsAt: start.toISOString(),
+        endsAt: end.toISOString(), basePrice: 300000,
+      });
+    assert.strictEqual(slot.status, 201);
+    assert.strictEqual(slot.body.data.status, FieldSlotStatus.available);
+    slotId = slot.body.data.id;
+
+    const firstBooking = await request(app)
+      .post('/api/v1/bookings')
+      .set('x-user-id', 'player_01')
+      .set('x-user-role', 'player')
+      .send({ fieldId, slotIds: [slotId] });
+    assert.strictEqual(firstBooking.status, 201);
+    assert.strictEqual(firstBooking.body.data.status, 'pending');
+    assert.strictEqual(firstBooking.body.data.priceSnapshot, 300000);
+
+    const duplicateBooking = await request(app)
+      .post('/api/v1/bookings')
+      .set('x-user-id', 'player_02')
+      .set('x-user-role', 'player')
+      .send({ fieldId, slotIds: [slotId] });
+    assert.strictEqual(duplicateBooking.status, 409);
+    assert.strictEqual(duplicateBooking.body.error.code, 'BOOKING_CONFLICT');
   });
 });

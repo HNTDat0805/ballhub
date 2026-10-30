@@ -5,6 +5,7 @@ import {
   StandingsRowEntity,
   MatchAuditEntity,
 } from '../types/tournament.types';
+import { BookingEntity, FieldOwnerProfileEntity, FieldSlotEntity, FootballFieldEntity } from '../types/booking.types';
 
 /**
  * Kho lưu trữ bộ nhớ đệm In-Memory (MemoryStore) phục vụ kiểm thử đơn vị,
@@ -16,6 +17,10 @@ export class MemoryStore {
   static matches = new Map<string, Map<string, MatchEntity>>();
   static standings = new Map<string, Map<string, StandingsRowEntity>>();
   static audits = new Map<string, MatchAuditEntity[]>();
+  static fieldOwners = new Map<string, FieldOwnerProfileEntity>();
+  static fields = new Map<string, FootballFieldEntity>();
+  static slots = new Map<string, Map<string, FieldSlotEntity>>();
+  static bookings = new Map<string, BookingEntity>();
 
   static clear(): void {
     this.tournaments.clear();
@@ -23,6 +28,7 @@ export class MemoryStore {
     this.matches.clear();
     this.standings.clear();
     this.audits.clear();
+    this.fieldOwners.clear(); this.fields.clear(); this.slots.clear(); this.bookings.clear();
   }
 
   static isMemoryMode(): boolean {

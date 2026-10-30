@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { z, ZodError } from 'zod';
 import { TournamentFormat, TournamentStatus, RegistrationStatus, MatchStatus } from '../types/tournament.types';
+import { FieldSlotStatus, FieldStatus } from '../types/booking.types';
 
 export function validateBody(schema: z.ZodSchema) {
   return (req: Request, res: Response, next: NextFunction): void => {
@@ -88,4 +89,40 @@ export const updateMatchResultSchema = z.object({
   isConfirmed: z.boolean().default(true),
   notes: z.string().optional(),
   reason: z.string().optional(),
+});
+
+export const createFieldSchema = z.object({
+  name: z.string().min(2).max(100), description: z.string().optional().default(''),
+  coverImageUrl: z.string().optional().default(''), imageUrls: z.array(z.string()).optional().default([]),
+  address: z.string().min(2), district: z.string().optional().default(''), city: z.string().min(2),
+  latitude: z.number().optional().default(0), longitude: z.number().optional().default(0),
+  fieldType: z.string().min(1), capacity: z.number().int().positive(), amenities: z.array(z.string()).optional().default([]),
+  basePrice: z.number().int().min(0), currency: z.string().default('VND'), slotDurationMinutes: z.number().int().positive().default(60),
+  status: z.nativeEnum(FieldStatus).optional().default(FieldStatus.draft), openingHours: z.record(z.array(z.string())).optional().default({}),
+  timezone: z.string().default('Asia/Ho_Chi_Minh'),
+});
+export const updateFieldSchema = createFieldSchema.partial();
+
+const isoDateTime = z.string().datetime({ offset: true });
+export const createSlotSchema = z.object({
+  dateKey: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'dateKey phải có dạng YYYY-MM-DD'),
+  startsAt: isoDateTime,
+  endsAt: isoDateTime,
+  basePrice: z.number().int().min(0),
+  currency: z.string().length(3).default('VND'),
+}).refine((value) => Date.parse(value.endsAt) > Date.parse(value.startsAt), {
+  message: 'Thời gian kết thúc phải sau thời gian bắt đầu.', path: ['endsAt'],
+});
+export const updateSlotSchema = z.object({
+  basePrice: z.number().int().min(0).optional(),
+  status: z.nativeEnum(FieldSlotStatus).optional(),
+  blockReason: z.string().max(500).nullable().optional(),
+});
+export const createBookingSchema = z.object({
+  fieldId: z.string().min(1),
+  slotIds: z.array(z.string().min(1)).min(1).max(12),
+  customerNote: z.string().max(500).optional(),
+});
+export const bookingReasonSchema = z.object({
+  reason: z.string().max(500).optional(),
 });
