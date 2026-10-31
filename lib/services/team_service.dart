@@ -20,6 +20,10 @@ class TeamService {
   static final ValueNotifier<int> changed = ValueNotifier(0);
   static void _notify() => changed.value++;
 
+  static final Set<String> _leftTeamIds = {};
+  static final Set<String> _deletedTeamIds = {};
+  static final List<Team> _userCreatedTeams = [];
+
   // ================= ĐỘI BÓNG =================
 
   static Future<List<Team>> search({String keyword = '', String area = ''}) async {
@@ -44,22 +48,34 @@ class TeamService {
   }
 
   static Future<List<Team>> getMyTeams() async {
+    List<Team> result = [];
     try {
       final res = await _api.get('/teams/mine');
       if (res is List) {
-        final list = res
+        result = res
             .whereType<Map>()
             .map((m) => Team.fromMap(Map<String, dynamic>.from(m)))
             .toList();
-        if (list.isNotEmpty) return list;
       }
-      return [_getFallbackSampleTeams().first];
-    } catch (_) {
-      return [_getFallbackSampleTeams().first];
+    } catch (_) {}
+
+    if (result.isEmpty) {
+      result = [_getFallbackSampleTeams().first];
     }
+
+    final all = [
+      ..._userCreatedTeams,
+      ...result.where((t) => !_userCreatedTeams.any((u) => u.teamId == t.teamId)),
+    ].where((t) => !_leftTeamIds.contains(t.teamId) && !_deletedTeamIds.contains(t.teamId)).toList();
+
+    return all;
   }
 
   static Future<Team?> getTeam(String teamId) async {
+    if (_deletedTeamIds.contains(teamId)) return null;
+    final created = _userCreatedTeams.where((t) => t.teamId == teamId).firstOrNull;
+    if (created != null) return created;
+
     try {
       final res = await _api.get('/teams/$teamId');
       if (res is Map) {
@@ -73,30 +89,85 @@ class TeamService {
   }
 
   static Future<void> createTeam(String name, String area, String description) async {
+    final uid = AuthService.uid ?? 'current_user';
+    final newTeam = Team(
+      teamId: 'team_${DateTime.now().millisecondsSinceEpoch}',
+      teamName: name,
+      area: area,
+      description: description,
+      captainId: uid,
+      captainName: AuthService.currentUser?.displayName ?? 'Tôi (Đội trưởng)',
+      memberCount: 1,
+      createdAt: DateTime.now(),
+    );
+    _userCreatedTeams.insert(0, newTeam);
     try {
       await _api.post('/teams', body: {
         'name': name,
         'area': area,
         'description': description,
       });
-      _notify();
     } catch (e) {
       if (e is ApiException) throw AppException(e.message);
-      throw AppException(e.toString());
+    } finally {
+      _notify();
     }
   }
 
   static Future<void> updateTeam(String teamId, String name, String area, String description) async {
+    final idx = _userCreatedTeams.indexWhere((t) => t.teamId == teamId);
+    if (idx != -1) {
+      final old = _userCreatedTeams[idx];
+      _userCreatedTeams[idx] = Team(
+        teamId: old.teamId,
+        teamName: name,
+        area: area,
+        description: description,
+        captainId: old.captainId,
+        captainName: old.captainName,
+        memberCount: old.memberCount,
+        createdAt: old.createdAt,
+      );
+    }
+
     try {
       await _api.patch('/teams/$teamId', body: {
         'name': name,
         'area': area,
         'description': description,
       });
-      _notify();
     } catch (e) {
       if (e is ApiException) throw AppException(e.message);
-      throw AppException(e.toString());
+    } finally {
+      _notify();
+    }
+  }
+
+  /// Rã / Giải tán đội bóng (Chỉ dành cho Đội trưởng)
+  static Future<void> deleteTeam(String teamId) async {
+    _deletedTeamIds.add(teamId);
+    _userCreatedTeams.removeWhere((t) => t.teamId == teamId);
+    try {
+      await _api.delete('/teams/$teamId');
+    } catch (e) {
+      if (e is ApiException) throw AppException(e.message);
+    } finally {
+      _notify();
+    }
+  }
+
+  /// Rời đội bóng (Dành cho thành viên)
+  static Future<void> leaveTeam(String teamId) async {
+    _leftTeamIds.add(teamId);
+    final uid = AuthService.uid;
+    try {
+      if (uid != null) {
+        await _api.delete('/teams/$teamId/members/$uid');
+      }
+    } catch (e) {
+      if (e is ApiException) throw AppException(e.message);
+    } finally {
+      _notify();
     }
   }
 
@@ -112,10 +183,26 @@ class TeamService {
             .toList();
         if (list.isNotEmpty) return list;
       }
-      return _getFallbackSampleMembers(teamId);
-    } catch (_) {
-      return _getFallbackSampleMembers(teamId);
+    } catch (_) {}
+
+    final created = _userCreatedTeams.where((t) => t.teamId == teamId).firstOrNull;
+    if (created != null) {
+      return [
+        TeamMember(
+          userId: AuthService.uid ?? 'current_user',
+          role: 'Captain',
+          fullName: AuthService.currentUser?.displayName ?? 'Tôi (Đội trưởng)',
+          position: 'Đội trưởng',
+        ),
+      ];
     }
+
+    final fallback = _getFallbackSampleMembers(teamId);
+    if (_leftTeamIds.contains(teamId)) {
+      final uid = AuthService.uid;
+      return fallback.where((m) => m.userId != uid).toList();
+    }
+    return fallback;
   }
 
   static Future<bool> isMember(String teamId) async {

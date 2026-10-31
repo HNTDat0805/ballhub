@@ -108,6 +108,16 @@ export class TeamService {
     return { ...team, ...updates };
   }
 
+  async deleteTeam(teamId: string, user: AuthUser): Promise<void> {
+    const team = await this.getById(teamId);
+    const isCaptain = team.captainId === user.uid;
+    const isAdmin = user.role === UserRole.admin;
+    if (!isCaptain && !isAdmin) {
+      throw new Error('Chỉ đội trưởng hoặc quản trị viên mới có quyền rã đội bóng này.');
+    }
+    await this.teamRepo.deleteTeam(teamId);
+  }
+
   // ================= MEMBERS =================
 
   async getMembers(teamId: string): Promise<TeamMemberEntity[]> {

@@ -100,6 +100,31 @@ export class TeamRepository {
     await this.teamsRef.doc(teamId).update(data);
   }
 
+  async deleteTeam(teamId: string): Promise<void> {
+    if (MemoryStore.isMemoryMode()) {
+      MemoryStore.teams.delete(teamId);
+      for (const [key, m] of MemoryStore.teamMembers.entries()) {
+        if (m.teamId === teamId) MemoryStore.teamMembers.delete(key);
+      }
+      for (const [key, r] of MemoryStore.joinRequests.entries()) {
+        if (r.teamId === teamId) MemoryStore.joinRequests.delete(key);
+      }
+      for (const [key, inv] of MemoryStore.friendlyInvitations.entries()) {
+        if (inv.fromTeamId === teamId || inv.toTeamId === teamId) {
+          MemoryStore.friendlyInvitations.delete(key);
+        }
+      }
+      return;
+    }
+    await this.teamsRef.doc(teamId).delete();
+    const membersSnap = await this.membersRef.where('teamId', '==', teamId).get();
+    const batch = db.batch();
+    membersSnap.forEach((doc) => batch.delete(doc.ref));
+    const requestsSnap = await this.requestsRef.where('teamId', '==', teamId).get();
+    requestsSnap.forEach((doc) => batch.delete(doc.ref));
+    await batch.commit();
+  }
+
   // ================= MEMBERS =================
 
   async findMember(teamId: string, userId: string): Promise<TeamMemberEntity | null> {

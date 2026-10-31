@@ -111,6 +111,23 @@ teamRouter.patch(
   }
 );
 
+// DELETE /api/v1/teams/:id - Rã / Xóa đội bóng (chỉ đội trưởng hoặc admin)
+teamRouter.delete('/:id', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    await service.deleteTeam(req.params.id as string, req.user!);
+    res.json({
+      success: true,
+      message: 'Đã giải tán đội bóng thành công.',
+    });
+  } catch (error: any) {
+    const isForbidden = error.message.includes('Chỉ đội trưởng') || error.message.includes('không có quyền');
+    res.status(isForbidden ? 403 : 400).json({
+      success: false,
+      error: { code: isForbidden ? 'FORBIDDEN' : 'DELETE_TEAM_FAILED', message: error.message },
+    });
+  }
+});
+
 // GET /api/v1/teams/:id/members - Danh sách thành viên
 teamRouter.get('/:id/members', async (req: Request, res: Response): Promise<void> => {
   try {

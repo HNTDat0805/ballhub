@@ -3,23 +3,25 @@ import '../../core/theme/app_theme.dart';
 import '../../models/team.dart';
 import '../../services/auth_service.dart';
 import '../../services/team_service.dart';
+import 'team_form_screen.dart';
 
 /// Màn hình Chi tiết Đội bóng (Page 10 - figma.pdf)
 ///
-/// Bố cục chuẩn Figma Material 3 kết nối 100% Firestore:
-/// - AppBar: `← Chi tiết đội bóng` + Menu
-/// - Header:
-///   - Avatar vuông màu Emerald với chữ cái đầu
-///   - Tên đội bóng, Khu vực, Ngày thành lập
-///   - Badges: Thể loại sân, Trạng thái hoạt động
-///   - Mô tả / Bio thực tế của đội bóng
-/// - Hàng 3 chỉ số: Số thành viên thực | Trận đã đá | Đội trưởng
-/// - Danh sách thành viên từ Firestore: Tên, Avatar, Vị trí, Role (Captain / Member)
-/// - Khối Kèo giao hữu / Gia nhập đội: Gửi lời mời tới đội trưởng
+/// Tùy biến thông minh theo vai trò của người dùng:
+/// - Đội bóng của người khác: Cho phép xin gia nhập và hẹn trận giao hữu.
+/// - Đội bóng của người dùng:
+///   + KHÔNG hiển thị nút hẹn giao hữu.
+///   + Nếu là Thành viên: Có nút "Rời đội" với hộp thoại xác nhận.
+///   + Nếu là Đội trưởng: Có nút "Rã đội" (giải tán đội) và "Sửa thông tin đội".
 class TeamDetailScreen extends StatefulWidget {
   final String teamId;
+  final bool? isMyTeam;
 
-  const TeamDetailScreen({super.key, required this.teamId});
+  const TeamDetailScreen({
+    super.key,
+    required this.teamId,
+    this.isMyTeam,
+  });
 
   @override
   State<TeamDetailScreen> createState() => _TeamDetailScreenState();
@@ -29,6 +31,8 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
   Team? _team;
   List<TeamMember> _members = [];
   bool _isLoading = true;
+  bool _isActionLoading = false;
+  bool _isUserTeam = false;
   String? _errorMessage;
 
   @override
@@ -46,10 +50,18 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
     try {
       final team = await TeamService.getTeam(widget.teamId);
       final members = await TeamService.getMembers(widget.teamId);
+      final myTeams = await TeamService.getMyTeams();
+
+      final uid = AuthService.uid;
+      final belongsToMyTeams = myTeams.any((t) => t.teamId == widget.teamId);
+      final isMemberOfList = uid != null && members.any((m) => m.userId == uid);
+      final isCaptainOfTeam = uid != null && team?.captainId == uid;
+
       if (!mounted) return;
       setState(() {
         _team = team;
         _members = members;
+        _isUserTeam = widget.isMyTeam == true || belongsToMyTeams || isMemberOfList || isCaptainOfTeam;
         _isLoading = false;
       });
     } catch (e) {
@@ -58,6 +70,156 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
         _isLoading = false;
         _errorMessage = e.toString().replaceFirst('Exception: ', '');
       });
+    }
+  }
+
+  /// Xác nhận và thực hiện giải tán đội bóng (Dành cho Đội trưởng)
+  Future<void> _confirmDisbandTeam() async {
+    final team = _team;
+    if (team == null) return;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: AppTheme.errorRed, size: 28),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Giải tán đội bóng?',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'Bạn có chắc chắn muốn giải tán đội "${team.teamName}" không?\n\n'
+          'Tất cả thành viên sẽ rời khỏi đội và toàn bộ dữ liệu đội bóng sẽ bị xóa vĩnh viễn khỏi hệ thống.',
+          style: const TextStyle(fontSize: 14, height: 1.4, color: AppTheme.textPrimary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Giữ lại đội', style: TextStyle(color: AppTheme.textSecondary)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.errorRed,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Xác nhận rã đội'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true || !mounted) return;
+
+    setState(() => _isActionLoading = true);
+    try {
+      await TeamService.deleteTeam(team.teamId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Đã giải tán đội bóng "${team.teamName}" thành công.'),
+          backgroundColor: AppTheme.primaryDarkGreen,
+        ),
+      );
+      Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isActionLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: AppTheme.errorRed,
+        ),
+      );
+    }
+  }
+
+  /// Xác nhận và thực hiện rời đội bóng (Dành cho thành viên)
+  Future<void> _confirmLeaveTeam() async {
+    final team = _team;
+    if (team == null) return;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.logout_rounded, color: AppTheme.errorRed, size: 26),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Rời khỏi đội bóng?',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'Bạn có chắc chắn muốn rời khỏi đội bóng "${team.teamName}" không?',
+          style: const TextStyle(fontSize: 14, height: 1.4, color: AppTheme.textPrimary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Ở lại', style: TextStyle(color: AppTheme.textSecondary)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.errorRed,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Rời đội'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true || !mounted) return;
+
+    setState(() => _isActionLoading = true);
+    try {
+      await TeamService.leaveTeam(team.teamId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Bạn đã rời khỏi đội bóng "${team.teamName}".'),
+          backgroundColor: AppTheme.primaryDarkGreen,
+        ),
+      );
+      Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isActionLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: AppTheme.errorRed,
+        ),
+      );
+    }
+  }
+
+  /// Chỉnh sửa thông tin đội bóng
+  Future<void> _editTeam() async {
+    final team = _team;
+    if (team == null) return;
+    final updated = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => TeamFormScreen(team: team),
+      ),
+    );
+    if (updated == true) {
+      _loadTeamData();
     }
   }
 
@@ -246,18 +408,32 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
             : team.teamName.trim().substring(0, 1).toUpperCase())
         : 'ĐB';
 
-    final isMyTeam = _members.any((m) => m.userId == AuthService.uid);
-    final isCaptain = team.captainId == AuthService.uid;
+    final uid = AuthService.uid;
+    final isCaptain = (uid != null && team.captainId == uid) ||
+        (uid != null && _members.any((m) => m.userId == uid && m.role.toLowerCase() == 'captain')) ||
+        team.captainName.toLowerCase().contains('tôi');
+
+    final isMember = isCaptain ||
+        (uid != null && _members.any((m) => m.userId == uid)) ||
+        _isUserTeam;
+
+    final isMyTeam = _isUserTeam || isMember || isCaptain;
 
     return Scaffold(
       backgroundColor: AppTheme.surfaceColor,
       appBar: AppBar(
-        title: const Text('Chi tiết đội bóng'),
+        title: Text(isMyTeam ? 'Đội bóng của tôi' : 'Chi tiết đội bóng'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
+          if (isMyTeam && isCaptain)
+            IconButton(
+              icon: const Icon(Icons.edit_outlined),
+              tooltip: 'Sửa thông tin đội',
+              onPressed: _editTeam,
+            ),
           IconButton(
             icon: const Icon(Icons.share_outlined),
             onPressed: () {
@@ -361,6 +537,44 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
                     ),
                   ],
                 ),
+
+                // BADGE ĐẶC BIỆT NẾU ĐÂY LÀ ĐỘI BÓNG CỦA BẠN
+                if (isMyTeam) ...[
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isCaptain ? const Color(0xFFFEF3C7) : AppTheme.primaryLightGreen,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isCaptain ? const Color(0xFFFDE68A) : const Color(0xFFA7F3D0),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          isCaptain ? Icons.military_tech_rounded : Icons.verified_user_rounded,
+                          size: 20,
+                          color: isCaptain ? const Color(0xFFB45309) : AppTheme.primaryDarkGreen,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            isCaptain
+                                ? 'Đội bóng của bạn · Bạn là Đội trưởng'
+                                : 'Đội bóng của bạn · Bạn là Thành viên chính thức',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: isCaptain ? const Color(0xFF92400E) : AppTheme.primaryDarkGreen,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
                 const SizedBox(height: 16),
                 Text(
                   team.description?.isNotEmpty == true
@@ -382,7 +596,12 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
                   children: [
                     _StatCol(number: '${_members.length}', label: 'Thành viên'),
                     const _StatDivider(),
-                    _StatCol(number: isCaptain ? 'Đội trưởng' : 'Thành viên', label: 'Vai trò của bạn'),
+                    _StatCol(
+                      number: !isMyTeam
+                          ? 'Chưa tham gia'
+                          : (isCaptain ? 'Đội trưởng' : 'Thành viên'),
+                      label: 'Vai trò của bạn',
+                    ),
                     const _StatDivider(),
                     _StatCol(
                       number: team.captainName.isNotEmpty ? team.captainName : 'Chưa có',
@@ -501,45 +720,143 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
           ),
           const SizedBox(height: 16),
 
-          // --- KHỐI KÈO GIAO HỮU ---
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppTheme.borderColor),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Row(
-                  children: [
-                    Icon(Icons.handshake_outlined, color: AppTheme.primaryDarkGreen, size: 24),
-                    SizedBox(width: 10),
-                    Text(
-                      'Hẹn một trận giao hữu?',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.textPrimary,
+          // --- KHỐI HÀNH ĐỘNG DÀNH CHO ĐỘI BÓNG CỦA TÔI HOẶC GIAO HỮU ---
+          if (isMyTeam) ...[
+            // GIAO DIỆN QUẢN LÝ ĐỘI BÓNG CỦA TÔI
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppTheme.borderColor),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        isCaptain ? Icons.admin_panel_settings_outlined : Icons.shield_outlined,
+                        color: AppTheme.primaryDarkGreen,
+                        size: 22,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        isCaptain ? 'Quản trị đội bóng' : 'Tùy chọn đội bóng',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    isCaptain
+                        ? 'Với tư cách là Đội trưởng, bạn có thể chỉnh sửa thông tin đội hoặc giải tán đội bóng khi không còn sinh hoạt.'
+                        : 'Bạn đang tham gia sinh hoạt trong đội bóng này. Bạn có thể rời đội bất cứ lúc nào.',
+                    style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary, height: 1.4),
+                  ),
+                  const SizedBox(height: 16),
+
+                  if (isCaptain) ...[
+                    // NÚT CHỈNH SỬA THÔNG TIN ĐỘI (ĐỘI TRƯỞNG)
+                    OutlinedButton.icon(
+                      onPressed: _isActionLoading ? null : _editTeam,
+                      icon: const Icon(Icons.edit_outlined, size: 18),
+                      label: const Text('Chỉnh sửa thông tin đội'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        side: const BorderSide(color: AppTheme.primaryDarkGreen),
+                        foregroundColor: AppTheme.primaryDarkGreen,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+
+                    // NÚT RÃ ĐỘI BÓNG (ĐỘI TRƯỞNG)
+                    ElevatedButton.icon(
+                      onPressed: _isActionLoading ? null : _confirmDisbandTeam,
+                      icon: const Icon(Icons.delete_forever_rounded, size: 18),
+                      label: _isActionLoading
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            )
+                          : const Text('Rã đội bóng (Giải tán đội)'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.errorRed,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ] else ...[
+                    // NÚT RỜI ĐỘI BÓNG (THÀNH VIÊN)
+                    ElevatedButton.icon(
+                      onPressed: _isActionLoading ? null : _confirmLeaveTeam,
+                      icon: const Icon(Icons.logout_rounded, size: 18),
+                      label: _isActionLoading
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            )
+                          : const Text('Rời đội bóng'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.errorRed,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                     ),
                   ],
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Gửi lời mời kèm thời gian, địa điểm hoặc chia sẻ chi phí sân bóng với đội trưởng.',
-                  style: TextStyle(fontSize: 13, color: AppTheme.textSecondary, height: 1.4),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton.icon(
-                  onPressed: _sendFriendlyInvite,
-                  icon: const Icon(Icons.sports_soccer, size: 18),
-                  label: const Text('Gửi lời mời giao hữu'),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
+          ] else ...[
+            // GIAO DIỆN XEM ĐỘI BÓNG KHÁC: KHỐI KÈO GIAO HỮU
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppTheme.borderColor),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.handshake_outlined, color: AppTheme.primaryDarkGreen, size: 24),
+                      SizedBox(width: 10),
+                      Text(
+                        'Hẹn một trận giao hữu?',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Gửi lời mời kèm thời gian, địa điểm hoặc chia sẻ chi phí sân bóng với đội trưởng.',
+                    style: TextStyle(fontSize: 13, color: AppTheme.textSecondary, height: 1.4),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: _sendFriendlyInvite,
+                    icon: const Icon(Icons.sports_soccer, size: 18),
+                    label: const Text('Gửi lời mời giao hữu'),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 24),
         ],
       ),

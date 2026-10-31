@@ -62,5 +62,21 @@ void main() {
       expect(inv.toTeamName, 'FC Rồng Bay');
       expect(inv.status, 'Pending');
     });
+
+    test('TeamMember.fromMap should parse member role and details', () {
+      final map = {
+        'userId': 'user_001',
+        'role': 'Captain',
+        'fullName': 'Nguyễn Văn Đội Trưởng',
+        'position': 'Tiền đạo',
+        'avatarBase64': null,
+      };
+
+      final member = TeamMember.fromMap(map);
+      expect(member.userId, 'user_001');
+      expect(member.role, 'Captain');
+      expect(member.fullName, 'Nguyễn Văn Đội Trưởng');
+      expect(member.position, 'Tiền đạo');
+    });
   });
 }
