@@ -61,13 +61,6 @@ class _TournamentListScreenState extends State<TournamentListScreen> {
           backgroundColor: AppTheme.surfaceColor,
           appBar: AppBar(
             title: const Text('Giải đấu'),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.tune_rounded),
-                onPressed: () {},
-                tooltip: 'Bộ lọc nâng cao',
-              ),
-            ],
           ),
           body: Column(
             children: [

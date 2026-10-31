@@ -338,19 +338,6 @@ class _TeamListScreenState extends State<TeamListScreen> {
       backgroundColor: AppTheme.surfaceColor,
       appBar: AppBar(
         title: const Text('Đội bóng'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const TeamFormScreen()),
-              );
-              _loadTeams();
-            },
-            tooltip: 'Tạo đội bóng mới',
-          ),
-        ],
       ),
       body: Column(
         children: [

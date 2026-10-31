@@ -58,17 +58,6 @@ class _FieldListScreenState extends State<FieldListScreen> {
       backgroundColor: AppTheme.surfaceColor,
       appBar: AppBar(
         title: const Text('Tìm sân bóng'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.map_outlined),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Chế độ xem bản đồ đang mở')),
-              );
-            },
-            tooltip: 'Xem bản đồ',
-          ),
-        ],
       ),
       body: Column(
         children: [

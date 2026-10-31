@@ -99,13 +99,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           backgroundColor: AppTheme.surfaceColor,
           appBar: AppBar(
             title: const Text('Cá nhân'),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.settings_outlined),
-                onPressed: () {},
-                tooltip: 'Cài đặt chung',
-              ),
-            ],
           ),
           body: RefreshIndicator(
             color: AppTheme.primaryDarkGreen,
@@ -205,7 +198,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 // --- ĐỘI BÓNG CỦA TÔI TỪ DATABASE ---
                 _sectionHeader(
                   'Đội bóng của tôi',
-                  'Tạo đội +',
+                  'Tạo đội',
                   () async {
                     await Navigator.push(
                       context,
