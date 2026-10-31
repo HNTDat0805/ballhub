@@ -26,8 +26,7 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameCtrl = TextEditingController(text: 'Nguyễn Minh Anh');
-  final _phoneCtrl = TextEditingController();
+  final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   final _confirmPassCtrl = TextEditingController();
@@ -40,7 +39,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   void dispose() {
     _nameCtrl.dispose();
-    _phoneCtrl.dispose();
     _emailCtrl.dispose();
     _passCtrl.dispose();
     _confirmPassCtrl.dispose();
@@ -60,15 +58,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     setState(() => _loading = true);
     try {
-      final email = _emailCtrl.text.trim().isNotEmpty
-          ? _emailCtrl.text.trim()
-          : '${_phoneCtrl.text.trim()}@ballhub.vn';
+      final email = _emailCtrl.text.trim();
 
       await AuthService.register(
         fullName: _nameCtrl.text.trim(),
         email: email,
         password: _passCtrl.text,
-        phone: _phoneCtrl.text.trim(),
       );
       if (mounted) {
         showMessage(context, 'Tạo tài khoản thành công! Đang chuyển hướng...');
@@ -129,22 +124,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _nameCtrl,
-                  decoration: const InputDecoration(hintText: 'Nguyễn Minh Anh'),
+                  decoration: const InputDecoration(hintText: 'Nhập họ và tên của bạn'),
                   validator: (v) => (v == null || v.trim().isEmpty) ? 'Vui lòng nhập họ và tên' : null,
                 ),
                 const SizedBox(height: 18),
 
-                // Số điện thoại
+                // Email
                 const Text(
-                  'Số điện thoại',
+                  'Email',
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
                 ),
                 const SizedBox(height: 8),
                 TextFormField(
-                  controller: _phoneCtrl,
-                  keyboardType: TextInputType.phone,
-                  decoration: const InputDecoration(hintText: 'Nhập số điện thoại'),
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Vui lòng nhập số điện thoại' : null,
+                  controller: _emailCtrl,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(
+                    hintText: 'Nhập địa chỉ email (ví dụ: ban@example.com)',
+                    prefixIcon: Icon(Icons.email_outlined, size: 20),
+                  ),
+                  validator: (v) {
+                    final val = v?.trim() ?? '';
+                    if (val.isEmpty) return 'Vui lòng nhập địa chỉ email';
+                    if (!RegExp(r'^[\w\.-]+@[\w\.-]+\.\w{2,}$').hasMatch(val)) {
+                      return 'Địa chỉ email không hợp lệ';
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 18),
 
