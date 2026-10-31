@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/auth/auth_context.dart' hide AppUser;
 import '../../core/theme/app_theme.dart';
 import '../../features/booking/data/booking_repository.dart';
 import '../../features/booking/domain/models/football_field.dart';
@@ -46,6 +47,8 @@ class _HomeScreenState extends State<HomeScreen> {
   FootballField? _featuredField;
   bool _isLoadingTeams = true;
   bool _isLoadingFields = true;
+  int _unreadNotifications = 0;
+  List<FriendlyInvitation> _invitations = [];
 
   @override
   void initState() {
@@ -83,6 +86,35 @@ class _HomeScreenState extends State<HomeScreen> {
     } else {
       if (mounted) setState(() => _isLoadingFields = false);
     }
+
+    // 3. Tải danh sách lời mời giao hữu nếu có đội để hiển thị thông báo
+    final teamId = AuthContext.instance.currentUser.teamId;
+    if (teamId != null && teamId.isNotEmpty) {
+      try {
+        final invites = await TeamService.getInvitations(teamId);
+        final pending = invites.where((i) => i.status == 'pending').toList();
+        if (mounted) {
+          setState(() {
+            _invitations = pending;
+            _unreadNotifications = pending.length;
+          });
+        }
+      } catch (_) {
+        if (mounted) {
+          setState(() {
+            _invitations = [];
+            _unreadNotifications = 0;
+          });
+        }
+      }
+    } else {
+      if (mounted) {
+        setState(() {
+          _invitations = [];
+          _unreadNotifications = 0;
+        });
+      }
+    }
   }
 
   @override
@@ -115,17 +147,20 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Stack(
+            icon: Stack(
+              clipBehavior: Clip.none,
               children: [
-                Icon(Icons.notifications_none_rounded, size: 26),
-                Positioned(
-                  right: 2,
-                  top: 2,
-                  child: CircleAvatar(radius: 4, backgroundColor: Colors.red),
-                ),
+                const Icon(Icons.notifications_none_rounded, size: 26),
+                if (_unreadNotifications > 0)
+                  const Positioned(
+                    right: 0,
+                    top: 0,
+                    child: CircleAvatar(radius: 4, backgroundColor: Colors.red),
+                  ),
               ],
             ),
             onPressed: () {
+              setState(() => _unreadNotifications = 0);
               showModalBottomSheet(
                 context: context,
                 shape: const RoundedRectangleBorder(
@@ -151,34 +186,56 @@ class _HomeScreenState extends State<HomeScreen> {
                         ],
                       ),
                       const Divider(),
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: const CircleAvatar(
-                          backgroundColor: AppTheme.primaryLightGreen,
-                          child: Icon(Icons.handshake_outlined, color: AppTheme.primaryDarkGreen),
+                      if (_invitations.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 28),
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.notifications_off_outlined,
+                                  size: 48,
+                                  color: AppTheme.textMuted.withValues(alpha: 0.6),
+                                ),
+                                const SizedBox(height: 12),
+                                const Text(
+                                  'Chưa có thông báo nào',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.textPrimary,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                const Text(
+                                  'Bạn sẽ nhận được thông báo khi có lời mời giao hữu hoặc giải đấu mới.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      else
+                        ..._invitations.map(
+                          (inv) => ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: const CircleAvatar(
+                              backgroundColor: AppTheme.primaryLightGreen,
+                              child: Icon(Icons.handshake_outlined, color: AppTheme.primaryDarkGreen),
+                            ),
+                            title: Text('Lời mời giao hữu từ ${inv.fromTeamName}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                            subtitle: Text('Sân: ${inv.venue ?? 'Thỏa thuận'}${inv.proposedDate != null ? ' • Ngày: ${inv.proposedDate}' : ''}'),
+                            trailing: TextButton(
+                              onPressed: () {
+                                Navigator.pop(ctx);
+                                widget.onNavigate(3);
+                              },
+                              child: const Text('Xem'),
+                            ),
+                          ),
                         ),
-                        title: const Text('Hệ thống cáp kèo & Tìm đối thủ', style: TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: const Text('Đã cập nhật tính năng ghép đội đối thủ tự động cùng khu vực.'),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () {
-                          Navigator.pop(ctx);
-                          widget.onNavigate(3);
-                        },
-                      ),
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: const CircleAvatar(
-                          backgroundColor: Color(0xFFEFF6FF),
-                          child: Icon(Icons.emoji_events_outlined, color: Color(0xFF2563EB)),
-                        ),
-                        title: const Text('Giải đấu Super Cup 2026', style: TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: const Text('Lịch thi đấu và bảng xếp hạng đã được đồng bộ tự động.'),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () {
-                          Navigator.pop(ctx);
-                          widget.onNavigate(1);
-                        },
-                      ),
                     ],
                   ),
                 ),
