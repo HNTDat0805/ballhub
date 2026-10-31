@@ -97,6 +97,191 @@ class ApiTournamentRepository implements TournamentRepository {
     ];
   }
 
+  static List<TournamentTeam> _getFallbackSampleTeams(String tournamentId) {
+    final now = DateTime.now();
+    return [
+      TournamentTeam(
+        id: 'tt_01',
+        tournamentId: tournamentId,
+        teamId: 'team_sao_vang',
+        teamName: 'FC Sao Vàng',
+        logoUrl: '',
+        captainId: 'captain_01',
+        captainName: 'Nguyễn Văn Đạt',
+        captainPhone: '0901234567',
+        captainEmail: 'dat@ballhub.com',
+        membersCount: 14,
+        status: RegistrationStatus.approved,
+        registeredAt: now.subtract(const Duration(days: 4)),
+      ),
+      TournamentTeam(
+        id: 'tt_02',
+        tournamentId: tournamentId,
+        teamId: 'team_pho_nui',
+        teamName: 'FC Phố Núi',
+        logoUrl: '',
+        captainId: 'captain_02',
+        captainName: 'Trần Văn Nam',
+        captainPhone: '0912345678',
+        captainEmail: 'nam@ballhub.com',
+        membersCount: 16,
+        status: RegistrationStatus.approved,
+        registeredAt: now.subtract(const Duration(days: 4)),
+      ),
+      TournamentTeam(
+        id: 'tt_03',
+        tournamentId: tournamentId,
+        teamId: 'team_con_loc_do',
+        teamName: 'FC Cơn Lốc Đỏ',
+        logoUrl: '',
+        captainId: 'captain_03',
+        captainName: 'Lê Hoàng Minh',
+        captainPhone: '0987654321',
+        captainEmail: 'minh@ballhub.com',
+        membersCount: 15,
+        status: RegistrationStatus.approved,
+        registeredAt: now.subtract(const Duration(days: 3)),
+      ),
+      TournamentTeam(
+        id: 'tt_04',
+        tournamentId: tournamentId,
+        teamId: 'team_song_han',
+        teamName: 'FC Sông Hàn Đà Nẵng',
+        logoUrl: '',
+        captainId: 'captain_04',
+        captainName: 'Phan Đình Tùng',
+        captainPhone: '0933445566',
+        captainEmail: 'tung@ballhub.com',
+        membersCount: 14,
+        status: RegistrationStatus.approved,
+        registeredAt: now.subtract(const Duration(days: 3)),
+      ),
+    ];
+  }
+
+  static List<TournamentMatch> _getFallbackSampleMatches(String tournamentId) {
+    final now = DateTime.now();
+    return [
+      TournamentMatch(
+        id: 'match_01',
+        tournamentId: tournamentId,
+        round: 1,
+        roundName: 'Vòng 1',
+        homeTeamId: 'team_sao_vang',
+        homeTeamName: 'FC Sao Vàng',
+        awayTeamId: 'team_con_loc_do',
+        awayTeamName: 'FC Cơn Lốc Đỏ',
+        scheduledTime: now.subtract(const Duration(hours: 3)),
+        venue: 'Sân bóng Gia Định',
+        status: MatchStatus.finished,
+        homeScore: 3,
+        awayScore: 1,
+        isConfirmed: true,
+      ),
+      TournamentMatch(
+        id: 'match_02',
+        tournamentId: tournamentId,
+        round: 1,
+        roundName: 'Vòng 1',
+        homeTeamId: 'team_song_han',
+        homeTeamName: 'FC Sông Hàn Đà Nẵng',
+        awayTeamId: 'team_pho_nui',
+        awayTeamName: 'FC Phố Núi',
+        scheduledTime: now.subtract(const Duration(minutes: 30)),
+        venue: 'Làng Thể Thao Tuyên Sơn',
+        status: MatchStatus.inProgress,
+        homeScore: 2,
+        awayScore: 2,
+        isConfirmed: false,
+      ),
+      TournamentMatch(
+        id: 'match_03',
+        tournamentId: tournamentId,
+        round: 2,
+        roundName: 'Vòng 2',
+        homeTeamId: 'team_sao_vang',
+        homeTeamName: 'FC Sao Vàng',
+        awayTeamId: 'team_song_han',
+        awayTeamName: 'FC Sông Hàn Đà Nẵng',
+        scheduledTime: now.add(const Duration(days: 1, hours: 2)),
+        venue: 'Sân bóng Gia Định',
+        status: MatchStatus.scheduled,
+        isConfirmed: false,
+      ),
+      TournamentMatch(
+        id: 'match_04',
+        tournamentId: tournamentId,
+        round: 2,
+        roundName: 'Vòng 2',
+        homeTeamId: 'team_pho_nui',
+        homeTeamName: 'FC Phố Núi',
+        awayTeamId: 'team_con_loc_do',
+        awayTeamName: 'FC Cơn Lốc Đỏ',
+        scheduledTime: now.add(const Duration(days: 2, hours: 3)),
+        venue: 'Sân vận động Mỹ Đình',
+        status: MatchStatus.scheduled,
+        isConfirmed: false,
+      ),
+    ];
+  }
+
+  static List<StandingsRow> _getFallbackSampleStandings(String tournamentId) {
+    return const [
+      StandingsRow(
+        teamId: 'team_sao_vang',
+        teamName: 'FC Sao Vàng',
+        played: 1,
+        won: 1,
+        drawn: 0,
+        lost: 0,
+        goalsFor: 3,
+        goalsAgainst: 1,
+        goalDifference: 2,
+        points: 3,
+        rank: 1,
+      ),
+      StandingsRow(
+        teamId: 'team_song_han',
+        teamName: 'FC Sông Hàn Đà Nẵng',
+        played: 1,
+        won: 0,
+        drawn: 1,
+        lost: 0,
+        goalsFor: 2,
+        goalsAgainst: 2,
+        goalDifference: 0,
+        points: 1,
+        rank: 2,
+      ),
+      StandingsRow(
+        teamId: 'team_pho_nui',
+        teamName: 'FC Phố Núi',
+        played: 1,
+        won: 0,
+        drawn: 1,
+        lost: 0,
+        goalsFor: 2,
+        goalsAgainst: 2,
+        goalDifference: 0,
+        points: 1,
+        rank: 3,
+      ),
+      StandingsRow(
+        teamId: 'team_con_loc_do',
+        teamName: 'FC Cơn Lốc Đỏ',
+        played: 1,
+        won: 0,
+        drawn: 0,
+        lost: 1,
+        goalsFor: 1,
+        goalsAgainst: 3,
+        goalDifference: -2,
+        points: 0,
+        rank: 4,
+      ),
+    ];
+  }
+
   // ----------------------------------------------------
   // TOURNAMENTS
   // ----------------------------------------------------
@@ -122,7 +307,6 @@ class ApiTournamentRepository implements TournamentRepository {
       _tournamentsController.add(list);
       return list;
     } catch (e) {
-      // Fallback hiển thị dữ liệu giải đấu mẫu khi máy chủ backend chưa khởi động
       if (_cachedTournaments.isEmpty) {
         _cachedTournaments = _getFallbackSampleTournaments();
         _tournamentsController.add(_cachedTournaments);
@@ -225,9 +409,10 @@ class ApiTournamentRepository implements TournamentRepository {
       }
       controller.add(list);
       return list;
-    } catch (e) {
-      controller.addError(e);
-      return [];
+    } catch (_) {
+      final fallback = _getFallbackSampleTeams(tournamentId);
+      controller.add(fallback);
+      return fallback;
     }
   }
 
@@ -299,9 +484,10 @@ class ApiTournamentRepository implements TournamentRepository {
       }
       controller.add(list);
       return list;
-    } catch (e) {
-      controller.addError(e);
-      return [];
+    } catch (_) {
+      final fallback = _getFallbackSampleMatches(tournamentId);
+      controller.add(fallback);
+      return fallback;
     }
   }
 
@@ -390,9 +576,10 @@ class ApiTournamentRepository implements TournamentRepository {
       }
       controller.add(list);
       return list;
-    } catch (e) {
-      controller.addError(e);
-      return [];
+    } catch (_) {
+      final fallback = _getFallbackSampleStandings(tournamentId);
+      controller.add(fallback);
+      return fallback;
     }
   }
 

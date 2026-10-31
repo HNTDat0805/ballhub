@@ -28,6 +28,7 @@ class FieldListController extends ChangeNotifier {
   List<FootballField> _fields = [];
   String _searchQuery = '';
   String? _cityFilter;
+  String? _districtFilter;
   String? _fieldTypeFilter;
 
   bool get isLoading => _isLoading;
@@ -35,6 +36,7 @@ class FieldListController extends ChangeNotifier {
   List<FootballField> get fields => _fields;
   String get searchQuery => _searchQuery;
   String? get cityFilter => _cityFilter;
+  String? get districtFilter => _districtFilter;
   String? get fieldTypeFilter => _fieldTypeFilter;
 
   void setSearchQuery(String query) {
@@ -44,6 +46,11 @@ class FieldListController extends ChangeNotifier {
 
   void setCityFilter(String? city) {
     _cityFilter = city;
+    notifyListeners();
+  }
+
+  void setDistrictFilter(String? district) {
+    _districtFilter = district;
     notifyListeners();
   }
 
@@ -64,6 +71,7 @@ class FieldListController extends ChangeNotifier {
     try {
       _fields = await _repo.getFields(
         city: _cityFilter,
+        district: _districtFilter,
         fieldType: _fieldTypeFilter,
         search: _searchQuery.isEmpty ? null : _searchQuery,
         status: 'active',

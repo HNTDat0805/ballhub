@@ -202,9 +202,18 @@ class _CreateEditTournamentScreenState extends State<CreateEditTournamentScreen>
                   Expanded(
                     child: DropdownButtonFormField<TournamentFormat>(
                       initialValue: _format,
+                      isExpanded: true,
                       decoration: const InputDecoration(labelText: 'Thể thức thi đấu'),
                       items: TournamentFormat.values.map((f) {
-                        return DropdownMenuItem(value: f, child: Text(f.displayName, style: const TextStyle(fontSize: 13)));
+                        return DropdownMenuItem(
+                          value: f,
+                          child: Text(
+                            f.displayName,
+                            style: const TextStyle(fontSize: 13),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
+                        );
                       }).toList(),
                       onChanged: (val) {
                         if (val != null) setState(() => _format = val);
@@ -215,9 +224,13 @@ class _CreateEditTournamentScreenState extends State<CreateEditTournamentScreen>
                   Expanded(
                     child: DropdownButtonFormField<int>(
                       initialValue: _maxTeams,
+                      isExpanded: true,
                       decoration: const InputDecoration(labelText: 'Số đội tối đa'),
                       items: [4, 6, 8, 10, 12, 16, 24, 32].map((count) {
-                        return DropdownMenuItem(value: count, child: Text('$count đội'));
+                        return DropdownMenuItem(
+                          value: count,
+                          child: Text('$count đội', overflow: TextOverflow.ellipsis, maxLines: 1),
+                        );
                       }).toList(),
                       onChanged: (val) {
                         if (val != null) setState(() => _maxTeams = val);
@@ -231,9 +244,13 @@ class _CreateEditTournamentScreenState extends State<CreateEditTournamentScreen>
               if (isEditing) ...[
                 DropdownButtonFormField<TournamentStatus>(
                   initialValue: _status,
+                  isExpanded: true,
                   decoration: const InputDecoration(labelText: 'Trạng thái giải đấu'),
                   items: TournamentStatus.values.map((s) {
-                    return DropdownMenuItem(value: s, child: Text(s.displayName));
+                    return DropdownMenuItem(
+                      value: s,
+                      child: Text(s.displayName, overflow: TextOverflow.ellipsis, maxLines: 1),
+                    );
                   }).toList(),
                   onChanged: (val) {
                     if (val != null) setState(() => _status = val);

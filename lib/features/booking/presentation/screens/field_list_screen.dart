@@ -6,6 +6,7 @@ import '../controllers/booking_controllers.dart';
 import 'field_detail_screen.dart';
 import '../../../../widgets/province_picker_modal.dart';
 import '../../../../widgets/filter_selection_modal.dart';
+import '../../../../services/province_service.dart';
 
 /// Màn hình Danh sách Sân bóng (Page 7 - figma.pdf)
 class FieldListScreen extends StatefulWidget {
@@ -20,10 +21,12 @@ class FieldListScreen extends StatefulWidget {
 class _FieldListScreenState extends State<FieldListScreen> {
   late final FieldListController _controller;
   final _searchController = TextEditingController();
-  int _selectedFilter = 0; // 0 = Tất cả, 1 = Tỉnh/Thành, 2 = Loại sân
+  int _selectedFilter = 0; // 0 = Tất cả, 1 = Tỉnh/Thành, 2 = Quận/Huyện, 3 = Loại sân
   String _selectedCity = 'TP. Hồ Chí Minh';
+  String? _selectedDistrict;
+  String _selectedDistrictLabel = 'Khu vực';
   String? _selectedFieldType;
-  String _selectedFieldTypeLabel = 'Sân 7 người';
+  String _selectedFieldTypeLabel = 'Loại sân';
 
   @override
   void initState() {
@@ -82,7 +85,7 @@ class _FieldListScreenState extends State<FieldListScreen> {
             ),
           ),
 
-          // Filter Chips: 1. Tất cả | 2. Chọn thành phố | 3. Loại sân (sổ xuống)
+          // Filter Chips: 1. Tất cả | 2. Chọn thành phố | 3. Quận/Huyện | 4. Loại sân
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -94,10 +97,13 @@ class _FieldListScreenState extends State<FieldListScreen> {
                   onTap: () {
                     setState(() {
                       _selectedFilter = 0;
+                      _selectedDistrict = null;
+                      _selectedDistrictLabel = 'Khu vực';
                       _selectedFieldType = null;
-                      _selectedFieldTypeLabel = 'Sân 7 người';
+                      _selectedFieldTypeLabel = 'Loại sân';
                     });
                     _controller.setCityFilter(null);
+                    _controller.setDistrictFilter(null);
                     _controller.setFieldTypeFilter(null);
                     _controller.loadFields();
                   },
@@ -110,15 +116,21 @@ class _FieldListScreenState extends State<FieldListScreen> {
                     final chosen = await ProvincePickerModal.show(context, currentProvince: _selectedCity);
                     if (chosen != null) {
                       setState(() {
-                        _selectedCity = chosen;
+                        if (_selectedCity != chosen) {
+                          _selectedCity = chosen;
+                          _selectedDistrict = null;
+                          _selectedDistrictLabel = 'Khu vực';
+                        }
                         _selectedFilter = 1;
                       });
                       _controller.setCityFilter(chosen);
+                      _controller.setDistrictFilter(null);
                       _controller.setFieldTypeFilter(_selectedFieldType);
                       _controller.loadFields();
                     } else {
                       setState(() => _selectedFilter = 1);
                       _controller.setCityFilter(_selectedCity);
+                      _controller.setDistrictFilter(_selectedDistrict);
                       _controller.setFieldTypeFilter(_selectedFieldType);
                       _controller.loadFields();
                     }
@@ -127,6 +139,54 @@ class _FieldListScreenState extends State<FieldListScreen> {
                 const SizedBox(width: 8),
                 _filterChip(
                   2,
+                  '$_selectedDistrictLabel ⌄',
+                  onTap: () async {
+                    final districts = ProvinceService.getDistricts(_selectedCity);
+                    final districtOptions = [
+                      const FilterOption<String?>(
+                        value: null,
+                        label: 'Tất cả quận/huyện',
+                        subtitle: 'Hiển thị mọi khu vực trên địa bàn',
+                      ),
+                      ...districts.map(
+                        (d) => FilterOption<String?>(
+                          value: d,
+                          label: d,
+                          subtitle: 'Khu vực $d, $_selectedCity',
+                        ),
+                      ),
+                    ];
+
+                    final chosen = await FilterSelectionModal.show<String?>(
+                      context,
+                      title: 'Chọn khu vực / Quận huyện ($_selectedCity)',
+                      selectedValue: _selectedDistrict,
+                      options: districtOptions,
+                    );
+                    if (chosen != null) {
+                      setState(() {
+                        _selectedFilter = 2;
+                        _selectedDistrict = chosen;
+                        _selectedDistrictLabel = chosen;
+                      });
+                      _controller.setCityFilter(_selectedCity);
+                      _controller.setDistrictFilter(chosen);
+                      _controller.loadFields();
+                    } else {
+                      setState(() {
+                        _selectedFilter = 1;
+                        _selectedDistrict = null;
+                        _selectedDistrictLabel = 'Khu vực';
+                      });
+                      _controller.setCityFilter(_selectedCity);
+                      _controller.setDistrictFilter(null);
+                      _controller.loadFields();
+                    }
+                  },
+                ),
+                const SizedBox(width: 8),
+                _filterChip(
+                  3,
                   '$_selectedFieldTypeLabel ⌄',
                   onTap: () async {
                     final chosen = await FilterSelectionModal.show<String?>(
@@ -143,7 +203,7 @@ class _FieldListScreenState extends State<FieldListScreen> {
                     );
                     if (chosen != null) {
                       setState(() {
-                        _selectedFilter = 2;
+                        _selectedFilter = 3;
                         if (chosen == 'all') {
                           _selectedFieldType = null;
                           _selectedFieldTypeLabel = 'Loại sân';

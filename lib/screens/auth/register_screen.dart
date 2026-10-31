@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 import '../../services/auth_service.dart';
 import '../../utils/ui_helpers.dart';
+import '../auth_gate.dart';
 
 /// Màn hình Tạo tài khoản (Page 2 - figma.pdf)
 ///
@@ -67,7 +68,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
       if (mounted) {
         showMessage(context, 'Tạo tài khoản thành công! Đang chuyển hướng...');
-        Navigator.pop(context);
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const AuthGate()),
+          (route) => false,
+        );
       }
     } catch (e) {
       if (mounted) showMessage(context, errorText(e));

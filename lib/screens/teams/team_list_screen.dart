@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/team.dart';
+import '../../services/province_service.dart';
 import '../../services/team_service.dart';
 import 'team_detail_screen.dart';
 import 'team_form_screen.dart';
@@ -84,8 +85,8 @@ class _TeamListScreenState extends State<TeamListScreen> {
 
   void _showMatchmakingModal() {
     String currentArea = '';
-    if (_selectedFilter == 1) currentArea = 'Hồ Chí Minh';
-    if (_selectedFilter == 2) currentArea = 'Bình Thạnh';
+    if (_selectedFilter == 1) currentArea = _selectedCity;
+    if (_selectedFilter == 2) currentArea = _selectedDistrict ?? _selectedCity;
 
     showModalBottomSheet(
       context: context,
@@ -405,10 +406,12 @@ class _TeamListScreenState extends State<TeamListScreen> {
                     final chosen = await ProvincePickerModal.show(context, currentProvince: _selectedCity);
                     if (chosen != null) {
                       setState(() {
-                        _selectedCity = chosen;
+                        if (_selectedCity != chosen) {
+                          _selectedCity = chosen;
+                          _selectedDistrict = null;
+                          _selectedDistrictLabel = 'Khu vực';
+                        }
                         _selectedFilter = 1;
-                        _selectedDistrict = null;
-                        _selectedDistrictLabel = 'Khu vực';
                       });
                       _loadTeams();
                     } else {
@@ -422,48 +425,37 @@ class _TeamListScreenState extends State<TeamListScreen> {
                   2,
                   '$_selectedDistrictLabel ⌄',
                   onTap: () async {
-                    // Cung cấp danh sách quận/huyện dựa trên thành phố đã chọn
-                    final List<FilterOption<String?>> districtOptions;
-                    if (_selectedCity.contains('Hà Nội')) {
-                      districtOptions = const [
-                        FilterOption(value: null, label: 'Tất cả quận/huyện'),
-                        FilterOption(value: 'Cầu Giấy', label: 'Quận Cầu Giấy'),
-                        FilterOption(value: 'Nam Từ Liêm', label: 'Quận Nam Từ Liêm'),
-                        FilterOption(value: 'Ba Đình', label: 'Quận Ba Đình'),
-                        FilterOption(value: 'Đống Đa', label: 'Quận Đống Đa'),
-                        FilterOption(value: 'Thanh Xuân', label: 'Quận Thanh Xuân'),
-                      ];
-                    } else if (_selectedCity.contains('Đà Nẵng')) {
-                      districtOptions = const [
-                        FilterOption(value: null, label: 'Tất cả quận/huyện'),
-                        FilterOption(value: 'Hải Châu', label: 'Quận Hải Châu'),
-                        FilterOption(value: 'Thanh Khê', label: 'Quận Thanh Khê'),
-                        FilterOption(value: 'Sơn Trà', label: 'Quận Sơn Trà'),
-                      ];
-                    } else {
-                      districtOptions = const [
-                        FilterOption(value: null, label: 'Tất cả quận/huyện'),
-                        FilterOption(value: 'Bình Thạnh', label: 'Quận Bình Thạnh'),
-                        FilterOption(value: 'Quận 1', label: 'Quận 1'),
-                        FilterOption(value: 'Thủ Đức', label: 'TP. Thủ Đức'),
-                        FilterOption(value: 'Tân Bình', label: 'Quận Tân Bình'),
-                        FilterOption(value: 'Gò Vấp', label: 'Quận Gò Vấp'),
-                        FilterOption(value: 'Quận 7', label: 'Quận 7'),
-                      ];
-                    }
+                    // Cung cấp danh sách quận/huyện chuẩn xác theo thành phố đã chọn
+                    final districts = ProvinceService.getDistricts(_selectedCity);
+                    final districtOptions = [
+                      const FilterOption<String?>(
+                        value: null,
+                        label: 'Tất cả quận/huyện',
+                        subtitle: 'Hiển thị mọi khu vực trên địa bàn',
+                      ),
+                      ...districts.map(
+                        (d) => FilterOption<String?>(
+                          value: d,
+                          label: d,
+                          subtitle: 'Khu vực $d, $_selectedCity',
+                        ),
+                      ),
+                    ];
 
                     final chosen = await FilterSelectionModal.show<String?>(
                       context,
-                      title: 'Chọn khu vực / Quận huyện',
+                      title: 'Chọn khu vực / Quận huyện ($_selectedCity)',
                       selectedValue: _selectedDistrict,
                       options: districtOptions,
                     );
-                    setState(() {
-                      _selectedFilter = 2;
-                      _selectedDistrict = chosen;
-                      _selectedDistrictLabel = chosen ?? 'Khu vực';
-                    });
-                    _loadTeams();
+                    if (chosen != _selectedDistrict) {
+                      setState(() {
+                        _selectedFilter = chosen != null ? 2 : 1;
+                        _selectedDistrict = chosen;
+                        _selectedDistrictLabel = chosen ?? 'Khu vực';
+                      });
+                      _loadTeams();
+                    }
                   },
                 ),
                 const SizedBox(width: 8),

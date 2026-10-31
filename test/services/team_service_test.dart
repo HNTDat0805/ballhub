@@ -120,13 +120,13 @@ void main() {
       expect(list.any((t) => t.teamId == 'team_test_1'), true);
     });
 
-    // 4. getMyTeams fallback
-    test('4. getMyTeams returns fallback team when API returns empty', () async {
+    // 4. getMyTeams empty
+    test('4. getMyTeams returns empty list when API returns empty and no teams created', () async {
       final mock = MockHttpClient((req) async => jsonResponse({'success': true, 'data': []}));
       TeamService.api = ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock);
 
       final list = await TeamService.getMyTeams();
-      expect(list.isNotEmpty, true);
+      expect(list.isEmpty, true);
     });
 
     // 5. getTeam by ID

@@ -33,6 +33,14 @@ class TeamService {
   static final Set<String> _deletedTeamIds = {};
   static final List<Team> _userCreatedTeams = [];
 
+  /// Dọn dẹp trạng thái cục bộ khi người dùng đăng xuất
+  static void clearLocalState() {
+    _leftTeamIds.clear();
+    _deletedTeamIds.clear();
+    _userCreatedTeams.clear();
+    _notify();
+  }
+
   // ================= ĐỘI BÓNG =================
 
   static Future<List<Team>> search({String keyword = '', String area = ''}) async {
@@ -67,10 +75,6 @@ class TeamService {
             .toList();
       }
     } catch (_) {}
-
-    if (result.isEmpty) {
-      result = [_getFallbackSampleTeams().first];
-    }
 
     final all = [
       ..._userCreatedTeams,
@@ -117,7 +121,16 @@ class TeamService {
         'description': description,
       });
     } catch (e) {
-      if (e is ApiException) throw AppException(e.message);
+      if (e is ApiException) {
+        if (e.code == 'NETWORK_ERROR' || e.code == 'TIMEOUT' || e.statusCode == 503) {
+          debugPrint('TeamService.createTeam server offline, keeping local team: $e');
+        } else {
+          _userCreatedTeams.remove(newTeam);
+          throw AppException(e.message);
+        }
+      } else {
+        throw AppException(e.toString());
+      }
     } finally {
       _notify();
     }
@@ -146,7 +159,15 @@ class TeamService {
         'description': description,
       });
     } catch (e) {
-      if (e is ApiException) throw AppException(e.message);
+      if (e is ApiException) {
+        if (e.code == 'NETWORK_ERROR' || e.code == 'TIMEOUT' || e.statusCode == 503) {
+          debugPrint('TeamService.updateTeam server offline, keeping local update: $e');
+        } else {
+          throw AppException(e.message);
+        }
+      } else {
+        throw AppException(e.toString());
+      }
     } finally {
       _notify();
     }
@@ -441,6 +462,66 @@ class TeamService {
         captainName: 'Vũ Đội Trưởng',
         memberCount: 14,
         createdAt: now.subtract(const Duration(days: 10)),
+      ),
+      Team(
+        teamId: 'team_dat_cang',
+        teamName: 'FC Đất Cảng Hải Phòng',
+        area: 'Lê Chân, Hải Phòng',
+        description: 'Đội bóng phong trào cáp kèo sân Lạch Tray và Lê Chân.',
+        captainId: 'user_captain_07',
+        captainName: 'Đặng Đội Trưởng',
+        memberCount: 15,
+        createdAt: now.subtract(const Duration(days: 9)),
+      ),
+      Team(
+        teamId: 'team_tay_do',
+        teamName: 'FC Tây Đô Cần Thơ',
+        area: 'Ninh Kiều, Cần Thơ',
+        description: 'Giao lưu bóng đá sân cỏ nhân tạo bến Ninh Kiều cuối tuần.',
+        captainId: 'user_captain_08',
+        captainName: 'Lâm Đội Trưởng',
+        memberCount: 13,
+        createdAt: now.subtract(const Duration(days: 8)),
+      ),
+      Team(
+        teamId: 'team_dat_thu',
+        teamName: 'FC Đất Thủ Bình Dương',
+        area: 'TP. Thủ Dầu Một, Bình Dương',
+        description: 'Giao lưu phong trào khu vực Thủ Dầu Một và Thuận An.',
+        captainId: 'user_captain_09',
+        captainName: 'Bùi Đội Trưởng',
+        memberCount: 16,
+        createdAt: now.subtract(const Duration(days: 7)),
+      ),
+      Team(
+        teamId: 'team_bien_hoa',
+        teamName: 'FC Miền Đông Đồng Nai',
+        area: 'TP. Biên Hòa, Đồng Nai',
+        description: 'Đội bóng giao hữu thể thao cuối tuần sân Biên Hòa.',
+        captainId: 'user_captain_10',
+        captainName: 'Dương Đội Trưởng',
+        memberCount: 14,
+        createdAt: now.subtract(const Duration(days: 6)),
+      ),
+      Team(
+        teamId: 'team_pho_bien',
+        teamName: 'FC Phố Biển Nha Trang',
+        area: 'TP. Nha Trang, Khánh Hòa',
+        description: 'Đội bóng phong trào biển Nha Trang, tìm đối giao hữu.',
+        captainId: 'user_captain_11',
+        captainName: 'Phan Đội Trưởng',
+        memberCount: 12,
+        createdAt: now.subtract(const Duration(days: 5)),
+      ),
+      Team(
+        teamId: 'team_xu_nghe',
+        teamName: 'FC Xứ Nghệ Vinh',
+        area: 'TP. Vinh, Nghệ An',
+        description: 'Đam mê bóng đá sân cỏ nhân tạo thành phố Vinh.',
+        captainId: 'user_captain_12',
+        captainName: 'Hồ Đội Trưởng',
+        memberCount: 17,
+        createdAt: now.subtract(const Duration(days: 4)),
       ),
     ];
 

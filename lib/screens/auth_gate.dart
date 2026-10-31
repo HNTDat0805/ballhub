@@ -11,9 +11,13 @@ class AuthGate extends StatelessWidget {
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
       stream: AuthService.authChanges(),
+      initialData: AuthService.currentUser,
       builder: (context, snap) {
-        if (snap.connectionState == ConnectionState.waiting) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        if (snap.connectionState == ConnectionState.waiting && !snap.hasData) {
+          return const Scaffold(
+            backgroundColor: Colors.white,
+            body: Center(child: CircularProgressIndicator()),
+          );
         }
         if (snap.data == null) return const LoginScreen();
         return MainScreen(key: ValueKey(snap.data!.uid));

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/theme/app_theme.dart';
 import '../../models/app_user.dart';
 import '../../services/user_service.dart';
 import '../../utils/ui_helpers.dart';
@@ -50,7 +51,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         area: _areaCtrl.text.trim(),
       );
       if (!mounted) return;
-      showMessage(context, 'Đã lưu hồ sơ');
+      showMessage(context, 'Đã lưu hồ sơ thành công');
       Navigator.pop(context, updatedUser);
     } catch (e) {
       if (mounted) showMessage(context, errorText(e));
@@ -102,10 +103,21 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               const SizedBox(height: 24),
               FilledButton(
                 onPressed: _saving ? null : _save,
-                style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppTheme.primaryDarkGreen,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
                 child: _saving
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Text('Lưu thay đổi'),
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Text(
+                        'Lưu thay đổi',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
               ),
             ],
           ),

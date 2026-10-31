@@ -8,7 +8,7 @@ import '../../services/auth_service.dart';
 import '../../services/team_service.dart';
 import '../../services/user_service.dart';
 import '../../utils/ui_helpers.dart';
-import '../auth/login_screen.dart';
+import '../auth_gate.dart';
 import '../teams/team_detail_screen.dart';
 import '../teams/team_form_screen.dart';
 import 'edit_profile_screen.dart';
@@ -82,11 +82,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _logout(BuildContext context) async {
     final ok = await confirmDialog(context, 'Đăng xuất', 'Bạn có chắc chắn muốn đăng xuất tài khoản Ballhub?');
     if (ok) {
+      TeamService.clearLocalState();
       await AuthService.logout();
       if (context.mounted) {
         Navigator.pushAndRemoveUntil(
           context,
-          MaterialPageRoute(builder: (_) => const LoginScreen()),
+          MaterialPageRoute(builder: (_) => const AuthGate()),
           (route) => false,
         );
       }

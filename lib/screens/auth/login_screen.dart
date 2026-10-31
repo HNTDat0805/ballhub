@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 import '../../services/auth_service.dart';
 import '../../utils/ui_helpers.dart';
+import '../auth_gate.dart';
 import 'forgot_password_screen.dart';
 import 'register_screen.dart';
 
@@ -45,6 +46,13 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _loading = true);
     try {
       await AuthService.login(_accountCtrl.text.trim(), _passCtrl.text);
+      if (mounted) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const AuthGate()),
+          (route) => false,
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -209,9 +217,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 24),
 
-                    // Trường Số điện thoại hoặc email
+                    // Trường Email
                     const Text(
-                      'Số điện thoại hoặc email',
+                      'Email',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
@@ -221,10 +229,21 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _accountCtrl,
+                      keyboardType: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.next,
+                      autocorrect: false,
                       decoration: const InputDecoration(
-                        hintText: 'Nhập số điện thoại hoặc email',
+                        hintText: 'Nhập địa chỉ email của bạn',
+                        prefixIcon: Icon(Icons.email_outlined, size: 20),
                       ),
-                      validator: (v) => (v == null || v.trim().isEmpty) ? 'Vui lòng nhập tài khoản' : null,
+                      validator: (v) {
+                        final val = v?.trim() ?? '';
+                        if (val.isEmpty) return 'Vui lòng nhập email';
+                        if (!val.contains('@') || !val.contains('.')) {
+                          return 'Vui lòng nhập định dạng email hợp lệ (ví dụ: ban@gmail.com)';
+                        }
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 18),
 
@@ -241,8 +260,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     TextFormField(
                       controller: _passCtrl,
                       obscureText: _obscure,
+                      textInputAction: TextInputAction.done,
+                      onFieldSubmitted: (_) => _login(),
                       decoration: InputDecoration(
                         hintText: 'Nhập mật khẩu',
+                        prefixIcon: const Icon(Icons.lock_outline, size: 20),
                         suffixIcon: IconButton(
                           icon: Icon(
                             _obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,

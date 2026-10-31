@@ -45,5 +45,42 @@ void main() {
       final p3 = Province.fromJson({'code': 74, 'name': 'Tỉnh Bình Dương'});
       expect(p3.displayName, 'Bình Dương');
     });
+
+    test('getDistricts returns accurate districts for TP. Hồ Chí Minh, Hà Nội, Đà Nẵng, Hải Phòng, Cần Thơ, Bình Dương', () {
+      final hcm = ProvinceService.getDistricts('TP. Hồ Chí Minh');
+      expect(hcm, containsAll(['Quận 1', 'Bình Thạnh', 'TP. Thủ Đức']));
+
+      final hn = ProvinceService.getDistricts('Hà Nội');
+      expect(hn, containsAll(['Cầu Giấy', 'Nam Từ Liêm', 'Ba Đình']));
+
+      final dn = ProvinceService.getDistricts('Đà Nẵng');
+      expect(dn, containsAll(['Hải Châu', 'Sơn Trà']));
+
+      final hp = ProvinceService.getDistricts('Hải Phòng');
+      expect(hp, containsAll(['Lê Chân', 'Hồng Bàng', 'Thủy Nguyên']));
+
+      final ct = ProvinceService.getDistricts('Cần Thơ');
+      expect(ct, containsAll(['Ninh Kiều', 'Cái Răng']));
+
+      final bd = ProvinceService.getDistricts('Bình Dương');
+      expect(bd, containsAll(['TP. Thủ Dầu Một', 'TP. Thuận An', 'TP. Dĩ An']));
+    });
+
+    test('getDistricts handles prefix normalization (Tỉnh, Thành phố, TP.)', () {
+      final ct = ProvinceService.getDistricts('Thành phố Cần Thơ');
+      expect(ct, contains('Ninh Kiều'));
+
+      final bd = ProvinceService.getDistricts('Tỉnh Bình Dương');
+      expect(bd, contains('TP. Thủ Dầu Một'));
+
+      final dn = ProvinceService.getDistricts('TP. Đà Nẵng');
+      expect(dn, contains('Hải Châu'));
+    });
+
+    test('getDistricts falls back gracefully for unknown province', () {
+      final res = ProvinceService.getDistricts('Vùng Đất Không Xác Định');
+      expect(res.isNotEmpty, isTrue);
+      expect(res.first, contains('Trung tâm Thành phố / Thị xã'));
+    });
   });
 }
