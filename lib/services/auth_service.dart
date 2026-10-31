@@ -23,17 +23,28 @@ class AuthService {
   }) async {
     final cred = await _auth.createUserWithEmailAndPassword(email: email, password: password);
     final id = cred.user!.uid;
-    await users.doc(id).set({
-      'userId': id,
-      'fullName': fullName,
-      'email': email,
-      'phone': phone,
-      'avatarUrl': null,
-      'position': null,
-      'area': null,
-      'role': 'User',
-      'createdAt': FieldValue.serverTimestamp(),
-    });
+
+    // Cập nhật tên hiển thị lên Firebase Auth
+    try {
+      await cred.user?.updateDisplayName(fullName);
+    } catch (_) {}
+
+    // Ghi thông tin profile vào Firestore nếu có, giới hạn timeout 2 giây để tránh treo ứng dụng khi Firestore chưa được kích hoạt
+    try {
+      await users.doc(id).set({
+        'userId': id,
+        'fullName': fullName,
+        'email': email,
+        'phone': phone,
+        'avatarUrl': null,
+        'position': null,
+        'area': null,
+        'role': 'User',
+        'createdAt': FieldValue.serverTimestamp(),
+      }).timeout(const Duration(seconds: 2));
+    } catch (_) {
+      // Tiếp tục hoàn tất đăng ký dù Firestore chưa bật hoặc API-First chặn direct write
+    }
   }
 
   static Future<void> login(String email, String password) async {
@@ -48,6 +59,10 @@ class AuthService {
   static Stream<AppUser?> currentUserStream() {
     final id = uid;
     if (id == null) return Stream.value(null);
-    return users.doc(id).snapshots().map((doc) => doc.exists ? AppUser.fromMap(doc.data()!) : null);
+    return users
+        .doc(id)
+        .snapshots()
+        .map((doc) => doc.exists ? AppUser.fromMap(doc.data()!) : null)
+        .handleError((_) => null);
   }
 }
