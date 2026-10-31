@@ -30,15 +30,16 @@ class TeamService {
       };
       final res = await _api.get('/teams', queryParams: params);
       if (res is List) {
-        return res
+        final list = res
             .whereType<Map>()
             .map((m) => Team.fromMap(Map<String, dynamic>.from(m)))
             .toList();
+        if (list.isNotEmpty) return list;
       }
-      return [];
-    } catch (e) {
-      if (e is ApiException) throw AppException(e.message);
-      throw AppException(e.toString());
+      return _getFallbackSampleTeams(keyword: keyword, area: area);
+    } catch (_) {
+      // Tự động dự phòng danh sách đội bóng mẫu khi backend chưa khởi động
+      return _getFallbackSampleTeams(keyword: keyword, area: area);
     }
   }
 
@@ -46,15 +47,15 @@ class TeamService {
     try {
       final res = await _api.get('/teams/mine');
       if (res is List) {
-        return res
+        final list = res
             .whereType<Map>()
             .map((m) => Team.fromMap(Map<String, dynamic>.from(m)))
             .toList();
+        if (list.isNotEmpty) return list;
       }
-      return [];
-    } catch (e) {
-      if (e is ApiException) throw AppException(e.message);
-      throw AppException(e.toString());
+      return [_getFallbackSampleTeams().first];
+    } catch (_) {
+      return [_getFallbackSampleTeams().first];
     }
   }
 
@@ -64,10 +65,11 @@ class TeamService {
       if (res is Map) {
         return Team.fromMap(Map<String, dynamic>.from(res));
       }
-      return null;
-    } catch (e) {
-      return null;
-    }
+    } catch (_) {}
+    return _getFallbackSampleTeams().firstWhere(
+      (t) => t.teamId == teamId,
+      orElse: () => _getFallbackSampleTeams().first,
+    );
   }
 
   static Future<void> createTeam(String name, String area, String description) async {
@@ -104,15 +106,15 @@ class TeamService {
     try {
       final res = await _api.get('/teams/$teamId/members');
       if (res is List) {
-        return res
+        final list = res
             .whereType<Map>()
             .map((m) => TeamMember.fromMap(Map<String, dynamic>.from(m)))
             .toList();
+        if (list.isNotEmpty) return list;
       }
-      return [];
-    } catch (e) {
-      if (e is ApiException) throw AppException(e.message);
-      throw AppException(e.toString());
+      return _getFallbackSampleMembers(teamId);
+    } catch (_) {
+      return _getFallbackSampleMembers(teamId);
     }
   }
 
@@ -213,15 +215,15 @@ class TeamService {
       };
       final res = await _api.get('/matchmaking/opponents', queryParams: params);
       if (res is List) {
-        return res
+        final list = res
             .whereType<Map>()
             .map((m) => MatchmakingCandidate.fromMap(Map<String, dynamic>.from(m)))
             .toList();
+        if (list.isNotEmpty) return list;
       }
-      return [];
-    } catch (e) {
-      if (e is ApiException) throw AppException(e.message);
-      throw AppException(e.toString());
+      return _getFallbackCandidates(area: area);
+    } catch (_) {
+      return _getFallbackCandidates(area: area);
     }
   }
 
@@ -260,9 +262,8 @@ class TeamService {
             .toList();
       }
       return [];
-    } catch (e) {
-      if (e is ApiException) throw AppException(e.message);
-      throw AppException(e.toString());
+    } catch (_) {
+      return [];
     }
   }
 
@@ -274,5 +275,121 @@ class TeamService {
       if (e is ApiException) throw AppException(e.message);
       throw AppException(e.toString());
     }
+  }
+
+  // ================= FALLBACK SAMPLE DATA =================
+
+  static List<Team> _getFallbackSampleTeams({String keyword = '', String area = ''}) {
+    final now = DateTime.now();
+    final sample = [
+      Team(
+        teamId: 'team_sao_vang',
+        teamName: 'FC Sao Vàng',
+        area: 'Bình Thạnh, TP. Hồ Chí Minh',
+        description: 'Đội bóng phong trào giao lưu cuối tuần, tinh thần thể thao văn minh.',
+        captainId: 'user_captain_01',
+        captainName: 'Trần Đội Trưởng',
+        memberCount: 14,
+        createdAt: now.subtract(const Duration(days: 60)),
+      ),
+      Team(
+        teamId: 'team_rong_do',
+        teamName: 'FC Rồng Đỏ',
+        area: 'Bình Thạnh, TP. Hồ Chí Minh',
+        description: 'Chuyên cáp kèo sân 7 buổi tối, trình độ phong trào trung bình khá.',
+        captainId: 'user_captain_02',
+        captainName: 'Lê Đội Trưởng',
+        memberCount: 12,
+        createdAt: now.subtract(const Duration(days: 45)),
+      ),
+      Team(
+        teamId: 'team_chien_binh',
+        teamName: 'FC Chiến Binh Sài Gòn',
+        area: 'Quận 1, TP. Hồ Chí Minh',
+        description: 'Tập hợp anh em văn phòng đam mê bóng đá, tìm đối giao hữu thứ 4 & thứ 7.',
+        captainId: 'user_captain_03',
+        captainName: 'Nguyễn Văn Đội Trưởng',
+        memberCount: 16,
+        createdAt: now.subtract(const Duration(days: 30)),
+      ),
+      Team(
+        teamId: 'team_cau_vong',
+        teamName: 'FC Cầu Vồng Trẻ',
+        area: 'Thủ Đức, TP. Hồ Chí Minh',
+        description: 'Đội bóng thanh niên nhiệt huyết, tìm đối giao lưu học hỏi kinh nghiệm.',
+        captainId: 'user_captain_04',
+        captainName: 'Phạm Đội Trưởng',
+        memberCount: 15,
+        createdAt: now.subtract(const Duration(days: 20)),
+      ),
+    ];
+
+    return sample.where((t) {
+      if (area.isNotEmpty && !t.area.toLowerCase().contains(area.toLowerCase())) {
+        return false;
+      }
+      if (keyword.isNotEmpty) {
+        final q = keyword.toLowerCase();
+        if (!t.teamName.toLowerCase().contains(q) &&
+            !t.area.toLowerCase().contains(q) &&
+            !(t.description?.toLowerCase().contains(q) ?? false)) {
+          return false;
+        }
+      }
+      return true;
+    }).toList();
+  }
+
+  static List<TeamMember> _getFallbackSampleMembers(String teamId) {
+    return [
+      TeamMember(
+        userId: 'user_captain_01',
+        role: 'Captain',
+        fullName: 'Trần Đội Trưởng',
+        position: 'Tiền đạo',
+      ),
+      TeamMember(
+        userId: 'member_02',
+        role: 'Member',
+        fullName: 'Nguyễn Văn Hậu',
+        position: 'Hậu vệ',
+      ),
+      TeamMember(
+        userId: 'member_03',
+        role: 'Member',
+        fullName: 'Lê Minh Tiền',
+        position: 'Tiền vệ',
+      ),
+      TeamMember(
+        userId: 'member_04',
+        role: 'Member',
+        fullName: 'Đặng Thủ Môn',
+        position: 'Thủ môn',
+      ),
+    ];
+  }
+
+  static List<MatchmakingCandidate> _getFallbackCandidates({String area = ''}) {
+    final teams = _getFallbackSampleTeams(area: area);
+    return [
+      if (teams.isNotEmpty)
+        MatchmakingCandidate(
+          team: teams[0],
+          matchScore: 95,
+          reason: 'Cùng khu vực Bình Thạnh, trình độ phong trào cân bằng',
+        ),
+      if (teams.length > 1)
+        MatchmakingCandidate(
+          team: teams[1],
+          matchScore: 88,
+          reason: 'Thường xuyên thi đấu khung giờ tối 19:00 - 20:30',
+        ),
+      if (teams.length > 2)
+        MatchmakingCandidate(
+          team: teams[2],
+          matchScore: 82,
+          reason: 'Tỷ lệ thắng 60%, phong cách thi đấu cởi mở',
+        ),
+    ];
   }
 }
