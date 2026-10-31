@@ -20,3 +20,4 @@ Hệ thống quản lý bóng đá toàn diện: **Tổ chức giải đấu, Đ
 - `ballhub-security-audit`: Cẩm nang rà soát lỗ hổng, Firestore Rules, phân quyền RBAC và kiểm toán gian lận.
 - `ballhub-secret-scan`: Rà soát và ngăn chặn rò rỉ API Keys, Private Keys, Service Accounts, Keystore trước khi commit/push lên GitHub.
 - `ballhub-cicd`: Tự động hóa kiểm thử, GitHub Actions pipeline và triển khai Firebase Production.
+- `ballhub-code-review`: Quy chuẩn và quy trình review code (Flutter, Cloud Functions, Firestore), phát hiện lỗi tiềm ẩn, bảo vệ kiến trúc và kiểm định chất lượng trước khi merge/commit.
