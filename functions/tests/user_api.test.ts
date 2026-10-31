@@ -200,7 +200,7 @@ describe('User Profile & Avatar REST API Test Suite', () => {
         .set('x-user-id', userId)
         .set('x-user-role', 'player');
 
-      const initialUpdatedAt = beforeRes.body.data.updatedAt;
+      assert.ok(beforeRes.body.data);
 
       // Make update
       const updateRes = await request(app)
