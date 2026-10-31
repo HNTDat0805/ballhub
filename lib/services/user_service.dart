@@ -7,7 +7,10 @@ import '../models/app_user.dart';
 import 'auth_service.dart';
 
 class UserService {
-  static final ApiClient _api = ApiClient();
+  static ApiClient _api = ApiClient();
+  @visibleForTesting
+  static set api(ApiClient client) => _api = client;
+
   static AppUser? currentUser;
   static final ValueNotifier<AppUser?> currentUserNotifier = ValueNotifier<AppUser?>(null);
 
@@ -16,8 +19,8 @@ class UserService {
     // 1. Gọi backend REST API
     try {
       final res = await _api.get('/users/me');
-      if (res is Map<String, dynamic>) {
-        final user = AppUser.fromMap(res);
+      if (res is Map) {
+        final user = AppUser.fromMap(Map<String, dynamic>.from(res));
         currentUser = user;
         currentUserNotifier.value = user;
         return user;
@@ -74,8 +77,8 @@ class UserService {
         'position': position,
         'area': area,
       });
-      if (res is Map<String, dynamic>) {
-        updated = AppUser.fromMap(res);
+      if (res is Map) {
+        updated = AppUser.fromMap(Map<String, dynamic>.from(res));
       }
     } catch (_) {}
 

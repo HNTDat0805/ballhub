@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import '../models/app_user.dart';
 
 class AuthService {
@@ -8,8 +9,25 @@ class AuthService {
 
   static CollectionReference<Map<String, dynamic>> get users => _db.collection('users');
 
-  static String? get uid => _auth.currentUser?.uid;
-  static User? get currentUser => _auth.currentUser;
+  @visibleForTesting
+  static String? mockUid;
+
+  static String? get uid {
+    if (mockUid != null) return mockUid;
+    try {
+      return _auth.currentUser?.uid;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static User? get currentUser {
+    try {
+      return _auth.currentUser;
+    } catch (_) {
+      return null;
+    }
+  }
 
   // Lắng nghe trạng thái đăng nhập
   static Stream<User?> authChanges() => _auth.authStateChanges();

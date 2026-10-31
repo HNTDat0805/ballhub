@@ -14,7 +14,16 @@ class AppException implements Exception {
 ///
 /// Tuân thủ kiến trúc API-First: Mọi thao tác đều thực hiện qua REST API Backend (/api/v1/teams, /api/v1/matchmaking, /api/v1/invitations).
 class TeamService {
-  static final ApiClient _api = ApiClient();
+  static ApiClient _api = ApiClient();
+  @visibleForTesting
+  static set api(ApiClient client) => _api = client;
+
+  @visibleForTesting
+  static void resetStateForTesting() {
+    _leftTeamIds.clear();
+    _deletedTeamIds.clear();
+    _userCreatedTeams.clear();
+  }
 
   // Báo cho các màn hình biết dữ liệu đội đã thay đổi để load lại
   static final ValueNotifier<int> changed = ValueNotifier(0);

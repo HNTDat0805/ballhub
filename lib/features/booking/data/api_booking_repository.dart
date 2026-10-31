@@ -56,7 +56,7 @@ class ApiBookingRepository implements BookingRepository {
   Future<FootballField> getFieldById(String fieldId) async {
     try {
       final data = await _client.get('/fields/$fieldId');
-      return FootballField.fromJson(data as Map<String, dynamic>);
+      return FootballField.fromJson(_toMap(data));
     } catch (_) {
       return _getFallbackSampleFields().firstWhere(
         (f) => f.id == fieldId,
@@ -68,19 +68,19 @@ class ApiBookingRepository implements BookingRepository {
   @override
   Future<FootballField> createField(Map<String, dynamic> data) async {
     final result = await _client.post('/fields', body: data);
-    return FootballField.fromJson(result as Map<String, dynamic>);
+    return FootballField.fromJson(_toMap(result));
   }
 
   @override
   Future<FootballField> updateField(String fieldId, Map<String, dynamic> data) async {
     final result = await _client.patch('/fields/$fieldId', body: data);
-    return FootballField.fromJson(result as Map<String, dynamic>);
+    return FootballField.fromJson(_toMap(result));
   }
 
   @override
   Future<FootballField> updateFieldStatus(String fieldId, String status) async {
     final result = await _client.patch('/fields/$fieldId/status', body: {'status': status});
-    return FootballField.fromJson(result as Map<String, dynamic>);
+    return FootballField.fromJson(_toMap(result));
   }
 
   // ───────── Slot ─────────
@@ -103,13 +103,13 @@ class ApiBookingRepository implements BookingRepository {
   @override
   Future<FieldSlot> createSlot(String fieldId, Map<String, dynamic> data) async {
     final result = await _client.post('/fields/$fieldId/slots', body: data);
-    return FieldSlot.fromJson(result as Map<String, dynamic>);
+    return FieldSlot.fromJson(_toMap(result));
   }
 
   @override
   Future<FieldSlot> updateSlot(String fieldId, String slotId, Map<String, dynamic> data) async {
     final result = await _client.patch('/fields/$fieldId/slots/$slotId', body: data);
-    return FieldSlot.fromJson(result as Map<String, dynamic>);
+    return FieldSlot.fromJson(_toMap(result));
   }
 
   @override
@@ -118,13 +118,13 @@ class ApiBookingRepository implements BookingRepository {
       '/fields/$fieldId/slots/$slotId/block',
       body: {'reason': reason ?? 'Chủ sân khóa khung giờ.'},
     );
-    return FieldSlot.fromJson(result as Map<String, dynamic>);
+    return FieldSlot.fromJson(_toMap(result));
   }
 
   @override
   Future<FieldSlot> unblockSlot(String fieldId, String slotId) async {
     final result = await _client.post('/fields/$fieldId/slots/$slotId/unblock');
-    return FieldSlot.fromJson(result as Map<String, dynamic>);
+    return FieldSlot.fromJson(_toMap(result));
   }
 
   static final List<Booking> _fallbackBookings = [];
@@ -145,7 +145,7 @@ class ApiBookingRepository implements BookingRepository {
     };
     try {
       final result = await _client.post('/bookings', body: body);
-      final booking = Booking.fromJson(result as Map<String, dynamic>);
+      final booking = Booking.fromJson(_toMap(result));
       _fallbackBookings.insert(0, booking);
       return booking;
     } catch (_) {
@@ -208,7 +208,7 @@ class ApiBookingRepository implements BookingRepository {
   Future<Booking> getBooking(String bookingId) async {
     try {
       final data = await _client.get('/bookings/$bookingId');
-      return Booking.fromJson(data as Map<String, dynamic>);
+      return Booking.fromJson(_toMap(data));
     } catch (_) {
       return _fallbackBookings.firstWhere(
         (b) => b.id == bookingId,
@@ -224,7 +224,7 @@ class ApiBookingRepository implements BookingRepository {
         '/bookings/$bookingId/cancel',
         body: {'reason': reason ?? ''},
       );
-      return Booking.fromJson(result as Map<String, dynamic>);
+      return Booking.fromJson(_toMap(result));
     } catch (_) {
       final idx = _fallbackBookings.indexWhere((b) => b.id == bookingId);
       if (idx != -1) {
@@ -278,7 +278,7 @@ class ApiBookingRepository implements BookingRepository {
   @override
   Future<Booking> confirmBooking(String bookingId) async {
     final result = await _client.post('/owner/bookings/$bookingId/confirm');
-    return Booking.fromJson(result as Map<String, dynamic>);
+    return Booking.fromJson(_toMap(result));
   }
 
   @override
@@ -287,14 +287,23 @@ class ApiBookingRepository implements BookingRepository {
       '/owner/bookings/$bookingId/reject',
       body: {'reason': reason},
     );
-    return Booking.fromJson(result as Map<String, dynamic>);
+    return Booking.fromJson(_toMap(result));
   }
 
   // ───────── Helpers & Fallbacks ─────────
 
+  static Map<String, dynamic> _toMap(dynamic val) {
+    if (val is Map<String, dynamic>) return val;
+    if (val is Map) return Map<String, dynamic>.from(val);
+    return <String, dynamic>{};
+  }
+
   List<T> _parseList<T>(dynamic data, T Function(Map<String, dynamic>) fromJson) {
     if (data is! List) return const [];
-    return data.whereType<Map<String, dynamic>>().map(fromJson).toList();
+    return data
+        .whereType<Map>()
+        .map((item) => fromJson(Map<String, dynamic>.from(item)))
+        .toList();
   }
 
   static List<FootballField> _getFallbackSampleFields({

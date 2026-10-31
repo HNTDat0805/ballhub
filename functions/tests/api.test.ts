@@ -306,6 +306,221 @@ describe('Ballhub API-First REST API Test Suite', () => {
       assert.strictEqual(audit.newAwayScore, 1);
     });
   });
+
+  // 7. Advanced Tournament Filters, Edge Cases & Security Validations
+  describe('Tournament Filters, Edge Cases & Security Rules', () => {
+    it('GET /api/v1/tournaments/:id should return 404 for unknown tournament', async () => {
+      const res = await request(app).get('/api/v1/tournaments/unknown_tour_999');
+      assert.strictEqual(res.status, 404);
+      assert.strictEqual(res.body.success, false);
+    });
+
+    it('GET /api/v1/tournaments should filter by location', async () => {
+      const res = await request(app)
+        .get('/api/v1/tournaments')
+        .query({ location: 'Thong Nhat' });
+      assert.strictEqual(res.status, 200);
+      assert.strictEqual(res.body.success, true);
+      assert.ok(res.body.data.some((t: any) => t.id === createdTournamentId));
+    });
+
+    it('GET /api/v1/tournaments should filter by status', async () => {
+      const res = await request(app)
+        .get('/api/v1/tournaments')
+        .query({ status: 'inProgress' });
+      assert.strictEqual(res.status, 200);
+      assert.strictEqual(res.body.success, true);
+      assert.ok(Array.isArray(res.body.data));
+    });
+
+    it('POST /api/v1/tournaments should reject tournament with empty name', async () => {
+      const res = await request(app)
+        .post('/api/v1/tournaments')
+        .set('x-user-id', 'user_organizer_01')
+        .set('x-user-role', 'organizer')
+        .send({
+          name: '',
+          location: 'San My Dinh',
+          startDate: new Date(Date.now() + 86400000).toISOString(),
+          endDate: new Date(Date.now() + 86400000 * 5).toISOString(),
+          registrationDeadline: new Date().toISOString(),
+          maxTeams: 8,
+        });
+
+      assert.strictEqual(res.status, 400);
+      assert.strictEqual(res.body.error.code, 'VALIDATION_ERROR');
+    });
+
+    it('POST /api/v1/tournaments should reject tournament with endDate before startDate', async () => {
+      const res = await request(app)
+        .post('/api/v1/tournaments')
+        .set('x-user-id', 'user_organizer_01')
+        .set('x-user-role', 'organizer')
+        .send({
+          name: 'Invalid Date Tournament',
+          location: 'San My Dinh',
+          startDate: new Date(Date.now() + 86400000 * 5).toISOString(),
+          endDate: new Date(Date.now() + 86400000).toISOString(),
+          registrationDeadline: new Date().toISOString(),
+          maxTeams: 8,
+        });
+
+      assert.strictEqual(res.status, 400);
+      assert.strictEqual(res.body.error.code, 'BAD_REQUEST');
+    });
+
+    it('POST /api/v1/tournaments should reject tournament with registrationDeadline after startDate', async () => {
+      const res = await request(app)
+        .post('/api/v1/tournaments')
+        .set('x-user-id', 'user_organizer_01')
+        .set('x-user-role', 'organizer')
+        .send({
+          name: 'Invalid Deadline Tournament',
+          location: 'San My Dinh',
+          startDate: new Date(Date.now() + 86400000).toISOString(),
+          endDate: new Date(Date.now() + 86400000 * 5).toISOString(),
+          registrationDeadline: new Date(Date.now() + 86400000 * 2).toISOString(),
+          maxTeams: 8,
+        });
+
+      assert.strictEqual(res.status, 400);
+      assert.strictEqual(res.body.error.code, 'BAD_REQUEST');
+    });
+
+    it('POST /api/v1/tournaments should create knockout tournament successfully', async () => {
+      const res = await request(app)
+        .post('/api/v1/tournaments')
+        .set('x-user-id', 'user_organizer_01')
+        .set('x-user-role', 'organizer')
+        .send({
+          name: 'Cúp Knockout Mở Rộng 2026',
+          location: 'Hà Nội',
+          startDate: new Date(Date.now() + 86400000 * 3).toISOString(),
+          endDate: new Date(Date.now() + 86400000 * 10).toISOString(),
+          registrationDeadline: new Date(Date.now() + 86400000 * 2).toISOString(),
+          maxTeams: 16,
+          format: TournamentFormat.knockout,
+        });
+
+      assert.strictEqual(res.status, 201);
+      assert.strictEqual(res.body.success, true);
+      assert.strictEqual(res.body.data.format, TournamentFormat.knockout);
+    });
+
+    it('PATCH /api/v1/tournaments/:id should reject update by non-organizer (403)', async () => {
+      const res = await request(app)
+        .patch(`/api/v1/tournaments/${createdTournamentId}`)
+        .set('x-user-id', 'user_player_01')
+        .set('x-user-role', 'player')
+        .send({ name: 'Hacked Name' });
+
+      assert.strictEqual(res.status, 403);
+      assert.strictEqual(res.body.success, false);
+      assert.strictEqual(res.body.error.code, 'PERMISSION_DENIED');
+    });
+
+    it('PATCH /api/v1/tournaments/:id should return 400 for unknown tournament', async () => {
+      const res = await request(app)
+        .patch('/api/v1/tournaments/unknown_999')
+        .set('x-user-id', 'user_organizer_01')
+        .set('x-user-role', 'organizer')
+        .send({ name: 'New Name' });
+
+      assert.strictEqual(res.status, 400);
+      assert.strictEqual(res.body.success, false);
+    });
+
+    it('POST /api/v1/tournaments/:id/registrations should reject empty team name', async () => {
+      const res = await request(app)
+        .post(`/api/v1/tournaments/${createdTournamentId}/registrations`)
+        .set('x-user-id', 'captain_invalid')
+        .set('x-user-role', 'teamCaptain')
+        .send({
+          teamId: 'team_invalid',
+          teamName: '',
+          captainPhone: '0901234567',
+        });
+
+      assert.strictEqual(res.status, 400);
+      assert.strictEqual(res.body.error.code, 'VALIDATION_ERROR');
+    });
+
+    it('POST /api/v1/tournaments/:id/registrations should return 400 for non-existent tournament', async () => {
+      const res = await request(app)
+        .post('/api/v1/tournaments/unknown_tour_888/registrations')
+        .set('x-user-id', 'captain_01')
+        .set('x-user-role', 'teamCaptain')
+        .send({
+          teamId: 'team_01',
+          teamName: 'FC Alpha',
+          captainPhone: '0901234567',
+        });
+
+      assert.strictEqual(res.status, 400);
+      assert.strictEqual(res.body.success, false);
+    });
+
+    it('PATCH /api/v1/registrations/:id/status should return 404 for unknown registration', async () => {
+      const res = await request(app)
+        .patch('/api/v1/registrations/reg_unknown_999/status')
+        .set('x-user-id', 'user_organizer_01')
+        .set('x-user-role', 'organizer')
+        .send({ status: 'approved' });
+
+      assert.strictEqual(res.status, 404);
+      assert.strictEqual(res.body.success, false);
+    });
+
+    it('PUT /api/v1/matches/:id/result should reject negative score', async () => {
+      const res = await request(app)
+        .put(`/api/v1/matches/${generatedMatchId}/result`)
+        .set('x-user-id', 'user_organizer_01')
+        .set('x-user-role', 'organizer')
+        .send({
+          homeScore: -1,
+          awayScore: 2,
+        });
+
+      assert.strictEqual(res.status, 400);
+      assert.strictEqual(res.body.error.code, 'VALIDATION_ERROR');
+    });
+
+    it('PUT /api/v1/matches/:id/result should reject score update by non-organizer (403)', async () => {
+      const res = await request(app)
+        .put(`/api/v1/matches/${generatedMatchId}/result`)
+        .set('x-user-id', 'user_captain_01')
+        .set('x-user-role', 'teamCaptain')
+        .send({
+          homeScore: 2,
+          awayScore: 2,
+        });
+
+      assert.strictEqual(res.status, 403);
+      assert.strictEqual(res.body.error.code, 'PERMISSION_DENIED');
+    });
+
+    it('PUT /api/v1/matches/:id/result should return 400 for unknown match', async () => {
+      const res = await request(app)
+        .put('/api/v1/matches/match_unknown_999/result')
+        .set('x-user-id', 'user_organizer_01')
+        .set('x-user-role', 'organizer')
+        .send({
+          homeScore: 1,
+          awayScore: 1,
+        });
+
+      assert.strictEqual(res.status, 400);
+      assert.strictEqual(res.body.success, false);
+    });
+
+    it('GET /api/v1/tournaments/:id/audits should return 401 for unauthenticated request', async () => {
+      const res = await request(app)
+        .get(`/api/v1/tournaments/${createdTournamentId}/audits`);
+
+      assert.strictEqual(res.status, 401);
+      assert.strictEqual(res.body.error.code, 'UNAUTHENTICATED');
+    });
+  });
 });
 
 describe('Booking Management', () => {

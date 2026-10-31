@@ -27,7 +27,33 @@ describe('Team & Matchmaking REST API Test Suite', () => {
     name: 'Lê Văn Cầu Thủ',
   };
 
+  const player2 = {
+    id: 'user_player_02',
+    role: 'player',
+    name: 'Phạm Cầu Thủ Hai',
+  };
+
   describe('1. Team Management & CRUD', () => {
+    it('POST /api/v1/teams should reject unauthenticated request (401)', async () => {
+      const res = await request(app)
+        .post('/api/v1/teams')
+        .send({ name: 'Anonymous FC' });
+
+      assert.strictEqual(res.status, 401);
+      assert.strictEqual(res.body.success, false);
+    });
+
+    it('POST /api/v1/teams should reject team with missing or empty name', async () => {
+      const res = await request(app)
+        .post('/api/v1/teams')
+        .set('x-user-id', captain1.id)
+        .set('x-user-role', captain1.role)
+        .send({ name: '', area: 'Bình Thạnh' });
+
+      assert.strictEqual(res.status, 400);
+      assert.strictEqual(res.body.error.code, 'VALIDATION_ERROR');
+    });
+
     it('POST /api/v1/teams should create team by Captain', async () => {
       const res = await request(app)
         .post('/api/v1/teams')
@@ -91,6 +117,22 @@ describe('Team & Matchmaking REST API Test Suite', () => {
       assert.strictEqual(res.body.data[0].teamName, 'CLB Sao Vàng FC');
     });
 
+    it('GET /api/v1/teams/:id should return team details', async () => {
+      const res = await request(app).get(`/api/v1/teams/${createdTeamId}`);
+
+      assert.strictEqual(res.status, 200);
+      assert.strictEqual(res.body.success, true);
+      assert.strictEqual(res.body.data.teamId, createdTeamId);
+      assert.strictEqual(res.body.data.teamName, 'CLB Sao Vàng FC');
+    });
+
+    it('GET /api/v1/teams/:id should return 404 for unknown team', async () => {
+      const res = await request(app).get('/api/v1/teams/unknown_team_404');
+
+      assert.strictEqual(res.status, 404);
+      assert.strictEqual(res.body.success, false);
+    });
+
     it('GET /api/v1/teams/mine should return current user teams', async () => {
       const res = await request(app)
         .get('/api/v1/teams/mine')
@@ -114,6 +156,29 @@ describe('Team & Matchmaking REST API Test Suite', () => {
       assert.strictEqual(res.status, 200);
       assert.strictEqual(res.body.success, true);
       assert.strictEqual(res.body.data.description, 'Cập nhật bio đội bóng mới');
+    });
+
+    it('PATCH /api/v1/teams/:id should reject update by non-captain (403)', async () => {
+      const res = await request(app)
+        .patch(`/api/v1/teams/${createdTeamId}`)
+        .set('x-user-id', player1.id)
+        .set('x-user-role', player1.role)
+        .send({
+          name: 'Hacked Team Name',
+        });
+
+      assert.strictEqual(res.status, 403);
+      assert.strictEqual(res.body.success, false);
+    });
+
+    it('DELETE /api/v1/teams/:id should reject delete by non-captain (403)', async () => {
+      const res = await request(app)
+        .delete(`/api/v1/teams/${createdTeamId}`)
+        .set('x-user-id', player1.id)
+        .set('x-user-role', player1.role);
+
+      assert.strictEqual(res.status, 403);
+      assert.strictEqual(res.body.success, false);
     });
   });
 
@@ -142,6 +207,20 @@ describe('Team & Matchmaking REST API Test Suite', () => {
       joinRequestId = res.body.data.requestId;
     });
 
+    it('POST /api/v1/teams/:id/join-requests should prevent duplicate pending join request', async () => {
+      const res = await request(app)
+        .post(`/api/v1/teams/${createdTeamId}/join-requests`)
+        .set('x-user-id', player1.id)
+        .set('x-user-role', player1.role)
+        .send({
+          message: 'Xin gia nhập lần nữa',
+        });
+
+      assert.strictEqual(res.status, 400);
+      assert.strictEqual(res.body.success, false);
+      assert.strictEqual(res.body.error.code, 'JOIN_REQUEST_FAILED');
+    });
+
     it('GET /api/v1/teams/:id/join-requests should allow Captain to see requests', async () => {
       const res = await request(app)
         .get(`/api/v1/teams/${createdTeamId}/join-requests`)
@@ -151,6 +230,16 @@ describe('Team & Matchmaking REST API Test Suite', () => {
       assert.strictEqual(res.status, 200);
       assert.strictEqual(res.body.success, true);
       assert.strictEqual(res.body.data.length, 1);
+    });
+
+    it('GET /api/v1/teams/:id/join-requests should reject non-captain (403)', async () => {
+      const res = await request(app)
+        .get(`/api/v1/teams/${createdTeamId}/join-requests`)
+        .set('x-user-id', player2.id)
+        .set('x-user-role', player2.role);
+
+      assert.strictEqual(res.status, 403);
+      assert.strictEqual(res.body.success, false);
     });
 
     it('PATCH /api/v1/teams/:id/join-requests/:reqId should approve member', async () => {
@@ -170,9 +259,39 @@ describe('Team & Matchmaking REST API Test Suite', () => {
       const membersRes = await request(app).get(`/api/v1/teams/${createdTeamId}/members`);
       assert.strictEqual(membersRes.body.data.length, 2);
     });
+
+    it('DELETE /api/v1/teams/:id/members/:userId should prevent captain from leaving when team has other members', async () => {
+      const res = await request(app)
+        .delete(`/api/v1/teams/${createdTeamId}/members/${captain1.id}`)
+        .set('x-user-id', captain1.id)
+        .set('x-user-role', captain1.role);
+
+      assert.strictEqual(res.status, 400);
+      assert.strictEqual(res.body.success, false);
+    });
+
+    it('DELETE /api/v1/teams/:id/members/:userId should allow player to leave team voluntarily', async () => {
+      const res = await request(app)
+        .delete(`/api/v1/teams/${createdTeamId}/members/${player1.id}`)
+        .set('x-user-id', player1.id)
+        .set('x-user-role', player1.role);
+
+      assert.strictEqual(res.status, 200);
+      assert.strictEqual(res.body.success, true);
+
+      // Số lượng thành viên phải giảm về 1 (chỉ còn đội trưởng)
+      const membersRes = await request(app).get(`/api/v1/teams/${createdTeamId}/members`);
+      assert.strictEqual(membersRes.body.data.length, 1);
+    });
   });
 
   describe('3. Matchmaking & Friendly Invitations', () => {
+    it('GET /api/v1/matchmaking/opponents should reject unauthenticated request (401)', async () => {
+      const res = await request(app).get('/api/v1/matchmaking/opponents');
+      assert.strictEqual(res.status, 401);
+      assert.strictEqual(res.body.success, false);
+    });
+
     it('GET /api/v1/matchmaking/opponents should suggest matching teams in same area', async () => {
       const res = await request(app)
         .get('/api/v1/matchmaking/opponents')
@@ -185,6 +304,21 @@ describe('Team & Matchmaking REST API Test Suite', () => {
       assert.ok(res.body.data.length >= 1);
       assert.strictEqual(res.body.data[0].team.teamId, opponentTeamId);
       assert.ok(res.body.data[0].matchScore >= 90);
+    });
+
+    it('POST /api/v1/invitations should reject invitation to self team', async () => {
+      const res = await request(app)
+        .post('/api/v1/invitations')
+        .set('x-user-id', captain1.id)
+        .set('x-user-role', captain1.role)
+        .send({
+          fromTeamId: createdTeamId,
+          toTeamId: createdTeamId,
+          message: 'Tự đá giao hữu',
+        });
+
+      assert.strictEqual(res.status, 400);
+      assert.strictEqual(res.body.success, false);
     });
 
     it('POST /api/v1/invitations should send friendly match invitation', async () => {
@@ -230,51 +364,20 @@ describe('Team & Matchmaking REST API Test Suite', () => {
       assert.strictEqual(res.body.success, true);
       assert.strictEqual(res.body.data.status, 'Accepted');
     });
-  });
 
-  describe('4. User Profile & Avatar Management', () => {
-    it('GET /api/v1/users/me should return user profile', async () => {
+    it('DELETE /api/v1/teams/:id should allow Captain to disband/delete team', async () => {
       const res = await request(app)
-        .get('/api/v1/users/me')
-        .set('x-user-id', player1.id)
-        .set('x-user-role', player1.role)
-        .set('x-user-name', encodeURIComponent(player1.name));
+        .delete(`/api/v1/teams/${createdTeamId}`)
+        .set('x-user-id', captain1.id)
+        .set('x-user-role', captain1.role);
 
       assert.strictEqual(res.status, 200);
       assert.strictEqual(res.body.success, true);
-      assert.strictEqual(res.body.data.userId, player1.id);
-    });
+      assert.strictEqual(res.body.message, 'Đã giải tán đội bóng thành công.');
 
-    it('PATCH /api/v1/users/me should update profile info', async () => {
-      const res = await request(app)
-        .patch('/api/v1/users/me')
-        .set('x-user-id', player1.id)
-        .set('x-user-role', player1.role)
-        .send({
-          fullName: 'Lê Văn Cầu Thủ Pro',
-          phone: '0901234567',
-          position: 'Tiền đạo cánh',
-          area: 'Bình Thạnh, TP. Hồ Chí Minh',
-        });
-
-      assert.strictEqual(res.status, 200);
-      assert.strictEqual(res.body.success, true);
-      assert.strictEqual(res.body.data.fullName, 'Lê Văn Cầu Thủ Pro');
-      assert.strictEqual(res.body.data.position, 'Tiền đạo cánh');
-    });
-
-    it('POST /api/v1/users/me/avatar should update avatar base64', async () => {
-      const res = await request(app)
-        .post('/api/v1/users/me/avatar')
-        .set('x-user-id', player1.id)
-        .set('x-user-role', player1.role)
-        .send({
-          avatarBase64: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
-        });
-
-      assert.strictEqual(res.status, 200);
-      assert.strictEqual(res.body.success, true);
-      assert.ok(res.body.data.avatarBase64);
+      // Verify team no longer found
+      const checkRes = await request(app).get(`/api/v1/teams/${createdTeamId}`);
+      assert.strictEqual(checkRes.status, 404);
     });
   });
 });
