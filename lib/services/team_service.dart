@@ -413,6 +413,26 @@ class TeamService {
         memberCount: 15,
         createdAt: now.subtract(const Duration(days: 20)),
       ),
+      Team(
+        teamId: 'team_thu_do',
+        teamName: 'FC Thủ Đô Hà Nội',
+        area: 'Cầu Giấy, Hà Nội',
+        description: 'Đội bóng giao lưu phong trào sân 7 tại Mỹ Đình và Cầu Giấy.',
+        captainId: 'user_captain_05',
+        captainName: 'Hoàng Đội Trưởng',
+        memberCount: 18,
+        createdAt: now.subtract(const Duration(days: 15)),
+      ),
+      Team(
+        teamId: 'team_song_han',
+        teamName: 'FC Sông Hàn Đà Nẵng',
+        area: 'Hải Châu, Đà Nẵng',
+        description: 'Đội bóng trẻ nhiệt huyết khu vực Tuyên Sơn và Hải Châu.',
+        captainId: 'user_captain_06',
+        captainName: 'Vũ Đội Trưởng',
+        memberCount: 14,
+        createdAt: now.subtract(const Duration(days: 10)),
+      ),
     ];
 
     return sample.where((t) {

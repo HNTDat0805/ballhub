@@ -5,18 +5,9 @@ import '../../domain/models/football_field.dart';
 import '../controllers/booking_controllers.dart';
 import 'field_detail_screen.dart';
 import '../../../../widgets/province_picker_modal.dart';
+import '../../../../widgets/filter_selection_modal.dart';
 
 /// Màn hình Danh sách Sân bóng (Page 7 - figma.pdf)
-///
-/// Bố cục:
-/// - Header: "Tìm sân bóng" + Icon bản đồ 🗺️
-/// - Search bar: "🔍 Tìm tên sân, địa chỉ"
-/// - Filter chips: `Bình Thạnh ⌄` (active), `Mức giá ⌄`, `7 người ⌄`
-/// - Hàng thông tin: "3 sân phù hợp · Gần bạn nhất" + Nút "Bản đồ"
-/// - Danh sách sân bóng:
-///   1. Sân Gia Định (★ 4,8, 2,4 km, 300.000đ/giờ, Còn giờ trống)
-///   2. Sân Bình Quới (★ 4,8, 3,8 km, 350.000đ/giờ, Còn giờ trống)
-///   3. Sân Thanh Đa (★ 4,8, 4,2 km, 280.000đ/giờ, Kín sân tối nay)
 class FieldListScreen extends StatefulWidget {
   final BookingRepository repository;
 
@@ -29,8 +20,10 @@ class FieldListScreen extends StatefulWidget {
 class _FieldListScreenState extends State<FieldListScreen> {
   late final FieldListController _controller;
   final _searchController = TextEditingController();
-  int _selectedFilter = 0; // 0 = Tất cả, 1 = Tỉnh/Thành, 2 = Sân 7 người
+  int _selectedFilter = 0; // 0 = Tất cả, 1 = Tỉnh/Thành, 2 = Loại sân
   String _selectedCity = 'TP. Hồ Chí Minh';
+  String? _selectedFieldType;
+  String _selectedFieldTypeLabel = 'Sân 7 người';
 
   @override
   void initState() {
@@ -89,7 +82,7 @@ class _FieldListScreenState extends State<FieldListScreen> {
             ),
           ),
 
-          // Filter Chips
+          // Filter Chips: 1. Tất cả | 2. Chọn thành phố | 3. Loại sân (sổ xuống)
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -99,7 +92,11 @@ class _FieldListScreenState extends State<FieldListScreen> {
                   0,
                   'Tất cả',
                   onTap: () {
-                    setState(() => _selectedFilter = 0);
+                    setState(() {
+                      _selectedFilter = 0;
+                      _selectedFieldType = null;
+                      _selectedFieldTypeLabel = 'Sân 7 người';
+                    });
                     _controller.setCityFilter(null);
                     _controller.setFieldTypeFilter(null);
                     _controller.loadFields();
@@ -117,12 +114,12 @@ class _FieldListScreenState extends State<FieldListScreen> {
                         _selectedFilter = 1;
                       });
                       _controller.setCityFilter(chosen);
-                      _controller.setFieldTypeFilter(null);
+                      _controller.setFieldTypeFilter(_selectedFieldType);
                       _controller.loadFields();
                     } else {
                       setState(() => _selectedFilter = 1);
                       _controller.setCityFilter(_selectedCity);
-                      _controller.setFieldTypeFilter(null);
+                      _controller.setFieldTypeFilter(_selectedFieldType);
                       _controller.loadFields();
                     }
                   },
@@ -130,12 +127,48 @@ class _FieldListScreenState extends State<FieldListScreen> {
                 const SizedBox(width: 8),
                 _filterChip(
                   2,
-                  'Sân 7 người',
-                  onTap: () {
-                    setState(() => _selectedFilter = 2);
-                    _controller.setCityFilter(null);
-                    _controller.setFieldTypeFilter('7-a-side');
-                    _controller.loadFields();
+                  '$_selectedFieldTypeLabel ⌄',
+                  onTap: () async {
+                    final chosen = await FilterSelectionModal.show<String?>(
+                      context,
+                      title: 'Chọn loại sân bóng',
+                      selectedValue: _selectedFieldType ?? '7-a-side',
+                      options: const [
+                        FilterOption(value: 'all', label: 'Tất cả loại sân', subtitle: 'Hiển thị mọi quy mô sân'),
+                        FilterOption(value: '5-a-side', label: 'Sân 5 người', subtitle: '5 vs 5 · Sân bóng đá mini'),
+                        FilterOption(value: '7-a-side', label: 'Sân 7 người', subtitle: '7 vs 7 · Tiêu chuẩn phong trào'),
+                        FilterOption(value: '11-a-side', label: 'Sân 11 người', subtitle: '11 vs 11 · Sân lớn 11 người tiêu chuẩn'),
+                        FilterOption(value: 'futsal', label: 'Sân Futsal', subtitle: 'Bóng đá trong nhà mặt sàn thảm/gỗ'),
+                      ],
+                    );
+                    if (chosen != null) {
+                      setState(() {
+                        _selectedFilter = 2;
+                        if (chosen == 'all') {
+                          _selectedFieldType = null;
+                          _selectedFieldTypeLabel = 'Loại sân';
+                          _controller.setFieldTypeFilter(null);
+                        } else {
+                          _selectedFieldType = chosen;
+                          switch (chosen) {
+                            case '5-a-side':
+                              _selectedFieldTypeLabel = 'Sân 5 người';
+                              break;
+                            case '7-a-side':
+                              _selectedFieldTypeLabel = 'Sân 7 người';
+                              break;
+                            case '11-a-side':
+                              _selectedFieldTypeLabel = 'Sân 11 người';
+                              break;
+                            case 'futsal':
+                              _selectedFieldTypeLabel = 'Sân Futsal';
+                              break;
+                          }
+                          _controller.setFieldTypeFilter(chosen);
+                        }
+                      });
+                      _controller.loadFields();
+                    }
                   },
                 ),
               ],

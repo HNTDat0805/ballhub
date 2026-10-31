@@ -18,6 +18,8 @@ class TournamentController extends ChangeNotifier {
   String? _errorMessage;
   String _searchQuery = '';
   TournamentStatus? _selectedStatusFilter;
+  String? _selectedCityFilter;
+  TournamentFormat? _selectedFormatFilter;
 
   TournamentController({required this.repository});
 
@@ -33,6 +35,12 @@ class TournamentController extends ChangeNotifier {
   /// Bộ lọc trạng thái giải đấu đang được chọn
   TournamentStatus? get selectedStatusFilter => _selectedStatusFilter;
 
+  /// Bộ lọc thành phố / địa điểm
+  String? get selectedCityFilter => _selectedCityFilter;
+
+  /// Bộ lọc thể thức thi đấu
+  TournamentFormat? get selectedFormatFilter => _selectedFormatFilter;
+
   /// Đặt từ khóa tìm kiếm giải đấu
   void setSearchQuery(String query) {
     _searchQuery = query;
@@ -42,6 +50,27 @@ class TournamentController extends ChangeNotifier {
   /// Đặt bộ lọc trạng thái giải đấu
   void setStatusFilter(TournamentStatus? status) {
     _selectedStatusFilter = status;
+    notifyListeners();
+  }
+
+  /// Đặt bộ lọc thành phố / địa phương
+  void setCityFilter(String? city) {
+    _selectedCityFilter = city;
+    notifyListeners();
+  }
+
+  /// Đặt bộ lọc thể thức thi đấu
+  void setFormatFilter(TournamentFormat? format) {
+    _selectedFormatFilter = format;
+    notifyListeners();
+  }
+
+  /// Xóa toàn bộ bộ lọc về mặc định
+  void resetFilters() {
+    _searchQuery = '';
+    _selectedStatusFilter = null;
+    _selectedCityFilter = null;
+    _selectedFormatFilter = null;
     notifyListeners();
   }
 
@@ -58,7 +87,11 @@ class TournamentController extends ChangeNotifier {
             t.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
             t.location.toLowerCase().contains(_searchQuery.toLowerCase());
         final matchesStatus = _selectedStatusFilter == null || t.status == _selectedStatusFilter;
-        return matchesQuery && matchesStatus;
+        final matchesCity = _selectedCityFilter == null ||
+            _selectedCityFilter!.isEmpty ||
+            t.location.toLowerCase().contains(_selectedCityFilter!.toLowerCase());
+        final matchesFormat = _selectedFormatFilter == null || t.format == _selectedFormatFilter;
+        return matchesQuery && matchesStatus && matchesCity && matchesFormat;
       }).toList();
     });
   }

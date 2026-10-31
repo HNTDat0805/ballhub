@@ -5,15 +5,9 @@ import '../../services/team_service.dart';
 import 'team_detail_screen.dart';
 import 'team_form_screen.dart';
 import '../../widgets/province_picker_modal.dart';
+import '../../widgets/filter_selection_modal.dart';
 
 /// Màn hình Danh sách Đội bóng & Tìm đối thủ (Page 9 - figma.pdf)
-///
-/// Bố cục chuẩn Figma Material 3:
-/// - AppBar: "Đội bóng" + Icon `+` tạo đội
-/// - Search bar: "🔍 Tìm tên đội bóng"
-/// - Filter chips: `Tất cả ⌄`, `TP. Hồ Chí Minh ⌄`, `Bình Thạnh`
-/// - Subheader: Số lượng đội đang hoạt động + Nút `⚽ Tìm đối thủ`
-/// - Danh sách thẻ đội bóng tải trực tiếp từ Database (Cloud Firestore)
 class TeamListScreen extends StatefulWidget {
   const TeamListScreen({super.key});
 
@@ -23,8 +17,12 @@ class TeamListScreen extends StatefulWidget {
 
 class _TeamListScreenState extends State<TeamListScreen> {
   final _searchController = TextEditingController();
-  int _selectedFilter = 0; // 0 = Tất cả, 1 = Tỉnh/Thành, 2 = Bình Thạnh
+  int _selectedFilter = 0; // 0 = Tất cả, 1 = Tỉnh/Thành, 2 = Quận/Huyện, 3 = Quy mô
   String _selectedCity = 'TP. Hồ Chí Minh';
+  String? _selectedDistrict;
+  String _selectedDistrictLabel = 'Khu vực';
+  String? _selectedPitchType;
+  String _selectedPitchTypeLabel = 'Quy mô';
   List<Team> _teams = [];
   bool _isLoading = true;
   String? _errorMessage;
@@ -51,11 +49,23 @@ class _TeamListScreenState extends State<TeamListScreen> {
 
     try {
       String area = '';
-      if (_selectedFilter == 1) area = _selectedCity;
-      if (_selectedFilter == 2) area = 'Bình Thạnh';
+      if (_selectedFilter == 1) {
+        area = _selectedCity;
+      } else if (_selectedFilter == 2) {
+        if (_selectedDistrict != null && _selectedDistrict!.isNotEmpty) {
+          area = _selectedDistrict!;
+        } else {
+          area = _selectedCity;
+        }
+      }
+
+      String keyword = _searchController.text.trim();
+      if (_selectedPitchType != null && _selectedPitchType!.isNotEmpty && keyword.isEmpty) {
+        keyword = _selectedPitchType!;
+      }
 
       final list = await TeamService.search(
-        keyword: _searchController.text,
+        keyword: keyword,
         area: area,
       );
       if (!mounted) return;
@@ -367,7 +377,7 @@ class _TeamListScreenState extends State<TeamListScreen> {
             ),
           ),
 
-          // Filter Chips
+          // Filter Chips: 1. Tất cả | 2. Chọn thành phố | 3. Quận/Huyện | 4. Quy mô
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -375,9 +385,15 @@ class _TeamListScreenState extends State<TeamListScreen> {
               children: [
                 _filterChip(
                   0,
-                  'Tất cả khu vực',
+                  'Tất cả',
                   onTap: () {
-                    setState(() => _selectedFilter = 0);
+                    setState(() {
+                      _selectedFilter = 0;
+                      _selectedDistrict = null;
+                      _selectedDistrictLabel = 'Khu vực';
+                      _selectedPitchType = null;
+                      _selectedPitchTypeLabel = 'Quy mô';
+                    });
                     _loadTeams();
                   },
                 ),
@@ -391,6 +407,8 @@ class _TeamListScreenState extends State<TeamListScreen> {
                       setState(() {
                         _selectedCity = chosen;
                         _selectedFilter = 1;
+                        _selectedDistrict = null;
+                        _selectedDistrictLabel = 'Khu vực';
                       });
                       _loadTeams();
                     } else {
@@ -402,9 +420,89 @@ class _TeamListScreenState extends State<TeamListScreen> {
                 const SizedBox(width: 8),
                 _filterChip(
                   2,
-                  'Bình Thạnh',
-                  onTap: () {
-                    setState(() => _selectedFilter = 2);
+                  '$_selectedDistrictLabel ⌄',
+                  onTap: () async {
+                    // Cung cấp danh sách quận/huyện dựa trên thành phố đã chọn
+                    final List<FilterOption<String?>> districtOptions;
+                    if (_selectedCity.contains('Hà Nội')) {
+                      districtOptions = const [
+                        FilterOption(value: null, label: 'Tất cả quận/huyện'),
+                        FilterOption(value: 'Cầu Giấy', label: 'Quận Cầu Giấy'),
+                        FilterOption(value: 'Nam Từ Liêm', label: 'Quận Nam Từ Liêm'),
+                        FilterOption(value: 'Ba Đình', label: 'Quận Ba Đình'),
+                        FilterOption(value: 'Đống Đa', label: 'Quận Đống Đa'),
+                        FilterOption(value: 'Thanh Xuân', label: 'Quận Thanh Xuân'),
+                      ];
+                    } else if (_selectedCity.contains('Đà Nẵng')) {
+                      districtOptions = const [
+                        FilterOption(value: null, label: 'Tất cả quận/huyện'),
+                        FilterOption(value: 'Hải Châu', label: 'Quận Hải Châu'),
+                        FilterOption(value: 'Thanh Khê', label: 'Quận Thanh Khê'),
+                        FilterOption(value: 'Sơn Trà', label: 'Quận Sơn Trà'),
+                      ];
+                    } else {
+                      districtOptions = const [
+                        FilterOption(value: null, label: 'Tất cả quận/huyện'),
+                        FilterOption(value: 'Bình Thạnh', label: 'Quận Bình Thạnh'),
+                        FilterOption(value: 'Quận 1', label: 'Quận 1'),
+                        FilterOption(value: 'Thủ Đức', label: 'TP. Thủ Đức'),
+                        FilterOption(value: 'Tân Bình', label: 'Quận Tân Bình'),
+                        FilterOption(value: 'Gò Vấp', label: 'Quận Gò Vấp'),
+                        FilterOption(value: 'Quận 7', label: 'Quận 7'),
+                      ];
+                    }
+
+                    final chosen = await FilterSelectionModal.show<String?>(
+                      context,
+                      title: 'Chọn khu vực / Quận huyện',
+                      selectedValue: _selectedDistrict,
+                      options: districtOptions,
+                    );
+                    setState(() {
+                      _selectedFilter = 2;
+                      _selectedDistrict = chosen;
+                      _selectedDistrictLabel = chosen ?? 'Khu vực';
+                    });
+                    _loadTeams();
+                  },
+                ),
+                const SizedBox(width: 8),
+                _filterChip(
+                  3,
+                  '$_selectedPitchTypeLabel ⌄',
+                  onTap: () async {
+                    final chosen = await FilterSelectionModal.show<String?>(
+                      context,
+                      title: 'Quy mô thi đấu ưa thích',
+                      selectedValue: _selectedPitchType,
+                      options: const [
+                        FilterOption(value: null, label: 'Tất cả quy mô', subtitle: 'Mọi hình thức thi đấu giao hữu'),
+                        FilterOption(value: 'sân 7', label: 'Sân 7 người', subtitle: '7 vs 7 · Kèo sân 7 phong trào'),
+                        FilterOption(value: 'sân 5', label: 'Sân 5 người', subtitle: '5 vs 5 · Kèo sân mini đá nhanh'),
+                        FilterOption(value: 'sân 11', label: 'Sân 11 người', subtitle: '11 vs 11 · Sân lớn 11 người'),
+                      ],
+                    );
+                    setState(() {
+                      _selectedFilter = 3;
+                      _selectedPitchType = chosen;
+                      if (chosen == null) {
+                        _selectedPitchTypeLabel = 'Quy mô';
+                      } else {
+                        switch (chosen) {
+                          case 'sân 7':
+                            _selectedPitchTypeLabel = 'Sân 7 người';
+                            break;
+                          case 'sân 5':
+                            _selectedPitchTypeLabel = 'Sân 5 người';
+                            break;
+                          case 'sân 11':
+                            _selectedPitchTypeLabel = 'Sân 11 người';
+                            break;
+                          default:
+                            _selectedPitchTypeLabel = chosen;
+                        }
+                      }
+                    });
                     _loadTeams();
                   },
                 ),

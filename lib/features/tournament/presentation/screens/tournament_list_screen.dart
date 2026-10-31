@@ -6,18 +6,10 @@ import '../../domain/models/tournament.dart';
 import '../controllers/tournament_controller.dart';
 import 'create_edit_tournament_screen.dart';
 import 'tournament_detail_screen.dart';
+import '../../../../widgets/province_picker_modal.dart';
+import '../../../../widgets/filter_selection_modal.dart';
 
 /// Màn hình danh sách giải đấu bóng đá (Page 5 - figma.pdf)
-///
-/// Bố cục:
-/// - Header: "Giải đấu" + Icon filter
-/// - Search bar: "🔍 Tìm tên giải đấu"
-/// - Filter chips: `Tất cả ⌄` (active), `7 người ⌄`, `Khu vực ⌄`
-/// - Hàng tiêu đề phụ: "3 giải đấu tại TP.HCM" + Nút `+ Tạo giải` (pill xanh)
-/// - Danh sách thẻ giải đấu:
-///   1. Sài Gòn League 2026 (Đang diễn ra - Vòng 3 sắp diễn ra →)
-///   2. Cúp Thủ Đức mở rộng (Đang nhận đội - Còn 2 suất)
-///   3. Bình Thạnh Cup 2026 (Đã kết thúc - Xem kết quả →)
 class TournamentListScreen extends StatefulWidget {
   final TournamentController controller;
   final TournamentRepository repository;
@@ -34,7 +26,12 @@ class TournamentListScreen extends StatefulWidget {
 
 class _TournamentListScreenState extends State<TournamentListScreen> {
   final _searchController = TextEditingController();
-  int _selectedFilter = 0; // 0 = Tất cả, 1 = 7 người, 2 = Khu vực
+  int _selectedFilter = 0; // 0 = Tất cả, 1 = Tỉnh/Thành, 2 = Thể thức, 3 = Trạng thái
+  String _selectedCity = 'TP. Hồ Chí Minh';
+  TournamentFormat? _selectedFormat;
+  String _selectedFormatLabel = 'Thể thức';
+  TournamentStatus? _selectedStatus;
+  String _selectedStatusLabel = 'Trạng thái';
 
   @override
   void dispose() {
@@ -88,17 +85,100 @@ class _TournamentListScreenState extends State<TournamentListScreen> {
                 ),
               ),
 
-              // Filter Chips
+              // Filter Chips: 1. Tất cả | 2. Chọn thành phố | 3. Thể thức | 4. Trạng thái
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
                   children: [
-                    _filterChip(0, 'Tất cả ⌄'),
+                    _filterChip(
+                      0,
+                      'Tất cả',
+                      onTap: () {
+                        setState(() {
+                          _selectedFilter = 0;
+                          _selectedFormat = null;
+                          _selectedFormatLabel = 'Thể thức';
+                          _selectedStatus = null;
+                          _selectedStatusLabel = 'Trạng thái';
+                        });
+                        controller.resetFilters();
+                      },
+                    ),
                     const SizedBox(width: 8),
-                    _filterChip(1, '7 người ⌄'),
+                    _filterChip(
+                      1,
+                      '$_selectedCity ⌄',
+                      onTap: () async {
+                        final chosen = await ProvincePickerModal.show(context, currentProvince: _selectedCity);
+                        if (chosen != null) {
+                          setState(() {
+                            _selectedCity = chosen;
+                            _selectedFilter = 1;
+                          });
+                          controller.setCityFilter(chosen);
+                        } else {
+                          setState(() => _selectedFilter = 1);
+                          controller.setCityFilter(_selectedCity);
+                        }
+                      },
+                    ),
                     const SizedBox(width: 8),
-                    _filterChip(2, 'Khu vực ⌄'),
+                    _filterChip(
+                      2,
+                      '$_selectedFormatLabel ⌄',
+                      onTap: () async {
+                        final chosen = await FilterSelectionModal.show<TournamentFormat?>(
+                          context,
+                          title: 'Chọn thể thức thi đấu',
+                          selectedValue: _selectedFormat,
+                          options: const [
+                            FilterOption(value: null, label: 'Tất cả thể thức', subtitle: 'Hiển thị mọi hình thức thi đấu'),
+                            FilterOption(value: TournamentFormat.roundRobinSingle, label: 'Vòng tròn 1 lượt', subtitle: 'Mỗi đội gặp nhau 1 lần tính điểm BXH'),
+                            FilterOption(value: TournamentFormat.roundRobinDouble, label: 'Vòng tròn 2 lượt', subtitle: 'Lượt đi và lượt về sân nhà - sân khách'),
+                            FilterOption(value: TournamentFormat.knockout, label: 'Loại trực tiếp (Knockout)', subtitle: 'Thua bị loại, tranh vé vào vòng chung kết'),
+                          ],
+                        );
+                        setState(() {
+                          _selectedFilter = 2;
+                          _selectedFormat = chosen;
+                          if (chosen == null) {
+                            _selectedFormatLabel = 'Thể thức';
+                          } else {
+                            _selectedFormatLabel = switch (chosen) {
+                              TournamentFormat.roundRobinSingle => 'Vòng tròn 1 lượt',
+                              TournamentFormat.roundRobinDouble => 'Vòng tròn 2 lượt',
+                              TournamentFormat.knockout => 'Loại trực tiếp',
+                            };
+                          }
+                        });
+                        controller.setFormatFilter(chosen);
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    _filterChip(
+                      3,
+                      '$_selectedStatusLabel ⌄',
+                      onTap: () async {
+                        final chosen = await FilterSelectionModal.show<TournamentStatus?>(
+                          context,
+                          title: 'Chọn trạng thái giải đấu',
+                          selectedValue: _selectedStatus,
+                          options: const [
+                            FilterOption(value: null, label: 'Tất cả trạng thái', subtitle: 'Hiển thị mọi giai đoạn giải đấu'),
+                            FilterOption(value: TournamentStatus.registrationOpen, label: 'Đang mở đăng ký', subtitle: 'Các đội có thể nộp đơn tham gia'),
+                            FilterOption(value: TournamentStatus.inProgress, label: 'Đang diễn ra', subtitle: 'Các trận đấu đang được tiến hành'),
+                            FilterOption(value: TournamentStatus.completed, label: 'Đã kết thúc', subtitle: 'Đã hoàn thành các trận chung kết'),
+                          ],
+                        );
+                        setState(() {
+                          _selectedFilter = 3;
+                          _selectedStatus = chosen;
+                          _selectedStatusLabel = chosen?.displayName ?? 'Trạng thái';
+                        });
+                        controller.setStatusFilter(chosen);
+                      },
+                    ),
                   ],
                 ),
               ),
@@ -199,10 +279,10 @@ class _TournamentListScreenState extends State<TournamentListScreen> {
     );
   }
 
-  Widget _filterChip(int index, String label) {
+  Widget _filterChip(int index, String label, {required VoidCallback onTap}) {
     final active = _selectedFilter == index;
     return GestureDetector(
-      onTap: () => setState(() => _selectedFilter = index),
+      onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
