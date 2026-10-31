@@ -150,7 +150,9 @@ class TeamService {
     try {
       await _api.delete('/teams/$teamId');
     } catch (e) {
-      if (e is ApiException) throw AppException(e.message);
+      if (e is ApiException && e.statusCode != 404 && !e.message.contains('Không tìm thấy')) {
+        throw AppException(e.message);
+      }
     } finally {
       _notify();
     }
@@ -165,7 +167,9 @@ class TeamService {
         await _api.delete('/teams/$teamId/members/$uid');
       }
     } catch (e) {
-      if (e is ApiException) throw AppException(e.message);
+      if (e is ApiException && e.statusCode != 404 && !e.message.contains('Không tìm thấy')) {
+        throw AppException(e.message);
+      }
     } finally {
       _notify();
     }

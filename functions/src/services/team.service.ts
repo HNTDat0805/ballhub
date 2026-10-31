@@ -109,7 +109,8 @@ export class TeamService {
   }
 
   async deleteTeam(teamId: string, user: AuthUser): Promise<void> {
-    const team = await this.getById(teamId);
+    const team = await this.teamRepo.findById(teamId);
+    if (!team) return;
     const isCaptain = team.captainId === user.uid;
     const isAdmin = user.role === UserRole.admin;
     if (!isCaptain && !isAdmin) {
@@ -121,12 +122,14 @@ export class TeamService {
   // ================= MEMBERS =================
 
   async getMembers(teamId: string): Promise<TeamMemberEntity[]> {
-    await this.getById(teamId);
+    const team = await this.teamRepo.findById(teamId);
+    if (!team) return [];
     return this.teamRepo.listMembers(teamId);
   }
 
   async removeMember(teamId: string, targetUserId: string, user: AuthUser): Promise<void> {
-    const team = await this.getById(teamId);
+    const team = await this.teamRepo.findById(teamId);
+    if (!team) return;
     const isCaptain = team.captainId === user.uid;
     const isAdmin = user.role === UserRole.admin;
     const isSelf = user.uid === targetUserId;
@@ -141,6 +144,7 @@ export class TeamService {
 
     const member = await this.teamRepo.findMember(teamId, targetUserId);
     if (!member) {
+      if (isSelf) return;
       throw new Error('Thành viên không tồn tại trong đội bóng.');
     }
 
