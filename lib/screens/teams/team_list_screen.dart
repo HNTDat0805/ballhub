@@ -70,6 +70,266 @@ class _TeamListScreenState extends State<TeamListScreen> {
     }
   }
 
+  void _showMatchmakingModal() {
+    String currentArea = '';
+    if (_selectedFilter == 1) currentArea = 'Hồ Chí Minh';
+    if (_selectedFilter == 2) currentArea = 'Bình Thạnh';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        height: MediaQuery.of(ctx).size.height * 0.75,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Row(
+              children: [
+                Icon(Icons.auto_awesome, color: Color(0xFFFBBF24), size: 24),
+                SizedBox(width: 8),
+                Text(
+                  'Cáp kèo & Đối thủ đề xuất',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Hệ thống tự động đối chiếu khu vực và hoạt động để tìm đối thủ phù hợp nhất cho đội của bạn.',
+              style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: FutureBuilder<List<MatchmakingCandidate>>(
+                future: TeamService.findOpponents(area: currentArea),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(
+                      child: CircularProgressIndicator(color: AppTheme.primaryDarkGreen),
+                    );
+                  }
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Text(
+                        'Lỗi tìm đối thủ: ${snapshot.error}',
+                        style: const TextStyle(color: AppTheme.errorRed),
+                      ),
+                    );
+                  }
+                  final candidates = snapshot.data ?? [];
+                  if (candidates.isEmpty) {
+                    return const Center(
+                      child: Text(
+                        'Chưa tìm thấy đội bóng đối thủ nào phù hợp trong khu vực này.',
+                        style: TextStyle(color: AppTheme.textSecondary),
+                      ),
+                    );
+                  }
+
+                  return ListView.builder(
+                    itemCount: candidates.length,
+                    itemBuilder: (context, index) {
+                      final item = candidates[index];
+                      final team = item.team;
+                      final initial = team.teamName.isNotEmpty ? team.teamName.substring(0, 1).toUpperCase() : '?';
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppTheme.surfaceColor,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: AppTheme.borderColor),
+                        ),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              backgroundColor: AppTheme.primaryLightGreen,
+                              child: Text(
+                                initial,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.primaryDarkGreen,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    team.teamName,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '${team.area} • ${team.memberCount} thành viên',
+                                    style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: Colors.green.shade50,
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: Text(
+                                          '${item.matchScore}% Phù hợp',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.green.shade800,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        child: Text(
+                                          item.reason,
+                                          style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            ElevatedButton(
+                              onPressed: () {
+                                Navigator.pop(ctx);
+                                _openInviteSheet(team);
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.primaryDarkGreen,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                minimumSize: Size.zero,
+                              ),
+                              child: const Text('Thách đấu', style: TextStyle(fontSize: 12)),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _openInviteSheet(Team targetTeam) {
+    final noteController = TextEditingController();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.fromLTRB(
+          24,
+          24,
+          24,
+          MediaQuery.of(ctx).viewInsets.bottom + 24,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Thách đấu giao hữu với ${targetTeam.teamName}',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Đội trưởng: ${targetTeam.captainName} · Khu vực: ${targetTeam.area.isNotEmpty ? targetTeam.area : "Chưa rõ"}',
+              style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: noteController,
+              maxLines: 3,
+              decoration: InputDecoration(
+                hintText: 'Nhập lời nhắn cáp kèo (ví dụ: Tối Thứ 6 tuần này sân 7 người, chia 50/50 tiền sân)...',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () async {
+                final message = noteController.text.trim();
+                if (message.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Vui lòng nhập lời nhắn cáp kèo')),
+                  );
+                  return;
+                }
+                Navigator.pop(ctx);
+                try {
+                  await TeamService.sendFriendlyInvite(
+                    toTeamId: targetTeam.teamId,
+                    message: message,
+                  );
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Đã gửi lời mời giao hữu thành công tới ${targetTeam.teamName}!'),
+                      backgroundColor: AppTheme.primaryDarkGreen,
+                    ),
+                  );
+                } catch (e) {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(e.toString().replaceFirst('Exception: ', '')),
+                      backgroundColor: AppTheme.errorRed,
+                    ),
+                  );
+                }
+              },
+              child: const Text('Gửi lời mời ngay'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -172,14 +432,7 @@ class _TeamListScreenState extends State<TeamListScreen> {
                   ),
                 ),
                 ElevatedButton.icon(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Hệ thống đang đối chiếu trình độ và khu vực để đề xuất đối thủ phù hợp'),
-                        backgroundColor: AppTheme.primaryDarkGreen,
-                      ),
-                    );
-                  },
+                  onPressed: _showMatchmakingModal,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primaryDarkGreen,
                     foregroundColor: Colors.white,

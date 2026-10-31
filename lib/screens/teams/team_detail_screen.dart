@@ -104,14 +104,36 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
             ),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
+                final message = noteController.text.trim();
+                if (message.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Vui lòng nhập lời nhắn cáp kèo')),
+                  );
+                  return;
+                }
                 Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Đã gửi lời mời giao hữu tới ${team.captainName}!'),
-                    backgroundColor: AppTheme.primaryDarkGreen,
-                  ),
-                );
+                try {
+                  await TeamService.sendFriendlyInvite(
+                    toTeamId: team.teamId,
+                    message: message,
+                  );
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Đã gửi lời mời giao hữu thành công tới ${team.captainName}!'),
+                      backgroundColor: AppTheme.primaryDarkGreen,
+                    ),
+                  );
+                } catch (e) {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(e.toString().replaceFirst('Exception: ', '')),
+                      backgroundColor: AppTheme.errorRed,
+                    ),
+                  );
+                }
               },
               child: const Text('Gửi lời mời ngay'),
             ),

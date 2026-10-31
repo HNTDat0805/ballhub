@@ -126,3 +126,47 @@ export const createBookingSchema = z.object({
 export const bookingReasonSchema = z.object({
   reason: z.string().max(500).optional(),
 });
+
+// Teams & Matchmaking Schemas
+export const createTeamSchema = z.object({
+  name: z.string().min(2, 'Tên đội phải có ít nhất 2 ký tự').max(50, 'Tên đội không vượt quá 50 ký tự'),
+  area: z.string().optional().default(''),
+  description: z.string().max(500).optional().default(''),
+});
+
+export const updateTeamSchema = z.object({
+  name: z.string().min(2).max(50).optional(),
+  area: z.string().optional(),
+  description: z.string().max(500).optional(),
+});
+
+export const createJoinRequestSchema = z.object({
+  message: z.string().max(300).optional().default('Tôi muốn tham gia đội bóng!'),
+});
+
+export const updateJoinRequestStatusSchema = z.object({
+  status: z.enum(['Approved', 'Rejected']),
+});
+
+export const createFriendlyInvitationSchema = z.object({
+  toTeamId: z.string().min(1, 'toTeamId là bắt buộc'),
+  message: z.string().min(1, 'Lời nhắn cáp kèo là bắt buộc').max(500),
+  proposedDate: z.string().optional(),
+  venue: z.string().optional(),
+});
+
+export const updateInvitationStatusSchema = z.object({
+  status: z.enum(['Accepted', 'Declined', 'Cancelled']),
+});
+
+// User Profile Schemas
+export const updateUserProfileSchema = z.object({
+  fullName: z.string().min(2, 'Họ tên phải có ít nhất 2 ký tự').max(100).optional(),
+  phone: z.string().max(20).optional().nullable(),
+  position: z.string().max(50).optional().nullable(),
+  area: z.string().max(100).optional().nullable(),
+});
+
+export const updateUserAvatarSchema = z.object({
+  avatarBase64: z.string().min(1, 'avatarBase64 không được để trống'),
+});

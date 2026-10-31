@@ -21,6 +21,11 @@ export class MemoryStore {
   static fields = new Map<string, FootballFieldEntity>();
   static slots = new Map<string, Map<string, FieldSlotEntity>>();
   static bookings = new Map<string, BookingEntity>();
+  static teams = new Map<string, any>();
+  static teamMembers = new Map<string, any>(); // key: ${teamId}_${userId}
+  static joinRequests = new Map<string, any>(); // key: requestId
+  static friendlyInvitations = new Map<string, any>();
+  static users = new Map<string, any>();
 
   static clear(): void {
     this.tournaments.clear();
@@ -29,6 +34,8 @@ export class MemoryStore {
     this.standings.clear();
     this.audits.clear();
     this.fieldOwners.clear(); this.fields.clear(); this.slots.clear(); this.bookings.clear();
+    this.teams.clear(); this.teamMembers.clear(); this.joinRequests.clear();
+    this.friendlyInvitations.clear(); this.users.clear();
   }
 
   static isMemoryMode(): boolean {

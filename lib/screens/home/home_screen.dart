@@ -126,8 +126,62 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Không có thông báo mới')),
+              showModalBottomSheet(
+                context: context,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                ),
+                builder: (ctx) => Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Trung tâm thông báo',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            child: const Text('Đóng'),
+                          ),
+                        ],
+                      ),
+                      const Divider(),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const CircleAvatar(
+                          backgroundColor: AppTheme.primaryLightGreen,
+                          child: Icon(Icons.handshake_outlined, color: AppTheme.primaryDarkGreen),
+                        ),
+                        title: const Text('Hệ thống cáp kèo & Tìm đối thủ', style: TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: const Text('Đã cập nhật tính năng ghép đội đối thủ tự động cùng khu vực.'),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () {
+                          Navigator.pop(ctx);
+                          widget.onNavigate(3);
+                        },
+                      ),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const CircleAvatar(
+                          backgroundColor: Color(0xFFEFF6FF),
+                          child: Icon(Icons.emoji_events_outlined, color: Color(0xFF2563EB)),
+                        ),
+                        title: const Text('Giải đấu Super Cup 2026', style: TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: const Text('Lịch thi đấu và bảng xếp hạng đã được đồng bộ tự động.'),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () {
+                          Navigator.pop(ctx);
+                          widget.onNavigate(1);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
               );
             },
           ),

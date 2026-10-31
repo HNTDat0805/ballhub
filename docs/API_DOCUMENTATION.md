@@ -243,3 +243,35 @@ Lấy bảng xếp hạng giải đấu theo thời gian thực.
     "count": 2
   }
   ```
+
+---
+
+### 2.5. Quản lý đội bóng & Thành viên (Teams & Members)
+
+- `GET /api/v1/teams`: Tìm kiếm và lọc danh sách đội bóng (`keyword`, `area`).
+- `GET /api/v1/teams/mine`: Lấy danh sách các đội bóng người dùng hiện tại đang tham gia (Authenticated).
+- `GET /api/v1/teams/{id}`: Xem chi tiết thông tin đội bóng.
+- `POST /api/v1/teams`: Tạo đội bóng mới. Người tạo tự động trở thành Đội trưởng (Captain).
+- `PATCH /api/v1/teams/{id}`: Cập nhật thông tin đội bóng (chỉ Đội trưởng hoặc Admin).
+- `GET /api/v1/teams/{id}/members`: Lấy danh sách thành viên đội bóng.
+- `DELETE /api/v1/teams/{id}/members/{userId}`: Xóa thành viên khỏi đội (Đội trưởng/Admin) hoặc tự rời đội.
+- `POST /api/v1/teams/{id}/join-requests`: Gửi yêu cầu xin gia nhập đội bóng.
+- `GET /api/v1/teams/{id}/join-requests`: Lấy danh sách yêu cầu xin gia nhập đang chờ duyệt (Đội trưởng/Admin).
+- `PATCH /api/v1/teams/{id}/join-requests/{requestId}`: Phê duyệt (`Approved`) hoặc từ chối (`Rejected`) yêu cầu gia nhập (Đội trưởng/Admin).
+
+---
+
+### 2.6. Cáp kèo tìm đối & Lời mời giao hữu (Matchmaking & Friendly Invitations)
+
+- `GET /api/v1/matchmaking/opponents`: Thuật toán đề xuất các đội bóng đối thủ tiềm năng dựa trên tiêu chí cùng khu vực và hoạt động.
+- `POST /api/v1/invitations`: Gửi lời mời giao hữu / thách đấu tới đội trưởng đội đối thủ.
+- `GET /api/v1/invitations?teamId={teamId}`: Xem danh sách lời mời giao hữu đã gửi hoặc nhận của đội bóng.
+- `PATCH /api/v1/invitations/{id}`: Phản hồi lời mời giao hữu (`Accepted`, `Declined`, hoặc `Cancelled`).
+
+---
+
+### 2.7. Quản lý hồ sơ người dùng (User Profile & Avatar)
+
+- `GET /api/v1/users/me`: Lấy thông tin chi tiết hồ sơ cá nhân của người dùng hiện tại.
+- `PATCH /api/v1/users/me`: Cập nhật họ tên, số điện thoại, vị trí thi đấu, khu vực.
+- `POST /api/v1/users/me/avatar`: Cập nhật ảnh đại diện (Base64 chuỗi ảnh tối đa 700KB).

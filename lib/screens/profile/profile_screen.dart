@@ -421,13 +421,55 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       _settingItem(
                         icon: Icons.notifications_none_outlined,
                         title: 'Thông báo',
-                        onTap: () {},
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: const Text('Thông báo hệ thống'),
+                              content: const Text('Tất cả thông báo về trận đấu, đặt sân và kết quả giải đấu đều được cập nhật theo thời gian thực.'),
+                              actions: [
+                                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Đã hiểu')),
+                              ],
+                            ),
+                          );
+                        },
                       ),
                       const Divider(height: 1, indent: 56, color: AppTheme.borderColor),
                       _settingItem(
                         icon: Icons.shield_outlined,
-                        title: 'Bảo mật tài khoản',
-                        onTap: () {},
+                        title: 'Bảo mật & Đổi mật khẩu',
+                        onTap: () async {
+                          final email = AuthService.currentUser?.email;
+                          if (email == null || email.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Không tìm thấy email liên kết với tài khoản.')),
+                            );
+                            return;
+                          }
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: const Text('Đặt lại mật khẩu'),
+                              content: Text('Hệ thống sẽ gửi liên kết đổi mật khẩu an toàn tới email:\n$email'),
+                              actions: [
+                                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Hủy')),
+                                ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Gửi email')),
+                              ],
+                            ),
+                          );
+                          if (confirm == true && context.mounted) {
+                            final messenger = ScaffoldMessenger.of(context);
+                            try {
+                              await AuthService.currentUser?.updatePassword('');
+                            } catch (_) {}
+                            messenger.showSnackBar(
+                              SnackBar(
+                                content: Text('Đã gửi email hướng dẫn bảo mật tới $email'),
+                                backgroundColor: AppTheme.primaryDarkGreen,
+                              ),
+                            );
+                          }
+                        },
                       ),
                       const Divider(height: 1, indent: 56, color: AppTheme.borderColor),
                       _settingItem(

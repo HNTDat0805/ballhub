@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 import '../../utils/ui_helpers.dart';
@@ -34,18 +35,38 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   Future<void> _submit() async {
     final text = _controller.text.trim();
     if (text.isEmpty) {
-      showMessage(context, 'Vui lòng nhập số điện thoại hoặc email');
+      showMessage(context, 'Vui lòng nhập địa chỉ email đã đăng ký');
+      return;
+    }
+
+    if (!text.contains('@') || !text.contains('.')) {
+      showMessage(context, 'Vui lòng nhập địa chỉ email hợp lệ để nhận liên kết khôi phục');
       return;
     }
 
     setState(() => _loading = true);
-    await Future.delayed(const Duration(milliseconds: 800));
-    if (mounted) {
-      setState(() {
-        _loading = false;
-        _sent = true;
-      });
-      showMessage(context, 'Mã xác thực đã được gửi tới $text');
+    try {
+      // Gửi email khôi phục mật khẩu thông qua Firebase Authentication
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: text);
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _sent = true;
+        });
+        showMessage(context, 'Đã gửi liên kết đặt lại mật khẩu tới $text. Vui lòng kiểm tra hộp thư!');
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loading = false);
+        String msg = 'Không thể gửi email khôi phục: $e';
+        final errStr = e.toString().toLowerCase();
+        if (errStr.contains('user-not-found')) {
+          msg = 'Email này chưa được đăng ký trong hệ thống Ballhub.';
+        } else if (errStr.contains('invalid-email')) {
+          msg = 'Địa chỉ email không đúng định dạng.';
+        }
+        showMessage(context, msg);
+      }
     }
   }
 
