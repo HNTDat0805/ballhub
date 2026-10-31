@@ -6,6 +6,7 @@ import '../../models/app_user.dart';
 import '../../models/team.dart';
 import '../../services/auth_service.dart';
 import '../../services/team_service.dart';
+import '../../services/user_service.dart';
 import '../../utils/ui_helpers.dart';
 import '../auth/login_screen.dart';
 import '../teams/team_detail_screen.dart';
@@ -13,14 +14,6 @@ import '../teams/team_form_screen.dart';
 import 'edit_profile_screen.dart';
 
 /// Màn hình Cá nhân (Page 12 - figma.pdf)
-///
-/// Bố cục chuẩn Figma Material 3 kết nối 100% Database:
-/// - Header: "Cá nhân" + Icon cài đặt
-/// - Thông tin hồ sơ: Tải trực tiếp từ Firestore user profile
-/// - Hàng 3 chỉ số cá nhân: Đội bóng tham gia | Đơn đặt sân | Điểm uy tín
-/// - Mục "Đội bóng của tôi": Danh sách đội bóng từ `TeamService.getMyTeams()`
-/// - Mục "Hoạt động gần đây": Đơn đặt sân từ `ApiBookingRepository.getMyBookings()`
-/// - Mục "Cài đặt & Tài khoản": Thông báo, Bảo mật và Đăng xuất
 class ProfileScreen extends StatefulWidget {
   final AppUser user;
 
@@ -35,17 +28,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
   List<Team> _myTeams = [];
   List<Booking> _myBookings = [];
   bool _isLoading = true;
+  late AppUser _currentUser;
 
   @override
   void initState() {
     super.initState();
+    _currentUser = UserService.currentUser ?? widget.user;
     _loadProfileData();
     TeamService.changed.addListener(_loadProfileData);
+    UserService.currentUserNotifier.addListener(_onUserNotifierChanged);
+  }
+
+  void _onUserNotifierChanged() {
+    final u = UserService.currentUserNotifier.value;
+    if (u != null && mounted) {
+      setState(() => _currentUser = u);
+    }
   }
 
   @override
   void dispose() {
     TeamService.changed.removeListener(_loadProfileData);
+    UserService.currentUserNotifier.removeListener(_onUserNotifierChanged);
     super.dispose();
   }
 
@@ -55,6 +59,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       List<Booking> bookings = [];
       try {
         bookings = await _bookingRepo.getMyBookings();
+      } catch (_) {}
+
+      try {
+        final apiUser = await UserService.getProfile();
+        if (apiUser != null && mounted) {
+          _currentUser = apiUser;
+        }
       } catch (_) {}
 
       if (!mounted) return;
@@ -86,9 +97,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     return StreamBuilder<AppUser?>(
       stream: AuthService.currentUserStream(),
-      initialData: widget.user,
+      initialData: _currentUser,
       builder: (context, snapshot) {
-        final currentUser = snapshot.data ?? widget.user;
+        if (snapshot.hasData && snapshot.data != null) {
+          _currentUser = snapshot.data!;
+        }
+        final currentUser = _currentUser;
         final nameInitials = currentUser.fullName.trim().isNotEmpty
             ? (currentUser.fullName.trim().length >= 2
                 ? currentUser.fullName.trim().substring(0, 2).toUpperCase()
@@ -155,11 +169,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 const SizedBox(height: 6),
                                 GestureDetector(
                                   onTap: () async {
-                                    await Navigator.push(
+                                    final updated = await Navigator.push<AppUser?>(
                                       context,
-                                      MaterialPageRoute(builder: (_) => EditProfileScreen(user: currentUser)),
+                                      MaterialPageRoute(builder: (_) => EditProfileScreen(user: _currentUser)),
                                     );
-                                    setState(() {});
+                                    if (updated != null && mounted) {
+                                      setState(() {
+                                        _currentUser = updated;
+                                      });
+                                    }
+                                    _loadProfileData();
                                   },
                                   child: const Text(
                                     'Chỉnh sửa hồ sơ →',

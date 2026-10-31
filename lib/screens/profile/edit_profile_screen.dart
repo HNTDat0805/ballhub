@@ -43,7 +43,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
     try {
-      await UserService.updateProfile(
+      final updatedUser = await UserService.updateProfile(
         fullName: _nameCtrl.text.trim(),
         phone: _phoneCtrl.text.trim(),
         position: _position,
@@ -51,7 +51,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       );
       if (!mounted) return;
       showMessage(context, 'Đã lưu hồ sơ');
-      Navigator.pop(context);
+      Navigator.pop(context, updatedUser);
     } catch (e) {
       if (mounted) showMessage(context, errorText(e));
     } finally {

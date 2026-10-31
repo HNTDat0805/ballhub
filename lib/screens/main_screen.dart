@@ -10,15 +10,9 @@ import '../services/auth_service.dart';
 import 'home/home_screen.dart';
 import 'profile/profile_screen.dart';
 import 'teams/team_list_screen.dart';
+import '../services/user_service.dart';
 
 /// Shell điều hướng chính của Ballhub (MainScreen).
-///
-/// Quản lý 5 Tab điều hướng theo đúng cấu trúc Figma (figma.pdf):
-/// 0. Khám phá (Explore / Home) - Page 4
-/// 1. Giải đấu (Tournaments) - Page 5 & 6
-/// 2. Đặt sân (Pitch Booking) - Page 7 & 8
-/// 3. Đội bóng (Teams & Matchmaking) - Page 9 & 10
-/// 4. Cá nhân (User Profile) - Page 12
 class MainScreen extends StatefulWidget {
   final AppUser? demoUser;
 
@@ -41,46 +35,50 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final effectiveUser = widget.demoUser ??
-        AppUser(
-          userId: AuthService.uid ?? '',
-          fullName: AuthService.currentUser?.displayName?.isNotEmpty == true
-              ? AuthService.currentUser!.displayName!
-              : (AuthService.currentUser?.email?.split('@').first ?? 'Cầu thủ Ballhub'),
-          email: AuthService.currentUser?.email ?? '',
-          position: 'Cầu thủ',
-          area: '',
-        );
+    return ValueListenableBuilder<AppUser?>(
+      valueListenable: UserService.currentUserNotifier,
+      builder: (context, userUpdate, _) {
+        final effectiveUser = userUpdate ??
+            widget.demoUser ??
+            AppUser(
+              userId: AuthService.uid ?? '',
+              fullName: AuthService.currentUser?.displayName?.isNotEmpty == true
+                  ? AuthService.currentUser!.displayName!
+                  : (AuthService.currentUser?.email?.split('@').first ?? 'Cầu thủ Ballhub'),
+              email: AuthService.currentUser?.email ?? '',
+              position: 'Cầu thủ',
+              area: '',
+            );
 
-    final pages = [
-      HomeScreen(
-        user: effectiveUser,
-        onNavigate: _navigateToTab,
-        tournamentRepository: _tournamentRepo,
-        bookingRepository: _bookingRepo,
-      ),
+        final pages = [
+          HomeScreen(
+            user: effectiveUser,
+            onNavigate: _navigateToTab,
+            tournamentRepository: _tournamentRepo,
+            bookingRepository: _bookingRepo,
+          ),
 
-      // 1. Giải đấu (Trang 5 & 6)
-      TournamentListScreen(
-        controller: _tournamentController,
-        repository: _tournamentRepo,
-      ),
+          // 1. Giải đấu (Trang 5 & 6)
+          TournamentListScreen(
+            controller: _tournamentController,
+            repository: _tournamentRepo,
+          ),
 
-      // 2. Đặt sân (Trang 7 & 8)
-      FieldListScreen(repository: _bookingRepo),
+          // 2. Đặt sân (Trang 7 & 8)
+          FieldListScreen(repository: _bookingRepo),
 
-      // 3. Đội bóng (Trang 9 & 10)
-      const TeamListScreen(),
+          // 3. Đội bóng (Trang 9 & 10)
+          const TeamListScreen(),
 
-      // 4. Cá nhân (Trang 12)
-      ProfileScreen(user: effectiveUser),
-    ];
+          // 4. Cá nhân (Trang 12)
+          ProfileScreen(user: effectiveUser),
+        ];
 
-    return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: pages,
-      ),
+        return Scaffold(
+          body: IndexedStack(
+            index: _currentIndex,
+            children: pages,
+          ),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           color: Colors.white,
@@ -125,6 +123,8 @@ class _MainScreenState extends State<MainScreen> {
           ],
         ),
       ),
+    );
+      },
     );
   }
 }
