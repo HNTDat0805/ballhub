@@ -4,6 +4,7 @@ import '../../data/booking_repository.dart';
 import '../../domain/models/football_field.dart';
 import '../controllers/booking_controllers.dart';
 import 'field_detail_screen.dart';
+import '../../../../widgets/province_picker_modal.dart';
 
 /// Màn hình Danh sách Sân bóng (Page 7 - figma.pdf)
 ///
@@ -28,7 +29,8 @@ class FieldListScreen extends StatefulWidget {
 class _FieldListScreenState extends State<FieldListScreen> {
   late final FieldListController _controller;
   final _searchController = TextEditingController();
-  int _selectedFilter = 0; // 0 = Bình Thạnh, 1 = Mức giá, 2 = 7 người
+  int _selectedFilter = 0; // 0 = Tất cả, 1 = Tỉnh/Thành, 2 = Sân 7 người
+  String _selectedCity = 'TP. Hồ Chí Minh';
 
   @override
   void initState() {
@@ -117,12 +119,23 @@ class _FieldListScreenState extends State<FieldListScreen> {
                 const SizedBox(width: 8),
                 _filterChip(
                   1,
-                  'TP. Hồ Chí Minh',
-                  onTap: () {
-                    setState(() => _selectedFilter = 1);
-                    _controller.setCityFilter('Hồ Chí Minh');
-                    _controller.setFieldTypeFilter(null);
-                    _controller.loadFields();
+                  '$_selectedCity ⌄',
+                  onTap: () async {
+                    final chosen = await ProvincePickerModal.show(context, currentProvince: _selectedCity);
+                    if (chosen != null) {
+                      setState(() {
+                        _selectedCity = chosen;
+                        _selectedFilter = 1;
+                      });
+                      _controller.setCityFilter(chosen);
+                      _controller.setFieldTypeFilter(null);
+                      _controller.loadFields();
+                    } else {
+                      setState(() => _selectedFilter = 1);
+                      _controller.setCityFilter(_selectedCity);
+                      _controller.setFieldTypeFilter(null);
+                      _controller.loadFields();
+                    }
                   },
                 ),
                 const SizedBox(width: 8),

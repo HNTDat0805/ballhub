@@ -14,6 +14,7 @@ import '../../models/team.dart';
 import '../../services/team_service.dart';
 import '../schedule/schedule_screen.dart';
 import '../teams/team_detail_screen.dart';
+import '../../widgets/province_picker_modal.dart';
 
 /// Màn hình Khám phá / Trang chủ (Page 4 - figma.pdf)
 ///
@@ -49,17 +50,19 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoadingFields = true;
   int _unreadNotifications = 0;
   List<FriendlyInvitation> _invitations = [];
+  String _selectedProvince = 'TP. Hồ Chí Minh';
 
   @override
   void initState() {
     super.initState();
+    _selectedProvince = widget.user.area?.isNotEmpty == true ? widget.user.area! : 'TP. Hồ Chí Minh';
     _loadFeaturedData();
   }
 
   Future<void> _loadFeaturedData() async {
-    // 1. Tải đội bóng thật từ Firestore
+    // 1. Tải đội bóng thật từ Firestore / Fallback theo tỉnh thành đã chọn
     try {
-      final teams = await TeamService.search();
+      final teams = await TeamService.search(area: _selectedProvince);
       if (mounted) {
         setState(() {
           _featuredTeam = teams.isNotEmpty ? teams.first : null;
@@ -70,10 +73,10 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) setState(() => _isLoadingTeams = false);
     }
 
-    // 2. Tải sân bóng thật từ API/Firestore
+    // 2. Tải sân bóng thật từ API/Firestore theo tỉnh thành đã chọn
     if (widget.bookingRepository != null) {
       try {
-        final fields = await widget.bookingRepository!.getFields();
+        final fields = await widget.bookingRepository!.getFields(city: _selectedProvince);
         if (mounted) {
           setState(() {
             _featuredField = fields.isNotEmpty ? fields.first : null;
@@ -256,7 +259,20 @@ class _HomeScreenState extends State<HomeScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 InkWell(
-                  onTap: () {},
+                  onTap: () async {
+                    final chosen = await ProvincePickerModal.show(
+                      context,
+                      currentProvince: _selectedProvince,
+                    );
+                    if (chosen != null && chosen != _selectedProvince) {
+                      setState(() {
+                        _selectedProvince = chosen;
+                        _isLoadingTeams = true;
+                        _isLoadingFields = true;
+                      });
+                      _loadFeaturedData();
+                    }
+                  },
                   borderRadius: BorderRadius.circular(8),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
@@ -265,7 +281,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         const Icon(Icons.location_on_outlined, size: 18, color: AppTheme.primaryDarkGreen),
                         const SizedBox(width: 4),
                         Text(
-                          widget.user.area?.isNotEmpty == true ? widget.user.area! : 'TP. Hồ Chí Minh',
+                          _selectedProvince,
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 14,

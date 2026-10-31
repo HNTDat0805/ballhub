@@ -4,6 +4,7 @@ import '../../models/team.dart';
 import '../../services/team_service.dart';
 import 'team_detail_screen.dart';
 import 'team_form_screen.dart';
+import '../../widgets/province_picker_modal.dart';
 
 /// Màn hình Danh sách Đội bóng & Tìm đối thủ (Page 9 - figma.pdf)
 ///
@@ -22,7 +23,8 @@ class TeamListScreen extends StatefulWidget {
 
 class _TeamListScreenState extends State<TeamListScreen> {
   final _searchController = TextEditingController();
-  int _selectedFilter = 0; // 0 = Tất cả, 1 = TP. Hồ Chí Minh, 2 = Bình Thạnh
+  int _selectedFilter = 0; // 0 = Tất cả, 1 = Tỉnh/Thành, 2 = Bình Thạnh
+  String _selectedCity = 'TP. Hồ Chí Minh';
   List<Team> _teams = [];
   bool _isLoading = true;
   String? _errorMessage;
@@ -49,7 +51,7 @@ class _TeamListScreenState extends State<TeamListScreen> {
 
     try {
       String area = '';
-      if (_selectedFilter == 1) area = 'Hồ Chí Minh';
+      if (_selectedFilter == 1) area = _selectedCity;
       if (_selectedFilter == 2) area = 'Bình Thạnh';
 
       final list = await TeamService.search(
@@ -395,10 +397,19 @@ class _TeamListScreenState extends State<TeamListScreen> {
                 const SizedBox(width: 8),
                 _filterChip(
                   1,
-                  'TP. Hồ Chí Minh ⌄',
-                  onTap: () {
-                    setState(() => _selectedFilter = 1);
-                    _loadTeams();
+                  '$_selectedCity ⌄',
+                  onTap: () async {
+                    final chosen = await ProvincePickerModal.show(context, currentProvince: _selectedCity);
+                    if (chosen != null) {
+                      setState(() {
+                        _selectedCity = chosen;
+                        _selectedFilter = 1;
+                      });
+                      _loadTeams();
+                    } else {
+                      setState(() => _selectedFilter = 1);
+                      _loadTeams();
+                    }
                   },
                 ),
                 const SizedBox(width: 8),
