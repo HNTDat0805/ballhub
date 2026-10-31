@@ -36,16 +36,15 @@ jobs:
           npm run build
 
       - name: Deploy to Firebase Production
-        if: env.HAS_SECRET == 'true'
+        if: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BALLHUB != '' }}
         uses: w9jds/firebase-action@master
         with:
           args: deploy --only functions,firestore,database
         env:
           GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BALLHUB }}
-          HAS_SECRET: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BALLHUB != '' }}
 
       - name: Check Deployment Credentials Notice
-        if: env.HAS_SECRET != 'true'
+        if: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BALLHUB == '' }}
         run: |
           echo "=========================================================================="
           echo " [THÔNG BÁO] Chưa cấu hình secret FIREBASE_SERVICE_ACCOUNT_BALLHUB!"
@@ -53,5 +52,3 @@ jobs:
           echo " Để kích hoạt auto-deploy lên Firebase, vui lòng vào Repository Settings:"
           echo " Settings -> Secrets and variables -> Actions -> Thêm FIREBASE_SERVICE_ACCOUNT_BALLHUB"
           echo "=========================================================================="
-        env:
-          HAS_SECRET: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BALLHUB != '' }}

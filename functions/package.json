@@ -10,12 +10,12 @@
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log",
     "local": "ts-node src/local.ts",
-    "test": "node --test dist/tests/**/*.test.js"
+    "test": "node --test dist/tests/"
   },
   "engines": {
     "node": "20"
   },
-  "main": "dist/index.js",
+  "main": "dist/src/index.js",
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.21.2",
