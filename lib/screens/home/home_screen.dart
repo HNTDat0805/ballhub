@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../core/auth/auth_context.dart' hide AppUser;
 import '../../core/theme/app_theme.dart';
 import '../../features/booking/data/booking_repository.dart';
@@ -55,8 +56,17 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _selectedProvince = widget.user.area?.isNotEmpty == true ? widget.user.area! : 'TP. Hồ Chí Minh';
+    _selectedProvince = widget.user.area?.isNotEmpty == true
+        ? widget.user.area!
+        : 'TP. Hồ Chí Minh';
     _loadFeaturedData();
+    TeamService.changed.addListener(_loadFeaturedData);
+  }
+
+  @override
+  void dispose() {
+    TeamService.changed.removeListener(_loadFeaturedData);
+    super.dispose();
   }
 
   Future<void> _loadFeaturedData() async {
@@ -76,7 +86,9 @@ class _HomeScreenState extends State<HomeScreen> {
     // 2. Tải sân bóng thật từ API/Firestore theo tỉnh thành đã chọn
     if (widget.bookingRepository != null) {
       try {
-        final fields = await widget.bookingRepository!.getFields(city: _selectedProvince);
+        final fields = await widget.bookingRepository!.getFields(
+          city: _selectedProvince,
+        );
         if (mounted) {
           setState(() {
             _featuredField = fields.isNotEmpty ? fields.first : null;
@@ -134,7 +146,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 shape: BoxShape.circle,
                 color: Color(0xFFFBBF24),
               ),
-              child: const Icon(Icons.sports_soccer, size: 16, color: Colors.black87),
+              child: const Icon(
+                Icons.sports_soccer,
+                size: 16,
+                color: Colors.black87,
+              ),
             ),
             const SizedBox(width: 8),
             const Text(
@@ -180,7 +196,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         children: [
                           const Text(
                             'Trung tâm thông báo',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.textPrimary,
+                            ),
                           ),
                           TextButton(
                             onPressed: () => Navigator.pop(ctx),
@@ -199,7 +219,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                 Icon(
                                   Icons.notifications_off_outlined,
                                   size: 48,
-                                  color: AppTheme.textMuted.withValues(alpha: 0.6),
+                                  color: AppTheme.textMuted.withValues(
+                                    alpha: 0.6,
+                                  ),
                                 ),
                                 const SizedBox(height: 12),
                                 const Text(
@@ -214,7 +236,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                 const Text(
                                   'Bạn sẽ nhận được thông báo khi có lời mời giao hữu hoặc giải đấu mới.',
                                   textAlign: TextAlign.center,
-                                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                                  style: TextStyle(
+                                    color: AppTheme.textSecondary,
+                                    fontSize: 13,
+                                  ),
                                 ),
                               ],
                             ),
@@ -226,10 +251,20 @@ class _HomeScreenState extends State<HomeScreen> {
                             contentPadding: EdgeInsets.zero,
                             leading: const CircleAvatar(
                               backgroundColor: AppTheme.primaryLightGreen,
-                              child: Icon(Icons.handshake_outlined, color: AppTheme.primaryDarkGreen),
+                              child: Icon(
+                                Icons.handshake_outlined,
+                                color: AppTheme.primaryDarkGreen,
+                              ),
                             ),
-                            title: Text('Lời mời giao hữu từ ${inv.fromTeamName}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                            subtitle: Text('Sân: ${inv.venue ?? 'Thỏa thuận'}${inv.proposedDate != null ? ' • Ngày: ${inv.proposedDate}' : ''}'),
+                            title: Text(
+                              'Lời mời giao hữu từ ${inv.fromTeamName}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            subtitle: Text(
+                              'Sân: ${inv.venue ?? 'Thỏa thuận'}${inv.proposedDate != null ? ' • Ngày: ${inv.proposedDate}' : ''}',
+                            ),
                             trailing: TextButton(
                               onPressed: () {
                                 Navigator.pop(ctx);
@@ -275,10 +310,17 @@ class _HomeScreenState extends State<HomeScreen> {
                   },
                   borderRadius: BorderRadius.circular(8),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 4,
+                      horizontal: 2,
+                    ),
                     child: Row(
                       children: [
-                        const Icon(Icons.location_on_outlined, size: 18, color: AppTheme.primaryDarkGreen),
+                        const Icon(
+                          Icons.location_on_outlined,
+                          size: 18,
+                          color: AppTheme.primaryDarkGreen,
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           _selectedProvince,
@@ -288,7 +330,11 @@ class _HomeScreenState extends State<HomeScreen> {
                             color: AppTheme.textPrimary,
                           ),
                         ),
-                        const Icon(Icons.keyboard_arrow_down, size: 18, color: AppTheme.textSecondary),
+                        const Icon(
+                          Icons.keyboard_arrow_down,
+                          size: 18,
+                          color: AppTheme.textSecondary,
+                        ),
                       ],
                     ),
                   ),
@@ -309,7 +355,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     padding: EdgeInsets.symmetric(vertical: 4, horizontal: 4),
                     child: Row(
                       children: [
-                        Icon(Icons.calendar_month_outlined, size: 16, color: AppTheme.primaryDarkGreen),
+                        Icon(
+                          Icons.calendar_month_outlined,
+                          size: 16,
+                          color: AppTheme.primaryDarkGreen,
+                        ),
                         SizedBox(width: 4),
                         Text(
                           'Lịch thi đấu →',
@@ -332,13 +382,21 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 24),
 
             // --- MỤC 1: ĐỘI BÓNG TÌM ĐỐI THỦ TỪ DATABASE ---
-            _sectionHeader('Đội bóng tìm đối thủ', 'Xem tất cả →', () => widget.onNavigate(3)),
+            _sectionHeader(
+              'Đội bóng tìm đối thủ',
+              'Xem tất cả →',
+              () => widget.onNavigate(3),
+            ),
             const SizedBox(height: 8),
             _buildFeaturedTeamCard(),
             const SizedBox(height: 24),
 
             // --- MỤC 2: SÂN BÓNG ĐỀ XUẤT TỪ DATABASE ---
-            _sectionHeader('Sân bóng đề xuất', 'Xem tất cả →', () => widget.onNavigate(2)),
+            _sectionHeader(
+              'Sân bóng đề xuất',
+              'Xem tất cả →',
+              () => widget.onNavigate(2),
+            ),
             const SizedBox(height: 8),
             _buildFeaturedFieldCard(),
             const SizedBox(height: 24),
@@ -373,6 +431,9 @@ class _HomeScreenState extends State<HomeScreen> {
     return StreamBuilder<List<Tournament>>(
       stream: widget.tournamentRepository!.watchTournaments(),
       builder: (context, snapshot) {
+        if (snapshot.hasError || !snapshot.hasData) {
+          return _buildEmptyHeroCard();
+        }
         final tournaments = snapshot.data ?? [];
         if (tournaments.isEmpty) {
           return _buildEmptyHeroCard();
@@ -393,7 +454,9 @@ class _HomeScreenState extends State<HomeScreen> {
               MaterialPageRoute(
                 builder: (_) => TournamentDetailScreen(
                   tournamentId: tournament.id,
-                  controller: TournamentController(repository: widget.tournamentRepository!),
+                  controller: TournamentController(
+                    repository: widget.tournamentRepository!,
+                  ),
                 ),
               ),
             );
@@ -422,7 +485,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.18),
                         borderRadius: BorderRadius.circular(12),
@@ -439,15 +505,23 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
-                        color: isLive ? AppTheme.primaryDarkGreen : const Color(0xFF3B82F6),
+                        color: isLive
+                            ? AppTheme.primaryDarkGreen
+                            : const Color(0xFF3B82F6),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const CircleAvatar(radius: 3, backgroundColor: Colors.white),
+                          const CircleAvatar(
+                            radius: 3,
+                            backgroundColor: Colors.white,
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             isLive ? 'Đang diễn ra' : 'Sắp khởi tranh',
@@ -525,13 +599,21 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               child: const Text(
                 'QUẢN LÝ GIẢI ĐẤU',
-                style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
             const SizedBox(height: 20),
             const Text(
               'Tổ chức giải đấu của bạn',
-              style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900),
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+              ),
             ),
             const SizedBox(height: 6),
             const Text(
@@ -565,7 +647,11 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         child: Row(
           children: [
-            const Icon(Icons.group_outlined, size: 36, color: AppTheme.textMuted),
+            const Icon(
+              Icons.group_outlined,
+              size: 36,
+              color: AppTheme.textMuted,
+            ),
             const SizedBox(width: 12),
             const Expanded(
               child: Text(
@@ -674,7 +760,11 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         child: Row(
           children: [
-            const Icon(Icons.stadium_outlined, size: 36, color: AppTheme.textMuted),
+            const Icon(
+              Icons.stadium_outlined,
+              size: 36,
+              color: AppTheme.textMuted,
+            ),
             const SizedBox(width: 12),
             const Expanded(
               child: Text(
@@ -731,9 +821,17 @@ class _HomeScreenState extends State<HomeScreen> {
                     ? Image.network(
                         field.coverImageUrl,
                         fit: BoxFit.cover,
-                        errorBuilder: (ctx, err, stack) => const Icon(Icons.stadium, color: Colors.white38, size: 40),
+                        errorBuilder: (ctx, err, stack) => const Icon(
+                          Icons.stadium,
+                          color: Colors.white38,
+                          size: 40,
+                        ),
                       )
-                    : const Icon(Icons.stadium, color: Colors.white38, size: 40),
+                    : const Icon(
+                        Icons.stadium,
+                        color: Colors.white38,
+                        size: 40,
+                      ),
               ),
             ),
             const SizedBox(width: 14),
@@ -754,8 +852,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       Expanded(
                         child: Text(
-                          field.address.isNotEmpty ? field.address : '${field.district}, ${field.city}',
-                          style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                          field.address.isNotEmpty
+                              ? field.address
+                              : '${field.district}, ${field.city}',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: AppTheme.textSecondary,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -788,6 +891,9 @@ class _HomeScreenState extends State<HomeScreen> {
     return StreamBuilder<List<Tournament>>(
       stream: widget.tournamentRepository!.watchTournaments(),
       builder: (context, tourSnap) {
+        if (tourSnap.hasError || !tourSnap.hasData) {
+          return _buildNoMatchState();
+        }
         final tournaments = tourSnap.data ?? [];
         if (tournaments.isEmpty) {
           return _buildNoMatchState();
@@ -798,17 +904,24 @@ class _HomeScreenState extends State<HomeScreen> {
           stream: widget.tournamentRepository!.watchMatches(activeTour.id),
           builder: (context, matchSnap) {
             final matches = matchSnap.data ?? [];
-            final upcomingMatches = matches.where((m) => m.status == MatchStatus.scheduled).toList();
+            final upcomingMatches = matches
+                .where((m) => m.status == MatchStatus.scheduled)
+                .toList();
 
             if (upcomingMatches.isEmpty) {
               return _buildNoMatchState();
             }
 
             final match = upcomingMatches.first;
-            final home = match.homeTeamName.isNotEmpty ? match.homeTeamName : 'Đội nhà';
-            final away = match.awayTeamName.isNotEmpty ? match.awayTeamName : 'Đội khách';
+            final home = match.homeTeamName.isNotEmpty
+                ? match.homeTeamName
+                : 'Đội nhà';
+            final away = match.awayTeamName.isNotEmpty
+                ? match.awayTeamName
+                : 'Đội khách';
             final dt = match.scheduledTime;
-            final dateStr = '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')} · ${dt.day}/${dt.month}';
+            final dateStr =
+                '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')} · ${dt.day}/${dt.month}';
 
             return InkWell(
               onTap: () => Navigator.push(
@@ -845,7 +958,11 @@ class _HomeScreenState extends State<HomeScreen> {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        const Icon(Icons.chevron_right, size: 20, color: AppTheme.textMuted),
+                        const Icon(
+                          Icons.chevron_right,
+                          size: 20,
+                          color: AppTheme.textMuted,
+                        ),
                       ],
                     ),
                     const SizedBox(height: 6),
@@ -860,7 +977,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
                             color: AppTheme.primaryLightGreen,
                             borderRadius: BorderRadius.circular(6),
@@ -896,7 +1016,11 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       child: Row(
         children: [
-          const Icon(Icons.event_available_outlined, size: 36, color: AppTheme.textMuted),
+          const Icon(
+            Icons.event_available_outlined,
+            size: 36,
+            color: AppTheme.textMuted,
+          ),
           const SizedBox(width: 12),
           const Expanded(
             child: Text(
@@ -920,7 +1044,11 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _sectionHeader(String title, String actionText, VoidCallback onAction) {
+  Widget _sectionHeader(
+    String title,
+    String actionText,
+    VoidCallback onAction,
+  ) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [

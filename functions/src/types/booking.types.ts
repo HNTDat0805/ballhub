@@ -50,6 +50,8 @@ export interface FootballFieldEntity {
   city: string;
   latitude: number;
   longitude: number;
+  placeId?: string;
+  ward?: string;
   fieldType: string;
   capacity: number;
   amenities: string[];

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+
 import '../../../../core/auth/auth_context.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../data/api_tournament_repository.dart';
 import '../../data/tournament_repository.dart';
 import '../../domain/models/tournament.dart';
 import '../controllers/tournament_controller.dart';
@@ -8,6 +10,7 @@ import 'create_edit_tournament_screen.dart';
 import 'tournament_detail_screen.dart';
 import '../../../../widgets/province_picker_modal.dart';
 import '../../../../widgets/filter_selection_modal.dart';
+import '../../../../utils/debouncer.dart';
 
 /// Màn hình danh sách giải đấu bóng đá (Page 5 - figma.pdf)
 class TournamentListScreen extends StatefulWidget {
@@ -26,25 +29,54 @@ class TournamentListScreen extends StatefulWidget {
 
 class _TournamentListScreenState extends State<TournamentListScreen> {
   final _searchController = TextEditingController();
-  int _selectedFilter = 0; // 0 = Tất cả, 1 = Tỉnh/Thành, 2 = Thể thức, 3 = Trạng thái
+  final _searchDebouncer = Debouncer(delay: const Duration(milliseconds: 300));
+  int _selectedFilter =
+      0; // 0 = Tất cả, 1 = Tỉnh/Thành, 2 = Thể thức, 3 = Trạng thái
   String _selectedCity = 'TP. Hồ Chí Minh';
   TournamentFormat? _selectedFormat;
   String _selectedFormatLabel = 'Thể thức';
   TournamentStatus? _selectedStatus;
   String _selectedStatusLabel = 'Trạng thái';
+  bool _isReloading = false;
 
   @override
   void dispose() {
+    _searchDebouncer.dispose();
     _searchController.dispose();
     super.dispose();
   }
 
-  void _openCreateScreen() {
-    Navigator.of(context).push(
+  void _openCreateScreen() async {
+    final created = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
-        builder: (_) => CreateEditTournamentScreen(controller: widget.controller),
+        builder: (_) =>
+            CreateEditTournamentScreen(controller: widget.controller),
       ),
     );
+    if (created == true && mounted) {
+      setState(() {
+        _selectedFilter = 0;
+        _selectedFormat = null;
+        _selectedFormatLabel = 'Thể thức';
+        _selectedStatus = null;
+        _selectedStatusLabel = 'Trạng thái';
+        _searchController.clear();
+        _isReloading = true;
+      });
+      widget.controller.resetFilters();
+      await _refreshTournaments();
+      if (mounted) {
+        setState(() {
+          _isReloading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _refreshTournaments() async {
+    if (widget.repository is ApiTournamentRepository) {
+      await (widget.repository as ApiTournamentRepository).refreshTournaments();
+    }
   }
 
   @override
@@ -58,6 +90,27 @@ class _TournamentListScreenState extends State<TournamentListScreen> {
           backgroundColor: AppTheme.surfaceColor,
           appBar: AppBar(
             title: const Text('Giải đấu'),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.add_rounded),
+                tooltip: 'Tạo giải đấu',
+                onPressed: _openCreateScreen,
+              ),
+              IconButton(
+                icon: const Icon(Icons.refresh_rounded),
+                tooltip: 'Làm mới',
+                onPressed: () async {
+                  setState(() => _isReloading = true);
+                  if (widget.repository is ApiTournamentRepository) {
+                    await (widget.repository as ApiTournamentRepository)
+                        .refreshTournaments();
+                  }
+                  if (mounted) {
+                    setState(() => _isReloading = false);
+                  }
+                },
+              ),
+            ],
           ),
           body: Column(
             children: [
@@ -68,20 +121,31 @@ class _TournamentListScreenState extends State<TournamentListScreen> {
                   controller: _searchController,
                   decoration: InputDecoration(
                     hintText: 'Tìm tên giải đấu',
-                    prefixIcon: const Icon(Icons.search, color: AppTheme.textMuted),
+                    prefixIcon: const Icon(
+                      Icons.search,
+                      color: AppTheme.textMuted,
+                    ),
                     suffixIcon: _searchController.text.isNotEmpty
                         ? IconButton(
                             icon: const Icon(Icons.clear, size: 18),
                             onPressed: () {
+                              _searchDebouncer.cancel();
                               _searchController.clear();
                               controller.setSearchQuery('');
                             },
                           )
                         : null,
                     isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                   ),
-                  onChanged: (val) => controller.setSearchQuery(val),
+                  onChanged: (val) {
+                    _searchDebouncer.run(() {
+                      controller.setSearchQuery(val);
+                    });
+                  },
                 ),
               ),
 
@@ -110,7 +174,10 @@ class _TournamentListScreenState extends State<TournamentListScreen> {
                       1,
                       '$_selectedCity ⌄',
                       onTap: () async {
-                        final chosen = await ProvincePickerModal.show(context, currentProvince: _selectedCity);
+                        final chosen = await ProvincePickerModal.show(
+                          context,
+                          currentProvince: _selectedCity,
+                        );
                         if (chosen != null) {
                           setState(() {
                             _selectedCity = chosen;
@@ -128,17 +195,36 @@ class _TournamentListScreenState extends State<TournamentListScreen> {
                       2,
                       '$_selectedFormatLabel ⌄',
                       onTap: () async {
-                        final chosen = await FilterSelectionModal.show<TournamentFormat?>(
-                          context,
-                          title: 'Chọn thể thức thi đấu',
-                          selectedValue: _selectedFormat,
-                          options: const [
-                            FilterOption(value: null, label: 'Tất cả thể thức', subtitle: 'Hiển thị mọi hình thức thi đấu'),
-                            FilterOption(value: TournamentFormat.roundRobinSingle, label: 'Vòng tròn 1 lượt', subtitle: 'Mỗi đội gặp nhau 1 lần tính điểm BXH'),
-                            FilterOption(value: TournamentFormat.roundRobinDouble, label: 'Vòng tròn 2 lượt', subtitle: 'Lượt đi và lượt về sân nhà - sân khách'),
-                            FilterOption(value: TournamentFormat.knockout, label: 'Loại trực tiếp (Knockout)', subtitle: 'Thua bị loại, tranh vé vào vòng chung kết'),
-                          ],
-                        );
+                        final chosen =
+                            await FilterSelectionModal.show<TournamentFormat?>(
+                              context,
+                              title: 'Chọn thể thức thi đấu',
+                              selectedValue: _selectedFormat,
+                              options: const [
+                                FilterOption(
+                                  value: null,
+                                  label: 'Tất cả thể thức',
+                                  subtitle: 'Hiển thị mọi hình thức thi đấu',
+                                ),
+                                FilterOption(
+                                  value: TournamentFormat.roundRobinSingle,
+                                  label: 'Vòng tròn 1 lượt',
+                                  subtitle:
+                                      'Mỗi đội gặp nhau 1 lần tính điểm BXH',
+                                ),
+                                FilterOption(
+                                  value: TournamentFormat.roundRobinDouble,
+                                  label: 'Vòng tròn 2 lượt',
+                                  subtitle:
+                                      'Lượt đi và lượt về sân nhà - sân khách',
+                                ),
+                                FilterOption(
+                                  value: TournamentFormat.knockout,
+                                  label: 'Loại trực tiếp (Knockout)',
+                                  subtitle: 'Thua bị loại, tranh vé vào vòng chung kết',
+                                ),
+                              ],
+                            );
                         setState(() {
                           _selectedFilter = 2;
                           _selectedFormat = chosen;
@@ -146,8 +232,10 @@ class _TournamentListScreenState extends State<TournamentListScreen> {
                             _selectedFormatLabel = 'Thể thức';
                           } else {
                             _selectedFormatLabel = switch (chosen) {
-                              TournamentFormat.roundRobinSingle => 'Vòng tròn 1 lượt',
-                              TournamentFormat.roundRobinDouble => 'Vòng tròn 2 lượt',
+                              TournamentFormat.roundRobinSingle =>
+                                'Vòng tròn 1 lượt',
+                              TournamentFormat.roundRobinDouble =>
+                                'Vòng tròn 2 lượt',
                               TournamentFormat.knockout => 'Loại trực tiếp',
                             };
                           }
@@ -160,21 +248,39 @@ class _TournamentListScreenState extends State<TournamentListScreen> {
                       3,
                       '$_selectedStatusLabel ⌄',
                       onTap: () async {
-                        final chosen = await FilterSelectionModal.show<TournamentStatus?>(
-                          context,
-                          title: 'Chọn trạng thái giải đấu',
-                          selectedValue: _selectedStatus,
-                          options: const [
-                            FilterOption(value: null, label: 'Tất cả trạng thái', subtitle: 'Hiển thị mọi giai đoạn giải đấu'),
-                            FilterOption(value: TournamentStatus.registrationOpen, label: 'Đang mở đăng ký', subtitle: 'Các đội có thể nộp đơn tham gia'),
-                            FilterOption(value: TournamentStatus.inProgress, label: 'Đang diễn ra', subtitle: 'Các trận đấu đang được tiến hành'),
-                            FilterOption(value: TournamentStatus.completed, label: 'Đã kết thúc', subtitle: 'Đã hoàn thành các trận chung kết'),
-                          ],
-                        );
+                        final chosen =
+                            await FilterSelectionModal.show<TournamentStatus?>(
+                              context,
+                              title: 'Chọn trạng thái giải đấu',
+                              selectedValue: _selectedStatus,
+                              options: const [
+                                FilterOption(
+                                  value: null,
+                                  label: 'Tất cả trạng thái',
+                                  subtitle: 'Hiển thị mọi giai đoạn giải đấu',
+                                ),
+                                FilterOption(
+                                  value: TournamentStatus.registrationOpen,
+                                  label: 'Đang mở đăng ký',
+                                  subtitle: 'Các đội có thể nộp đơn tham gia',
+                                ),
+                                FilterOption(
+                                  value: TournamentStatus.inProgress,
+                                  label: 'Đang diễn ra',
+                                  subtitle: 'Các trận đấu đang được tiến hành',
+                                ),
+                                FilterOption(
+                                  value: TournamentStatus.completed,
+                                  label: 'Đã kết thúc',
+                                  subtitle: 'Đã hoàn thành các trận chung kết',
+                                ),
+                              ],
+                            );
                         setState(() {
                           _selectedFilter = 3;
                           _selectedStatus = chosen;
-                          _selectedStatusLabel = chosen?.displayName ?? 'Trạng thái';
+                          _selectedStatusLabel =
+                              chosen?.displayName ?? 'Trạng thái';
                         });
                         controller.setStatusFilter(chosen);
                       },
@@ -203,15 +309,27 @@ class _TournamentListScreenState extends State<TournamentListScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primaryDarkGreen,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 8,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
-                      icon: const Icon(Icons.add, size: 16, color: Colors.white),
+                      icon: const Icon(
+                        Icons.add,
+                        size: 16,
+                        color: Colors.white,
+                      ),
                       label: const Text(
                         'Tạo giải',
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ],
@@ -221,56 +339,112 @@ class _TournamentListScreenState extends State<TournamentListScreen> {
 
               // Danh sách giải đấu từ database
               Expanded(
-                child: StreamBuilder<List<Tournament>>(
-                  stream: controller.watchTournaments(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-
-                    final tournaments = snapshot.data ?? [];
-
-                    if (tournaments.isEmpty) {
-                      return Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(32),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.emoji_events_outlined, size: 64, color: Colors.grey.shade400),
-                              const SizedBox(height: 16),
-                              const Text(
-                                'Chưa có giải đấu nào trong hệ thống',
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                child: _isReloading
+                    ? const Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            CircularProgressIndicator(
+                              color: AppTheme.primaryDarkGreen,
+                            ),
+                            SizedBox(height: 16),
+                            Text(
+                              'Đang cập nhật danh sách giải đấu...',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: AppTheme.textSecondary,
                               ),
-                              const SizedBox(height: 8),
-                              const Text(
-                                'Hãy nhấn nút "Tạo giải" để bắt đầu giải đấu mới của bạn!',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
-                              ),
-                              const SizedBox(height: 16),
-                              ElevatedButton.icon(
-                                onPressed: _openCreateScreen,
-                                icon: const Icon(Icons.add, size: 18),
-                                label: const Text('Tạo giải đấu ngay'),
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                      );
-                    }
+                      )
+                    : StreamBuilder<List<Tournament>>(
+                        stream: controller.watchTournaments(),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                                  ConnectionState.waiting &&
+                              !snapshot.hasData) {
+                            return const Center(
+                              child: CircularProgressIndicator(),
+                            );
+                          }
 
-                    return ListView.builder(
-                      padding: const EdgeInsets.only(bottom: 24),
-                      itemCount: tournaments.length,
-                      itemBuilder: (context, index) {
-                        final t = tournaments[index];
-                        return _buildDynamicTournamentCard(context, t);
-                      },
-                    );
-                  },
-                ),
+                          final tournaments = snapshot.data ?? [];
+
+                          if (tournaments.isEmpty) {
+                            return RefreshIndicator(
+                              color: AppTheme.primaryDarkGreen,
+                              onRefresh: _refreshTournaments,
+                              child: SingleChildScrollView(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                child: SizedBox(
+                                  height:
+                                      MediaQuery.of(context).size.height * 0.55,
+                                  child: Center(
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(32),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.emoji_events_outlined,
+                                            size: 64,
+                                            color: Colors.grey.shade400,
+                                          ),
+                                          const SizedBox(height: 16),
+                                          const Text(
+                                            'Chưa có giải đấu nào trong hệ thống',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                              color: AppTheme.textPrimary,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          const Text(
+                                            'Hãy nhấn nút "Tạo giải" để bắt đầu giải đấu mới của bạn!',
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                              color: AppTheme.textSecondary,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 16),
+                                          ElevatedButton.icon(
+                                            onPressed: _openCreateScreen,
+                                            icon: const Icon(
+                                              Icons.add,
+                                              size: 18,
+                                            ),
+                                            label: const Text(
+                                              'Tạo giải đấu ngay',
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
+
+                          return RefreshIndicator(
+                            color: AppTheme.primaryDarkGreen,
+                            onRefresh: _refreshTournaments,
+                            child: ListView.builder(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              padding: const EdgeInsets.only(bottom: 24),
+                              itemCount: tournaments.length,
+                              itemBuilder: (context, index) {
+                                final t = tournaments[index];
+                                return _buildDynamicTournamentCard(context, t);
+                              },
+                            ),
+                          );
+                        },
+                      ),
               ),
             ],
           ),
@@ -305,9 +479,14 @@ class _TournamentListScreenState extends State<TournamentListScreen> {
     );
   }
 
-  Widget _buildDynamicTournamentCard(BuildContext context, Tournament tournament) {
-    final startStr = '${tournament.startDate.day}/${tournament.startDate.month}/${tournament.startDate.year}';
-    final endStr = '${tournament.endDate.day}/${tournament.endDate.month}/${tournament.endDate.year}';
+  Widget _buildDynamicTournamentCard(
+    BuildContext context,
+    Tournament tournament,
+  ) {
+    final startStr =
+        '${tournament.startDate.day}/${tournament.startDate.month}/${tournament.startDate.year}';
+    final endStr =
+        '${tournament.endDate.day}/${tournament.endDate.month}/${tournament.endDate.year}';
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -343,7 +522,11 @@ class _TournamentListScreenState extends State<TournamentListScreen> {
                       color: AppTheme.primaryLightGreen,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.emoji_events_outlined, color: AppTheme.primaryDarkGreen, size: 24),
+                    child: const Icon(
+                      Icons.emoji_events_outlined,
+                      color: AppTheme.primaryDarkGreen,
+                      size: 24,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -360,7 +543,10 @@ class _TournamentListScreenState extends State<TournamentListScreen> {
                         ),
                         const SizedBox(height: 6),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
                             color: AppTheme.primaryLightGreen,
                             borderRadius: BorderRadius.circular(6),
@@ -382,7 +568,10 @@ class _TournamentListScreenState extends State<TournamentListScreen> {
               const SizedBox(height: 12),
               Text(
                 '${tournament.maxTeams} đội · ${tournament.location}',
-                style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppTheme.textSecondary,
+                ),
               ),
               const SizedBox(height: 8),
               Row(
@@ -390,7 +579,10 @@ class _TournamentListScreenState extends State<TournamentListScreen> {
                 children: [
                   Text(
                     '$startStr – $endStr',
-                    style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textMuted,
+                    ),
                   ),
                   const Text(
                     'Xem chi tiết →',

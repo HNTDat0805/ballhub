@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+
 import '../../../../core/theme/app_theme.dart';
+import '../../../../models/place_location.dart';
+import '../../../../widgets/address_autocomplete_field.dart';
 import '../../data/booking_repository.dart';
 import '../../domain/models/football_field.dart';
 import '../controllers/booking_controllers.dart';
@@ -34,6 +37,7 @@ class _OwnerFieldFormScreenState extends State<OwnerFieldFormScreen> {
   final _priceCtrl = TextEditingController();
   final _capacityCtrl = TextEditingController();
   final _coverImageCtrl = TextEditingController();
+  PlaceLocation? _selectedPlaceLocation;
 
   String _fieldType = '5 người';
   String _status = 'draft';
@@ -50,7 +54,13 @@ class _OwnerFieldFormScreenState extends State<OwnerFieldFormScreen> {
     ('maintenance', 'Bảo trì'),
   ];
   static const _amenityOptions = [
-    'wifi', 'parking', 'shower', 'lighting', 'locker', 'canteen', 'tribune'
+    'wifi',
+    'parking',
+    'shower',
+    'lighting',
+    'locker',
+    'canteen',
+    'tribune',
   ];
 
   @override
@@ -76,6 +86,16 @@ class _OwnerFieldFormScreenState extends State<OwnerFieldFormScreen> {
     _status = field.status.name;
     _slotDuration = field.slotDurationMinutes;
     _amenities.addAll(field.amenities);
+    _selectedPlaceLocation = PlaceLocation(
+      placeId: field.placeId ?? '',
+      name: field.name,
+      formattedAddress: field.address,
+      latitude: field.latitude,
+      longitude: field.longitude,
+      province: field.city,
+      district: field.district,
+      ward: field.ward,
+    );
   }
 
   void _onUpdate() {
@@ -109,7 +129,10 @@ class _OwnerFieldFormScreenState extends State<OwnerFieldFormScreen> {
               child: SizedBox(
                 width: 20,
                 height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
               ),
             )
           else
@@ -142,8 +165,13 @@ class _OwnerFieldFormScreenState extends State<OwnerFieldFormScreen> {
             _sectionTitle('Thông tin cơ bản'),
             TextFormField(
               controller: _nameCtrl,
-              decoration: const InputDecoration(labelText: 'Tên sân *', hintText: 'Ví dụ: Sân bóng Hoàng Mai A'),
-              validator: (v) => v == null || v.trim().length < 2 ? 'Tên sân tối thiểu 2 ký tự' : null,
+              decoration: const InputDecoration(
+                labelText: 'Tên sân *',
+                hintText: 'Ví dụ: Sân bóng Hoàng Mai A',
+              ),
+              validator: (v) => v == null || v.trim().length < 2
+                  ? 'Tên sân tối thiểu 2 ký tự'
+                  : null,
             ),
             const SizedBox(height: 12),
             TextFormField(
@@ -154,14 +182,38 @@ class _OwnerFieldFormScreenState extends State<OwnerFieldFormScreen> {
             const SizedBox(height: 12),
             TextFormField(
               controller: _coverImageCtrl,
-              decoration: const InputDecoration(labelText: 'URL ảnh bìa', hintText: 'https://...'),
+              decoration: const InputDecoration(
+                labelText: 'URL ảnh bìa',
+                hintText: 'https://...',
+              ),
             ),
             const SizedBox(height: 20),
             _sectionTitle('Địa chỉ'),
-            TextFormField(
+            AddressAutocompleteField(
               controller: _addressCtrl,
-              decoration: const InputDecoration(labelText: 'Địa chỉ *'),
-              validator: (v) => v == null || v.trim().isEmpty ? 'Vui lòng nhập địa chỉ' : null,
+              labelText: 'Địa chỉ sân bóng *',
+              hintText:
+                  'Nhập số nhà, tên đường hoặc tìm kiếm trên Google Places...',
+              isRequired: true,
+              onPlaceSelected: (place) {
+                setState(() {
+                  _selectedPlaceLocation = place;
+                  if (place.district != null && place.district!.isNotEmpty) {
+                    _districtCtrl.text = place.district!;
+                  }
+                  if (place.province != null && place.province!.isNotEmpty) {
+                    _cityCtrl.text = place.province!;
+                  }
+                });
+              },
+              onCleared: () {
+                setState(() {
+                  _selectedPlaceLocation = null;
+                });
+              },
+              validator: (v) => v == null || v.trim().isEmpty
+                  ? 'Vui lòng nhập địa chỉ'
+                  : null,
             ),
             const SizedBox(height: 12),
             Row(
@@ -177,7 +229,8 @@ class _OwnerFieldFormScreenState extends State<OwnerFieldFormScreen> {
                   child: TextFormField(
                     controller: _cityCtrl,
                     decoration: const InputDecoration(labelText: 'Thành phố *'),
-                    validator: (v) => v == null || v.trim().isEmpty ? 'Bắt buộc' : null,
+                    validator: (v) =>
+                        v == null || v.trim().isEmpty ? 'Bắt buộc' : null,
                   ),
                 ),
               ],
@@ -188,7 +241,9 @@ class _OwnerFieldFormScreenState extends State<OwnerFieldFormScreen> {
             DropdownButtonFormField<String>(
               initialValue: _fieldType,
               decoration: const InputDecoration(labelText: 'Loại sân *'),
-              items: _fieldTypes.map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
+              items: _fieldTypes
+                  .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                  .toList(),
               onChanged: (v) => setState(() => _fieldType = v!),
             ),
             const SizedBox(height: 12),
@@ -197,7 +252,10 @@ class _OwnerFieldFormScreenState extends State<OwnerFieldFormScreen> {
                 Expanded(
                   child: TextFormField(
                     controller: _capacityCtrl,
-                    decoration: const InputDecoration(labelText: 'Sức chứa *', suffixText: 'người'),
+                    decoration: const InputDecoration(
+                      labelText: 'Sức chứa *',
+                      suffixText: 'người',
+                    ),
                     keyboardType: TextInputType.number,
                     validator: (v) {
                       final n = int.tryParse(v ?? '');
@@ -210,7 +268,9 @@ class _OwnerFieldFormScreenState extends State<OwnerFieldFormScreen> {
                 Expanded(
                   child: DropdownButtonFormField<int>(
                     initialValue: _slotDuration,
-                    decoration: const InputDecoration(labelText: 'Thời lượng ca'),
+                    decoration: const InputDecoration(
+                      labelText: 'Thời lượng ca',
+                    ),
                     items: const [
                       DropdownMenuItem(value: 30, child: Text('30 phút')),
                       DropdownMenuItem(value: 60, child: Text('60 phút')),
@@ -228,7 +288,10 @@ class _OwnerFieldFormScreenState extends State<OwnerFieldFormScreen> {
                 Expanded(
                   child: TextFormField(
                     controller: _priceCtrl,
-                    decoration: const InputDecoration(labelText: 'Giá cơ bản *', suffixText: 'VND/giờ'),
+                    decoration: const InputDecoration(
+                      labelText: 'Giá cơ bản *',
+                      suffixText: 'VND/giờ',
+                    ),
                     keyboardType: TextInputType.number,
                     validator: (v) {
                       final n = int.tryParse(v ?? '');
@@ -242,7 +305,12 @@ class _OwnerFieldFormScreenState extends State<OwnerFieldFormScreen> {
                   child: DropdownButtonFormField<String>(
                     initialValue: _status,
                     decoration: const InputDecoration(labelText: 'Trạng thái'),
-                    items: _statuses.map((s) => DropdownMenuItem(value: s.$1, child: Text(s.$2))).toList(),
+                    items: _statuses
+                        .map(
+                          (s) =>
+                              DropdownMenuItem(value: s.$1, child: Text(s.$2)),
+                        )
+                        .toList(),
                     onChanged: (v) => setState(() => _status = v!),
                   ),
                 ),
@@ -277,7 +345,9 @@ class _OwnerFieldFormScreenState extends State<OwnerFieldFormScreen> {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: _controller.isSubmitting ? null : _submit,
-                style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
                 child: Text(
                   _isEditing ? 'Lưu thay đổi' : 'Tạo sân',
                   style: const TextStyle(fontSize: 16),
@@ -317,6 +387,24 @@ class _OwnerFieldFormScreenState extends State<OwnerFieldFormScreen> {
       'address': _addressCtrl.text.trim(),
       'district': _districtCtrl.text.trim(),
       'city': _cityCtrl.text.trim(),
+      'latitude':
+          _selectedPlaceLocation?.latitude ??
+          widget.existingField?.latitude ??
+          0.0,
+      'longitude':
+          _selectedPlaceLocation?.longitude ??
+          widget.existingField?.longitude ??
+          0.0,
+      if (_selectedPlaceLocation?.placeId != null &&
+          _selectedPlaceLocation!.placeId.isNotEmpty)
+        'placeId': _selectedPlaceLocation!.placeId
+      else if (widget.existingField?.placeId != null)
+        'placeId': widget.existingField!.placeId!,
+      if (_selectedPlaceLocation?.ward != null &&
+          _selectedPlaceLocation!.ward!.isNotEmpty)
+        'ward': _selectedPlaceLocation!.ward!
+      else if (widget.existingField?.ward != null)
+        'ward': widget.existingField!.ward!,
       'fieldType': _fieldType,
       'capacity': int.parse(_capacityCtrl.text.trim()),
       'basePrice': int.parse(_priceCtrl.text.trim()),
@@ -328,6 +416,47 @@ class _OwnerFieldFormScreenState extends State<OwnerFieldFormScreen> {
       'timezone': 'Asia/Ho_Chi_Minh',
     };
 
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => PopScope(
+        canPop: false,
+        child: AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          content: Row(
+            children: [
+              const CircularProgressIndicator(color: AppTheme.primaryGreen),
+              const SizedBox(width: 20),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _isEditing
+                          ? 'Đang cập nhật sân...'
+                          : 'Đang tạo sân mới...',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Đang đồng bộ dữ liệu vào hệ thống...',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
     final bool success;
     if (_isEditing) {
       success = await _controller.updateField(widget.existingField!.id, data);
@@ -336,15 +465,23 @@ class _OwnerFieldFormScreenState extends State<OwnerFieldFormScreen> {
     }
 
     if (!mounted) return;
+    Navigator.of(context, rootNavigator: true).pop(); // Đóng loading dialog
+
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(_isEditing ? 'Đã cập nhật sân thành công.' : 'Đã tạo sân mới thành công.'),
+          content: Text(
+            _isEditing
+                ? 'Đã cập nhật sân thành công.'
+                : 'Đã tạo sân mới thành công.',
+          ),
           backgroundColor: AppTheme.primaryGreen,
         ),
       );
-      widget.onSaved?.call(_controller.fields.first);
-      Navigator.pop(context);
+      if (_controller.fields.isNotEmpty) {
+        widget.onSaved?.call(_controller.fields.first);
+      }
+      Navigator.pop(context, true);
     }
   }
 }

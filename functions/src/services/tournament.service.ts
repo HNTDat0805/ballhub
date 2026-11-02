@@ -19,6 +19,12 @@ export class TournamentService {
       description?: string;
       bannerUrl?: string;
       location: string;
+      placeId?: string;
+      latitude?: number;
+      longitude?: number;
+      province?: string;
+      district?: string;
+      ward?: string;
       startDate: string;
       endDate: string;
       registrationDeadline: string;
@@ -48,6 +54,12 @@ export class TournamentService {
       description: data.description || '',
       bannerUrl: data.bannerUrl || '',
       location: data.location,
+      ...(data.placeId ? { placeId: data.placeId } : {}),
+      ...(data.latitude !== undefined ? { latitude: data.latitude } : {}),
+      ...(data.longitude !== undefined ? { longitude: data.longitude } : {}),
+      ...(data.province ? { province: data.province } : {}),
+      ...(data.district ? { district: data.district } : {}),
+      ...(data.ward ? { ward: data.ward } : {}),
       startDate: data.startDate,
       endDate: data.endDate,
       registrationDeadline: data.registrationDeadline,

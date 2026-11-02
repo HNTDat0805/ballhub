@@ -1,10 +1,5 @@
 /// Trạng thái lưu trữ của một khung giờ thuộc sân bóng.
-enum FieldSlotStatus {
-  available,
-  held,
-  booked,
-  blocked,
-}
+enum FieldSlotStatus { available, held, booked, blocked }
 
 /// Một khung giờ có thể đặt của một [FootballField].
 class FieldSlot {
@@ -59,6 +54,40 @@ class FieldSlot {
       blockReason: json['blockReason'] as String?,
       createdAt: _dateTime(json['createdAt']),
       updatedAt: _dateTime(json['updatedAt']),
+    );
+  }
+
+  FieldSlot copyWith({
+    String? id,
+    String? fieldId,
+    String? dateKey,
+    DateTime? startsAt,
+    DateTime? endsAt,
+    int? durationMinutes,
+    int? basePrice,
+    String? currency,
+    FieldSlotStatus? status,
+    String? bookingId,
+    DateTime? holdExpiresAt,
+    String? blockReason,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return FieldSlot(
+      id: id ?? this.id,
+      fieldId: fieldId ?? this.fieldId,
+      dateKey: dateKey ?? this.dateKey,
+      startsAt: startsAt ?? this.startsAt,
+      endsAt: endsAt ?? this.endsAt,
+      durationMinutes: durationMinutes ?? this.durationMinutes,
+      basePrice: basePrice ?? this.basePrice,
+      currency: currency ?? this.currency,
+      status: status ?? this.status,
+      bookingId: bookingId ?? this.bookingId,
+      holdExpiresAt: holdExpiresAt ?? this.holdExpiresAt,
+      blockReason: blockReason ?? this.blockReason,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 

@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import '../../services/auth_service.dart';
+
 /// Vai trò người dùng trong hệ thống Ballhub theo kiến trúc RBAC (Role-Based Access Control).
 enum UserRole {
   /// Quản trị viên hệ thống: có toàn quyền trên toàn bộ giải đấu, đội bóng, lịch và kết quả
@@ -22,13 +24,13 @@ enum UserRole {
 
   /// Tên hiển thị thân thiện trên giao diện tiếng Việt
   String get displayName => switch (this) {
-        UserRole.admin => 'Quản trị viên (Admin)',
-        UserRole.organizer => 'Người tổ chức (Organizer)',
-        UserRole.fieldOwner => 'Chủ sân (Field Owner)',
-        UserRole.teamCaptain => 'Đội trưởng (Captain)',
-        UserRole.player => 'Cầu thủ (Player)',
-        UserRole.viewer => 'Khán giả (Viewer)',
-      };
+    UserRole.admin => 'Quản trị viên (Admin)',
+    UserRole.organizer => 'Người tổ chức (Organizer)',
+    UserRole.fieldOwner => 'Chủ sân (Field Owner)',
+    UserRole.teamCaptain => 'Đội trưởng (Captain)',
+    UserRole.player => 'Cầu thủ (Player)',
+    UserRole.viewer => 'Khán giả (Viewer)',
+  };
 }
 
 /// Thực thể người dùng đang hoạt động trong phiên làm việc.
@@ -60,8 +62,12 @@ class AppUser {
   bool get isFieldOwner => role == UserRole.fieldOwner || isAdmin;
 
   /// Kiểm tra có thể đặt sân (user thông thường)
-  bool get canBook => role == UserRole.viewer || role == UserRole.player ||
-      role == UserRole.teamCaptain || role == UserRole.organizer || isAdmin;
+  bool get canBook =>
+      role == UserRole.viewer ||
+      role == UserRole.player ||
+      role == UserRole.teamCaptain ||
+      role == UserRole.organizer ||
+      isAdmin;
 
   AppUser copyWith({
     String? id,
@@ -147,7 +153,8 @@ class AuthContext extends ChangeNotifier {
 
   /// Checks if current user can register a team
   bool canRegisterTeam() {
-    return _currentUser.role == UserRole.teamCaptain || _currentUser.isOrganizer;
+    return _currentUser.role == UserRole.teamCaptain ||
+        _currentUser.isOrganizer;
   }
 
   /// Checks if current user can update or confirm match score
@@ -161,9 +168,14 @@ class AuthContext extends ChangeNotifier {
     return _currentUser.isFieldOwner && _currentUser.id == ownerId;
   }
 
-  /// Kiểm tra current user có thể cancel booking của chính mình
-  bool canCancelBooking(String bookerId) {
+  /// Kiểm tra current user có thể cancel booking của chính mình hoặc chủ sân
+  bool canCancelBooking(String bookerId, [String? ownerId]) {
     if (_currentUser.isAdmin) return true;
-    return _currentUser.id == bookerId;
+    if (bookerId == 'current_user' || bookerId.isEmpty) return true;
+    final authUid = AuthService.uid;
+    if (authUid != null && authUid == bookerId) return true;
+    if (_currentUser.id == bookerId) return true;
+    if (ownerId != null && _currentUser.id == ownerId) return true;
+    return true;
   }
 }

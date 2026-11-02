@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../core/theme/app_theme.dart';
 import '../../features/tournament/data/api_tournament_repository.dart';
 import '../../features/tournament/data/tournament_repository.dart';
@@ -25,7 +26,8 @@ class ScheduleScreen extends StatefulWidget {
 
 class _ScheduleScreenState extends State<ScheduleScreen> {
   late final TournamentRepository _repository;
-  int _selectedFilter = 0; // 0 = Tất cả, 1 = Sắp diễn ra, 2 = Đang diễn ra, 3 = Đã kết thúc
+  int _selectedFilter =
+      0; // 0 = Tất cả, 1 = Sắp diễn ra, 2 = Đang diễn ra, 3 = Đã kết thúc
   late DateTime _currentMonth;
 
   @override
@@ -89,7 +91,11 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                       ],
                     ),
                     IconButton(
-                      icon: const Icon(Icons.refresh, size: 20, color: AppTheme.textSecondary),
+                      icon: const Icon(
+                        Icons.refresh,
+                        size: 20,
+                        color: AppTheme.textSecondary,
+                      ),
                       onPressed: () => setState(() {}),
                       tooltip: 'Làm mới',
                     ),
@@ -107,13 +113,17 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               builder: (context, tourSnap) {
                 if (tourSnap.connectionState == ConnectionState.waiting) {
                   return const Center(
-                    child: CircularProgressIndicator(color: AppTheme.primaryDarkGreen),
+                    child: CircularProgressIndicator(
+                      color: AppTheme.primaryDarkGreen,
+                    ),
                   );
                 }
 
                 final tournaments = tourSnap.data ?? [];
                 if (tournaments.isEmpty) {
-                  return _buildEmptyState('Chưa có giải đấu hoặc lịch thi đấu nào.');
+                  return _buildEmptyState(
+                    'Chưa có giải đấu hoặc lịch thi đấu nào.',
+                  );
                 }
 
                 // Lấy các trận đấu từ giải đấu đầu tiên hoặc giải đang chạy
@@ -127,7 +137,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   builder: (context, matchSnap) {
                     if (matchSnap.connectionState == ConnectionState.waiting) {
                       return const Center(
-                        child: CircularProgressIndicator(color: AppTheme.primaryDarkGreen),
+                        child: CircularProgressIndicator(
+                          color: AppTheme.primaryDarkGreen,
+                        ),
                       );
                     }
 
@@ -135,15 +147,23 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
                     // Áp dụng bộ lọc
                     if (_selectedFilter == 1) {
-                      matches = matches.where((m) => m.status == MatchStatus.scheduled).toList();
+                      matches = matches
+                          .where((m) => m.status == MatchStatus.scheduled)
+                          .toList();
                     } else if (_selectedFilter == 2) {
-                      matches = matches.where((m) => m.status == MatchStatus.inProgress).toList();
+                      matches = matches
+                          .where((m) => m.status == MatchStatus.inProgress)
+                          .toList();
                     } else if (_selectedFilter == 3) {
-                      matches = matches.where((m) => m.status == MatchStatus.finished).toList();
+                      matches = matches
+                          .where((m) => m.status == MatchStatus.finished)
+                          .toList();
                     }
 
                     if (matches.isEmpty) {
-                      return _buildEmptyState('Không có trận đấu nào trong danh mục này.');
+                      return _buildEmptyState(
+                        'Không có trận đấu nào trong danh mục này.',
+                      );
                     }
 
                     return ListView.builder(
@@ -180,7 +200,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+              style: const TextStyle(
+                fontSize: 14,
+                color: AppTheme.textSecondary,
+              ),
             ),
           ],
         ),
@@ -216,15 +239,22 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
   Widget _buildDynamicMatchCard(TournamentMatch match, Tournament tournament) {
     final home = match.homeTeamName.isNotEmpty ? match.homeTeamName : 'Đội nhà';
-    final away = match.awayTeamName.isNotEmpty ? match.awayTeamName : 'Đội khách';
-    final homeInitial = home.isNotEmpty ? home.substring(0, 1).toUpperCase() : 'A';
-    final awayInitial = away.isNotEmpty ? away.substring(0, 1).toUpperCase() : 'B';
+    final away = match.awayTeamName.isNotEmpty
+        ? match.awayTeamName
+        : 'Đội khách';
+    final homeInitial = home.isNotEmpty
+        ? home.substring(0, 1).toUpperCase()
+        : 'A';
+    final awayInitial = away.isNotEmpty
+        ? away.substring(0, 1).toUpperCase()
+        : 'B';
 
     final isLive = match.status == MatchStatus.inProgress;
     final isDone = match.status == MatchStatus.finished;
 
     final dt = match.scheduledTime;
-    final dateStr = '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')} · ${dt.day}/${dt.month}/${dt.year}';
+    final dateStr =
+        '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')} · ${dt.day}/${dt.month}/${dt.year}';
 
     Widget statusBadge;
     if (isLive) {
@@ -241,7 +271,11 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             SizedBox(width: 4),
             Text(
               'LIVE Đang đấu',
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
             ),
           ],
         ),
@@ -255,7 +289,11 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         ),
         child: const Text(
           'Đã kết thúc',
-          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF4B5563)),
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF4B5563),
+          ),
         ),
       );
     } else {
@@ -272,7 +310,11 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             SizedBox(width: 4),
             Text(
               'Sắp diễn ra',
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.primaryDarkGreen),
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.primaryDarkGreen,
+              ),
             ),
           ],
         ),
@@ -317,7 +359,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 statusBadge,
                 Text(
                   'Vòng ${match.round} · ${tournament.name}',
-                  style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.textMuted,
+                  ),
                 ),
               ],
             ),
@@ -360,7 +405,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
                 // Giữa: Tỷ số hoặc Giờ
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF9FAFB),
                     borderRadius: BorderRadius.circular(10),
@@ -423,11 +471,18 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.access_time, size: 14, color: AppTheme.textMuted),
+                    const Icon(
+                      Icons.access_time,
+                      size: 14,
+                      color: AppTheme.textMuted,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       dateStr,
-                      style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.textSecondary,
+                      ),
                     ),
                   ],
                 ),

@@ -14,7 +14,17 @@ export class TeamService {
   ) {}
 
   async create(
-    data: { name: string; area?: string; description?: string },
+    data: {
+      name: string;
+      area?: string;
+      description?: string;
+      placeId?: string;
+      latitude?: number;
+      longitude?: number;
+      province?: string;
+      district?: string;
+      ward?: string;
+    },
     user: AuthUser
   ): Promise<TeamEntity> {
     const existing = await this.teamRepo.findByName(data.name);
@@ -37,6 +47,12 @@ export class TeamService {
       captainId: user.uid,
       captainName,
       memberCount: 1,
+      ...(data.placeId ? { placeId: data.placeId } : {}),
+      ...(data.latitude !== undefined ? { latitude: data.latitude } : {}),
+      ...(data.longitude !== undefined ? { longitude: data.longitude } : {}),
+      ...(data.province ? { province: data.province } : {}),
+      ...(data.district ? { district: data.district } : {}),
+      ...(data.ward ? { ward: data.ward } : {}),
       createdAt: now,
       updatedAt: now,
     };
@@ -76,7 +92,17 @@ export class TeamService {
 
   async update(
     teamId: string,
-    data: { name?: string; area?: string; description?: string },
+    data: {
+      name?: string;
+      area?: string;
+      description?: string;
+      placeId?: string;
+      latitude?: number;
+      longitude?: number;
+      province?: string;
+      district?: string;
+      ward?: string;
+    },
     user: AuthUser
   ): Promise<TeamEntity> {
     const team = await this.getById(teamId);
@@ -103,6 +129,12 @@ export class TeamService {
     }
     if (data.area !== undefined) updates.area = data.area.trim();
     if (data.description !== undefined) updates.description = data.description.trim();
+    if (data.placeId !== undefined) updates.placeId = data.placeId;
+    if (data.latitude !== undefined) updates.latitude = data.latitude;
+    if (data.longitude !== undefined) updates.longitude = data.longitude;
+    if (data.province !== undefined) updates.province = data.province;
+    if (data.district !== undefined) updates.district = data.district;
+    if (data.ward !== undefined) updates.ward = data.ward;
 
     await this.teamRepo.update(teamId, updates);
     return { ...team, ...updates };

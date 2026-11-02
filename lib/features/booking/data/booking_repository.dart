@@ -40,7 +40,11 @@ abstract interface class BookingRepository {
   Future<FieldSlot> createSlot(String fieldId, Map<String, dynamic> data);
 
   /// Cập nhật slot (giá, trạng thái)
-  Future<FieldSlot> updateSlot(String fieldId, String slotId, Map<String, dynamic> data);
+  Future<FieldSlot> updateSlot(
+    String fieldId,
+    String slotId,
+    Map<String, dynamic> data,
+  );
 
   /// Chủ sân khóa một slot
   Future<FieldSlot> blockSlot(String fieldId, String slotId, {String? reason});
@@ -76,4 +80,10 @@ abstract interface class BookingRepository {
 
   /// Chủ sân từ chối booking (cần lý do)
   Future<Booking> rejectBooking(String bookingId, {required String reason});
+
+  /// Chủ sân hủy booking đã xác nhận (cần lý do)
+  Future<Booking> ownerCancelBooking(
+    String bookingId, {
+    required String reason,
+  });
 }

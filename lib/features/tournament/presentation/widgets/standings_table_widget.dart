@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../domain/models/standings_row.dart';
 
 /// Bảng hiển thị thứ hạng giải đấu (Standings / Leaderboard Table).
@@ -21,7 +22,11 @@ class StandingsTableWidget extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.leaderboard_outlined, size: 56, color: Colors.grey.shade400),
+              Icon(
+                Icons.leaderboard_outlined,
+                size: 56,
+                color: Colors.grey.shade400,
+              ),
               const SizedBox(height: 12),
               const Text(
                 'Chưa có dữ liệu bảng xếp hạng',
@@ -73,16 +78,77 @@ class StandingsTableWidget extends StatelessWidget {
               dataRowMinHeight: 46,
               dataRowMaxHeight: 52,
               columns: const [
-                DataColumn(label: Text('Hạng', style: TextStyle(fontWeight: FontWeight.bold))),
-                DataColumn(label: Text('Đội bóng', style: TextStyle(fontWeight: FontWeight.bold))),
-                DataColumn(label: Text('Trận', style: TextStyle(fontWeight: FontWeight.bold)), numeric: true),
-                DataColumn(label: Text('T', style: TextStyle(fontWeight: FontWeight.bold)), numeric: true),
-                DataColumn(label: Text('H', style: TextStyle(fontWeight: FontWeight.bold)), numeric: true),
-                DataColumn(label: Text('B', style: TextStyle(fontWeight: FontWeight.bold)), numeric: true),
-                DataColumn(label: Text('BT', style: TextStyle(fontWeight: FontWeight.bold)), numeric: true),
-                DataColumn(label: Text('BB', style: TextStyle(fontWeight: FontWeight.bold)), numeric: true),
-                DataColumn(label: Text('HS', style: TextStyle(fontWeight: FontWeight.bold)), numeric: true),
-                DataColumn(label: Text('Điểm', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F9D58))), numeric: true),
+                DataColumn(
+                  label: Text(
+                    'Hạng',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                DataColumn(
+                  label: Text(
+                    'Đội bóng',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                DataColumn(
+                  label: Text(
+                    'Trận',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  numeric: true,
+                ),
+                DataColumn(
+                  label: Text(
+                    'T',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  numeric: true,
+                ),
+                DataColumn(
+                  label: Text(
+                    'H',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  numeric: true,
+                ),
+                DataColumn(
+                  label: Text(
+                    'B',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  numeric: true,
+                ),
+                DataColumn(
+                  label: Text(
+                    'BT',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  numeric: true,
+                ),
+                DataColumn(
+                  label: Text(
+                    'BB',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  numeric: true,
+                ),
+                DataColumn(
+                  label: Text(
+                    'HS',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  numeric: true,
+                ),
+                DataColumn(
+                  label: Text(
+                    'Điểm',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0F9D58),
+                    ),
+                  ),
+                  numeric: true,
+                ),
               ],
               rows: standings.map((row) {
                 final isFirst = row.rank == 1;
@@ -96,7 +162,9 @@ class StandingsTableWidget extends StatelessWidget {
 
                 return DataRow(
                   color: isFirst
-                      ? WidgetStateProperty.all(Colors.amber.shade50.withValues(alpha: 0.4))
+                      ? WidgetStateProperty.all(
+                          Colors.amber.shade50.withValues(alpha: 0.4),
+                        )
                       : null,
                   cells: [
                     DataCell(
@@ -114,7 +182,9 @@ class StandingsTableWidget extends StatelessWidget {
                           '${row.rank}',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: rankColor != null ? Colors.white : Colors.black87,
+                            color: rankColor != null
+                                ? Colors.white
+                                : Colors.black87,
                             fontSize: 12,
                           ),
                         ),
@@ -129,7 +199,10 @@ class StandingsTableWidget extends StatelessWidget {
                             backgroundColor: Colors.blue.shade100,
                             child: Text(
                               row.teamName.isNotEmpty ? row.teamName[0] : 'T',
-                              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -139,7 +212,9 @@ class StandingsTableWidget extends StatelessWidget {
                               row.teamName,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                fontWeight: isFirst ? FontWeight.bold : FontWeight.w500,
+                                fontWeight: isFirst
+                                    ? FontWeight.bold
+                                    : FontWeight.w500,
                               ),
                             ),
                           ),
@@ -154,20 +229,28 @@ class StandingsTableWidget extends StatelessWidget {
                     DataCell(Text('${row.goalsAgainst}')),
                     DataCell(
                       Text(
-                        (row.goalDifference > 0) ? '+${row.goalDifference}' : '${row.goalDifference}',
+                        (row.goalDifference > 0)
+                            ? '+${row.goalDifference}'
+                            : '${row.goalDifference}',
                         style: TextStyle(
                           color: row.goalDifference > 0
                               ? Colors.green.shade700
-                              : (row.goalDifference < 0 ? Colors.red.shade700 : Colors.black87),
+                              : (row.goalDifference < 0
+                                    ? Colors.red.shade700
+                                    : Colors.black87),
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
                     DataCell(
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF0F9D58).withValues(alpha: 0.15),
+                          color: const Color(0xFF0F9D58)
+                              .withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(

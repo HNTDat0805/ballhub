@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+
 import '../../../../core/theme/app_theme.dart';
 import '../../data/booking_repository.dart';
 import '../../domain/models/booking.dart';
 import '../controllers/booking_controllers.dart';
 import '../widgets/booking_widgets.dart';
 import 'booking_detail_screen.dart';
+import '../../../../utils/async_action_runner.dart';
 
 /// Màn hình chủ sân quản lý booking — xác nhận/từ chối
 class OwnerBookingsScreen extends StatefulWidget {
@@ -73,13 +75,20 @@ class _OwnerBookingsScreenState extends State<OwnerBookingsScreen>
           controller: _tabController,
           isScrollable: true,
           tabAlignment: TabAlignment.start,
-          indicatorColor: Colors.white,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
+          indicatorColor: AppTheme.primaryDarkGreen,
+          labelColor: AppTheme.primaryDarkGreen,
+          unselectedLabelColor: AppTheme.textSecondary,
+          labelStyle: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 13,
+          ),
+          labelPadding: const EdgeInsets.symmetric(horizontal: 16),
           tabs: _tabs.map((t) {
             final status = t.$1;
             final label = t.$2;
-            final count = status == BookingStatus.pending ? _controller.pendingCount : 0;
+            final count = status == BookingStatus.pending
+                ? _controller.pendingCount
+                : 0;
             return Tab(
               child: count > 0 && status == BookingStatus.pending
                   ? Badge(
@@ -101,7 +110,9 @@ class _OwnerBookingsScreenState extends State<OwnerBookingsScreen>
 
   Widget _buildBody() {
     if (_controller.isLoading) {
-      return const BookingLoadingState(message: 'Đang tải danh sách đặt sân...');
+      return const BookingLoadingState(
+        message: 'Đang tải danh sách đặt sân...',
+      );
     }
 
     if (_controller.errorMessage != null) {
@@ -114,10 +125,20 @@ class _OwnerBookingsScreenState extends State<OwnerBookingsScreen>
     final bookings = _controller.bookings;
 
     if (bookings.isEmpty) {
-      return const BookingEmptyState(
-        title: 'Chưa có đặt sân nào',
-        subtitle: 'Khi khách hàng đặt sân, chúng sẽ hiển thị ở đây.',
-        icon: Icons.inbox_rounded,
+      return RefreshIndicator(
+        color: AppTheme.primaryDarkGreen,
+        onRefresh: _controller.loadOwnerBookings,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: SizedBox(
+            height: MediaQuery.of(context).size.height * 0.55,
+            child: const BookingEmptyState(
+              title: 'Chưa có đặt sân nào',
+              subtitle: 'Khi khách hàng đặt sân, chúng sẽ hiển thị ở đây.',
+              icon: Icons.inbox_rounded,
+            ),
+          ),
+        ),
       );
     }
 
@@ -137,6 +158,9 @@ class _OwnerBookingsScreenState extends State<OwnerBookingsScreen>
                 : null,
             onReject: booking.status == BookingStatus.pending
                 ? () => _showRejectDialog(booking)
+                : null,
+            onCancel: booking.status == BookingStatus.confirmed
+                ? () => _showOwnerCancelDialog(booking)
                 : null,
           );
         },
@@ -167,7 +191,10 @@ class _OwnerBookingsScreenState extends State<OwnerBookingsScreen>
           'Xác nhận đặt sân từ ${booking.bookerNameSnapshot} vào ngày ${_formatDate(booking.startsAt)}?',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Hủy')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Hủy'),
+          ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Xác nhận'),
@@ -178,12 +205,17 @@ class _OwnerBookingsScreenState extends State<OwnerBookingsScreen>
 
     if (confirm != true || !mounted) return;
 
-    final success = await _controller.confirmBooking(booking.id);
-    if (mounted) {
+    final success = await AsyncActionRunner.run(
+      context,
+      loadingTitle: 'Đang xác nhận đặt sân',
+      loadingMessage: 'Vui lòng chờ trong giây lát...',
+      action: () => _controller.confirmBooking(booking.id),
+    );
+    if (mounted && success == true) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(success ? 'Đã xác nhận booking.' : (_controller.errorMessage ?? 'Lỗi.')),
-          backgroundColor: success ? AppTheme.primaryGreen : AppTheme.dangerRed,
+        const SnackBar(
+          content: Text('Đã xác nhận booking thành công.'),
+          backgroundColor: AppTheme.primaryDarkGreen,
         ),
       );
     }
@@ -211,7 +243,10 @@ class _OwnerBookingsScreenState extends State<OwnerBookingsScreen>
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Hủy')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Hủy'),
+          ),
           TextButton(
             onPressed: () async {
               final reason = reasonController.text.trim();
@@ -222,17 +257,93 @@ class _OwnerBookingsScreenState extends State<OwnerBookingsScreen>
                 return;
               }
               Navigator.pop(ctx);
-              final success = await _controller.rejectBooking(booking.id, reason: reason);
-              if (mounted) {
+              final success = await AsyncActionRunner.run(
+                context,
+                loadingTitle: 'Đang từ chối booking',
+                loadingMessage: 'Đang cập nhật trạng thái đơn...',
+                action: () =>
+                    _controller.rejectBooking(booking.id, reason: reason),
+              );
+              if (mounted && success == true) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(success ? 'Đã từ chối booking.' : (_controller.errorMessage ?? 'Lỗi.')),
-                    backgroundColor: success ? AppTheme.warningOrange : AppTheme.dangerRed,
+                  const SnackBar(
+                    content: Text('Đã từ chối booking.'),
+                    backgroundColor: AppTheme.warningOrange,
                   ),
                 );
               }
             },
-            child: const Text('Từ chối', style: TextStyle(color: AppTheme.dangerRed)),
+            child: const Text(
+              'Từ chối',
+              style: TextStyle(color: AppTheme.dangerRed),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showOwnerCancelDialog(Booking booking) {
+    final reasonController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Hủy lịch đặt sân đã xác nhận'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Bạn có chắc muốn hủy lịch đặt sân của ${booking.bookerNameSnapshot}?',
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: reasonController,
+              decoration: const InputDecoration(
+                labelText: 'Lý do hủy (bắt buộc) *',
+                hintText: 'Ví dụ: Sân ngập nước, sự cố kỹ thuật...',
+              ),
+              maxLines: 2,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Đóng'),
+          ),
+          TextButton(
+            onPressed: () async {
+              final reason = reasonController.text.trim();
+              if (reason.isEmpty) {
+                ScaffoldMessenger.of(ctx).showSnackBar(
+                  const SnackBar(
+                    content: Text('Vui lòng nhập lý do hủy lịch.'),
+                  ),
+                );
+                return;
+              }
+              Navigator.pop(ctx);
+              final success = await AsyncActionRunner.run(
+                context,
+                loadingTitle: 'Đang hủy lịch đặt sân',
+                loadingMessage: 'Đang thông báo đến khách hàng...',
+                action: () =>
+                    _controller.cancelBooking(booking.id, reason: reason),
+              );
+              if (mounted && success == true) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Đã hủy lịch đặt sân thành công.'),
+                    backgroundColor: AppTheme.primaryDarkGreen,
+                  ),
+                );
+              }
+            },
+            child: const Text(
+              'Hủy lịch',
+              style: TextStyle(color: AppTheme.dangerRed),
+            ),
           ),
         ],
       ),
@@ -254,12 +365,14 @@ class _OwnerBookingCard extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onConfirm;
   final VoidCallback? onReject;
+  final VoidCallback? onCancel;
 
   const _OwnerBookingCard({
     required this.booking,
     this.onTap,
     this.onConfirm,
     this.onReject,
+    this.onCancel,
   });
 
   @override
@@ -294,23 +407,46 @@ class _OwnerBookingCard extends StatelessWidget {
               // Booker info
               Row(
                 children: [
-                  const Icon(Icons.person_outline_rounded, size: 14, color: AppTheme.textSecondary),
+                  const Icon(
+                    Icons.person_outline_rounded,
+                    size: 14,
+                    color: AppTheme.textSecondary,
+                  ),
                   const SizedBox(width: 4),
-                  Text(booking.bookerNameSnapshot, style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
+                  Text(
+                    booking.bookerNameSnapshot,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 4),
               // Date + time
               Row(
                 children: [
-                  const Icon(Icons.calendar_today_outlined, size: 14, color: AppTheme.textSecondary),
+                  const Icon(
+                    Icons.calendar_today_outlined,
+                    size: 14,
+                    color: AppTheme.textSecondary,
+                  ),
                   const SizedBox(width: 4),
-                  Text(_formatDate(booking.startsAt), style: const TextStyle(fontSize: 13)),
+                  Text(
+                    _formatDate(booking.startsAt),
+                    style: const TextStyle(fontSize: 13),
+                  ),
                   const SizedBox(width: 12),
-                  const Icon(Icons.access_time_rounded, size: 14, color: AppTheme.textSecondary),
+                  const Icon(
+                    Icons.access_time_rounded,
+                    size: 14,
+                    color: AppTheme.textSecondary,
+                  ),
                   const SizedBox(width: 4),
-                  Text('${_fmt(booking.startsAt)}–${_fmt(booking.endsAt)}',
-                      style: const TextStyle(fontSize: 13)),
+                  Text(
+                    '${_fmt(booking.startsAt)}–${_fmt(booking.endsAt)}',
+                    style: const TextStyle(fontSize: 13),
+                  ),
                   const Spacer(),
                   Text(
                     '${_fmtPrice(booking.totalAmount)} ${booking.currency}',
@@ -322,35 +458,83 @@ class _OwnerBookingCard extends StatelessWidget {
                   ),
                 ],
               ),
-              // Action buttons (only for pending)
-              if (onConfirm != null || onReject != null) ...[
+              // Action buttons (confirm/reject for pending, cancel for confirmed)
+              if (onConfirm != null ||
+                  onReject != null ||
+                  onCancel != null) ...[
                 const SizedBox(height: 10),
                 const Divider(height: 1),
                 const SizedBox(height: 10),
-                Row(
-                  children: [
-                    if (onReject != null)
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: onReject,
-                          style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: AppTheme.dangerRed),
-                            padding: const EdgeInsets.symmetric(vertical: 8),
+                if (onCancel != null)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: onCancel,
+                        icon: const Icon(
+                          Icons.cancel_outlined,
+                          size: 15,
+                          color: AppTheme.dangerRed,
+                        ),
+                        label: const Text(
+                          'Hủy lịch sân',
+                          style: TextStyle(
+                            color: AppTheme.dangerRed,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
                           ),
-                          child: const Text('Từ chối', style: TextStyle(color: AppTheme.dangerRed, fontSize: 13)),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: AppTheme.dangerRed),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
+                          ),
+                          visualDensity: VisualDensity.compact,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
                       ),
-                    if (onConfirm != null && onReject != null) const SizedBox(width: 8),
-                    if (onConfirm != null)
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: onConfirm,
-                          style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 8)),
-                          child: const Text('Xác nhận', style: TextStyle(fontSize: 13)),
+                    ],
+                  )
+                else
+                  Row(
+                    children: [
+                      if (onReject != null)
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: onReject,
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: AppTheme.dangerRed),
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                            ),
+                            child: const Text(
+                              'Từ chối',
+                              style: TextStyle(
+                                color: AppTheme.dangerRed,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
-                  ],
-                ),
+                      if (onConfirm != null && onReject != null)
+                        const SizedBox(width: 8),
+                      if (onConfirm != null)
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: onConfirm,
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                            ),
+                            child: const Text(
+                              'Xác nhận',
+                              style: TextStyle(fontSize: 13),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
               ],
             ],
           ),

@@ -108,26 +108,31 @@ void main() {
       }
     });
 
-    test('Round Robin with odd number of teams (3 teams) handles byes correctly', () {
-      final threeTeams = fourTeams.sublist(0, 3);
-      final matches = ScheduleGenerator.generate(
-        tournament: tournament,
-        approvedTeams: threeTeams,
-      );
+    test(
+      'Round Robin with odd number of teams (3 teams) handles byes correctly',
+      () {
+        final threeTeams = fourTeams.sublist(0, 3);
+        final matches = ScheduleGenerator.generate(
+          tournament: tournament,
+          approvedTeams: threeTeams,
+        );
 
-      // Formula for N=3: N*(N-1)/2 = 3*2/2 = 3 matches
-      expect(matches.length, equals(3));
+        // Formula for N=3: N*(N-1)/2 = 3*2/2 = 3 matches
+        expect(matches.length, equals(3));
 
-      // No null or dummy teams in match list
-      for (final m in matches) {
-        expect(m.homeTeamId.isNotEmpty, isTrue);
-        expect(m.awayTeamId.isNotEmpty, isTrue);
-        expect(m.homeTeamId, isNot(equals(m.awayTeamId)));
-      }
-    });
+        // No null or dummy teams in match list
+        for (final m in matches) {
+          expect(m.homeTeamId.isNotEmpty, isTrue);
+          expect(m.awayTeamId.isNotEmpty, isTrue);
+          expect(m.homeTeamId, isNot(equals(m.awayTeamId)));
+        }
+      },
+    );
 
     test('Double Round Robin generates home and away legs (12 matches for 4 teams)', () {
-      final doubleTournament = tournament.copyWith(format: TournamentFormat.roundRobinDouble);
+      final doubleTournament = tournament.copyWith(
+        format: TournamentFormat.roundRobinDouble,
+      );
       final matches = ScheduleGenerator.generate(
         tournament: doubleTournament,
         approvedTeams: fourTeams,
@@ -162,7 +167,9 @@ void main() {
 
       // Confirm that the played match kept its score and confirmed state
       final preservedMatch = regenerated.firstWhere(
-        (m) => m.homeTeamId == playedMatch.homeTeamId && m.awayTeamId == playedMatch.awayTeamId,
+        (m) =>
+            m.homeTeamId == playedMatch.homeTeamId &&
+            m.awayTeamId == playedMatch.awayTeamId,
       );
 
       expect(preservedMatch.homeScore, equals(2));

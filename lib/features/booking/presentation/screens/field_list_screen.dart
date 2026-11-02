@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+
 import '../../../../core/theme/app_theme.dart';
+import '../../data/api_booking_repository.dart';
 import '../../data/booking_repository.dart';
 import '../../domain/models/football_field.dart';
 import '../controllers/booking_controllers.dart';
@@ -7,6 +9,7 @@ import 'field_detail_screen.dart';
 import '../../../../widgets/province_picker_modal.dart';
 import '../../../../widgets/filter_selection_modal.dart';
 import '../../../../services/province_service.dart';
+import '../../../../utils/debouncer.dart';
 
 /// Màn hình Danh sách Sân bóng (Page 7 - figma.pdf)
 class FieldListScreen extends StatefulWidget {
@@ -21,7 +24,9 @@ class FieldListScreen extends StatefulWidget {
 class _FieldListScreenState extends State<FieldListScreen> {
   late final FieldListController _controller;
   final _searchController = TextEditingController();
-  int _selectedFilter = 0; // 0 = Tất cả, 1 = Tỉnh/Thành, 2 = Quận/Huyện, 3 = Loại sân
+  final _searchDebouncer = Debouncer(delay: const Duration(milliseconds: 300));
+  int _selectedFilter =
+      0; // 0 = Tất cả, 1 = Tỉnh/Thành, 2 = Quận/Huyện, 3 = Loại sân
   String _selectedCity = 'TP. Hồ Chí Minh';
   String? _selectedDistrict;
   String _selectedDistrictLabel = 'Khu vực';
@@ -33,6 +38,7 @@ class _FieldListScreenState extends State<FieldListScreen> {
     super.initState();
     _controller = FieldListController(repository: widget.repository);
     _controller.addListener(_onControllerUpdate);
+    ApiBookingRepository.bookingChanged.addListener(_onBookingChanged);
     _controller.loadFields();
   }
 
@@ -40,8 +46,16 @@ class _FieldListScreenState extends State<FieldListScreen> {
     if (mounted) setState(() {});
   }
 
+  void _onBookingChanged() {
+    if (mounted) {
+      _controller.loadFields();
+    }
+  }
+
   @override
   void dispose() {
+    _searchDebouncer.dispose();
+    ApiBookingRepository.bookingChanged.removeListener(_onBookingChanged);
     _controller.removeListener(_onControllerUpdate);
     _controller.dispose();
     _searchController.dispose();
@@ -54,6 +68,13 @@ class _FieldListScreenState extends State<FieldListScreen> {
       backgroundColor: AppTheme.surfaceColor,
       appBar: AppBar(
         title: const Text('Tìm sân bóng'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded),
+            tooltip: 'Làm mới',
+            onPressed: () => _controller.loadFields(),
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -69,6 +90,7 @@ class _FieldListScreenState extends State<FieldListScreen> {
                     ? IconButton(
                         icon: const Icon(Icons.clear, size: 18),
                         onPressed: () {
+                          _searchDebouncer.cancel();
                           _searchController.clear();
                           _controller.setSearchQuery('');
                           _controller.loadFields();
@@ -76,11 +98,16 @@ class _FieldListScreenState extends State<FieldListScreen> {
                       )
                     : null,
                 isDense: true,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
               ),
               onChanged: (val) {
-                _controller.setSearchQuery(val);
-                _controller.loadFields();
+                _searchDebouncer.run(() {
+                  _controller.setSearchQuery(val);
+                  _controller.loadFields();
+                });
               },
             ),
           ),
@@ -113,7 +140,10 @@ class _FieldListScreenState extends State<FieldListScreen> {
                   1,
                   '$_selectedCity ⌄',
                   onTap: () async {
-                    final chosen = await ProvincePickerModal.show(context, currentProvince: _selectedCity);
+                    final chosen = await ProvincePickerModal.show(
+                      context,
+                      currentProvince: _selectedCity,
+                    );
                     if (chosen != null) {
                       setState(() {
                         if (_selectedCity != chosen) {
@@ -141,7 +171,9 @@ class _FieldListScreenState extends State<FieldListScreen> {
                   2,
                   '$_selectedDistrictLabel ⌄',
                   onTap: () async {
-                    final districts = ProvinceService.getDistricts(_selectedCity);
+                    final districts = ProvinceService.getDistricts(
+                      _selectedCity,
+                    );
                     final districtOptions = [
                       const FilterOption<String?>(
                         value: null,
@@ -194,11 +226,31 @@ class _FieldListScreenState extends State<FieldListScreen> {
                       title: 'Chọn loại sân bóng',
                       selectedValue: _selectedFieldType ?? '7-a-side',
                       options: const [
-                        FilterOption(value: 'all', label: 'Tất cả loại sân', subtitle: 'Hiển thị mọi quy mô sân'),
-                        FilterOption(value: '5-a-side', label: 'Sân 5 người', subtitle: '5 vs 5 · Sân bóng đá mini'),
-                        FilterOption(value: '7-a-side', label: 'Sân 7 người', subtitle: '7 vs 7 · Tiêu chuẩn phong trào'),
-                        FilterOption(value: '11-a-side', label: 'Sân 11 người', subtitle: '11 vs 11 · Sân lớn 11 người tiêu chuẩn'),
-                        FilterOption(value: 'futsal', label: 'Sân Futsal', subtitle: 'Bóng đá trong nhà mặt sàn thảm/gỗ'),
+                        FilterOption(
+                          value: 'all',
+                          label: 'Tất cả loại sân',
+                          subtitle: 'Hiển thị mọi quy mô sân',
+                        ),
+                        FilterOption(
+                          value: '5-a-side',
+                          label: 'Sân 5 người',
+                          subtitle: '5 vs 5 · Sân bóng đá mini',
+                        ),
+                        FilterOption(
+                          value: '7-a-side',
+                          label: 'Sân 7 người',
+                          subtitle: '7 vs 7 · Tiêu chuẩn phong trào',
+                        ),
+                        FilterOption(
+                          value: '11-a-side',
+                          label: 'Sân 11 người',
+                          subtitle: '11 vs 11 · Sân lớn 11 người tiêu chuẩn',
+                        ),
+                        FilterOption(
+                          value: 'futsal',
+                          label: 'Sân Futsal',
+                          subtitle: 'Bóng đá trong nhà mặt sàn thảm/gỗ',
+                        ),
                       ],
                     );
                     if (chosen != null) {
@@ -255,7 +307,9 @@ class _FieldListScreenState extends State<FieldListScreen> {
                 GestureDetector(
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Chế độ xem bản đồ đang mở')),
+                      const SnackBar(
+                        content: Text('Chế độ xem bản đồ đang mở'),
+                      ),
                     );
                   },
                   child: const Text(
@@ -275,80 +329,104 @@ class _FieldListScreenState extends State<FieldListScreen> {
           // Danh sách sân bóng từ Database
           Expanded(
             child: _controller.isLoading
-                ? const Center(child: CircularProgressIndicator(color: AppTheme.primaryDarkGreen))
+                ? const Center(
+                    child: CircularProgressIndicator(
+                      color: AppTheme.primaryDarkGreen,
+                    ),
+                  )
                 : _controller.errorMessage != null
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.error_outline, size: 48, color: AppTheme.errorRed),
-                            const SizedBox(height: 12),
-                            Text(
-                              _controller.errorMessage!,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(color: AppTheme.textSecondary),
-                            ),
-                            const SizedBox(height: 12),
-                            ElevatedButton(
-                              onPressed: () => _controller.loadFields(),
-                              child: const Text('Thử lại'),
-                            ),
-                          ],
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.error_outline,
+                          size: 48,
+                          color: AppTheme.errorRed,
                         ),
-                      )
-                    : _controller.fields.isEmpty
-                        ? Center(
-                            child: Padding(
-                              padding: const EdgeInsets.all(24),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.sports_soccer,
-                                    size: 64,
-                                    color: AppTheme.textMuted.withValues(alpha: 0.5),
+                        const SizedBox(height: 12),
+                        Text(
+                          _controller.errorMessage!,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: AppTheme.textSecondary),
+                        ),
+                        const SizedBox(height: 12),
+                        ElevatedButton(
+                          onPressed: () => _controller.loadFields(),
+                          child: const Text('Thử lại'),
+                        ),
+                      ],
+                    ),
+                  )
+                : _controller.fields.isEmpty
+                ? RefreshIndicator(
+                    color: AppTheme.primaryDarkGreen,
+                    onRefresh: () => _controller.loadFields(),
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      child: SizedBox(
+                        height: MediaQuery.of(context).size.height * 0.55,
+                        child: Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.sports_soccer,
+                                  size: 64,
+                                  color: AppTheme.textMuted.withValues(
+                                    alpha: 0.5,
                                   ),
-                                  const SizedBox(height: 16),
-                                  const Text(
-                                    'Chưa có sân bóng nào',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppTheme.textPrimary,
-                                    ),
+                                ),
+                                const SizedBox(height: 16),
+                                const Text(
+                                  'Chưa có sân bóng nào',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.textPrimary,
                                   ),
-                                  const SizedBox(height: 8),
-                                  const Text(
-                                    'Hãy thử xóa bộ lọc hoặc kiểm tra lại sau.',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                                ),
+                                const SizedBox(height: 8),
+                                const Text(
+                                  'Hãy thử xóa bộ lọc hoặc kiểm tra lại sau.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: AppTheme.textSecondary,
                                   ),
-                                  const SizedBox(height: 16),
-                                  OutlinedButton.icon(
-                                    onPressed: () {
-                                      _searchController.clear();
-                                      _controller.setSearchQuery('');
-                                      _controller.loadFields();
-                                    },
-                                    icon: const Icon(Icons.refresh),
-                                    label: const Text('Làm mới'),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          )
-                        : RefreshIndicator(
-                            color: AppTheme.primaryDarkGreen,
-                            onRefresh: () => _controller.loadFields(),
-                            child: ListView.builder(
-                              padding: const EdgeInsets.only(bottom: 24),
-                              itemCount: _controller.fields.length,
-                              itemBuilder: (context, index) {
-                                final f = _controller.fields[index];
-                                return _buildDynamicFieldCard(f);
-                              },
+                                ),
+                                const SizedBox(height: 16),
+                                OutlinedButton.icon(
+                                  onPressed: () {
+                                    _searchDebouncer.cancel();
+                                    _searchController.clear();
+                                    _controller.setSearchQuery('');
+                                    _controller.loadFields();
+                                  },
+                                  icon: const Icon(Icons.refresh),
+                                  label: const Text('Làm mới'),
+                                ),
+                              ],
                             ),
                           ),
+                        ),
+                      ),
+                    ),
+                  )
+                : RefreshIndicator(
+                    color: AppTheme.primaryDarkGreen,
+                    onRefresh: () => _controller.loadFields(),
+                    child: ListView.builder(
+                      padding: const EdgeInsets.only(bottom: 24),
+                      itemCount: _controller.fields.length,
+                      itemBuilder: (context, index) {
+                        final f = _controller.fields[index];
+                        return _buildDynamicFieldCard(f);
+                      },
+                    ),
+                  ),
           ),
         ],
       ),
@@ -419,7 +497,9 @@ class _FieldListScreenState extends State<FieldListScreen> {
           children: [
             // Ảnh sân cỏ
             ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(16),
+              ),
               child: Container(
                 height: 140,
                 width: double.infinity,
@@ -438,12 +518,20 @@ class _FieldListScreenState extends State<FieldListScreen> {
                         field.coverImageUrl,
                         fit: BoxFit.cover,
                         errorBuilder: (ctx, err, stack) => const Center(
-                          child: Icon(Icons.sports_soccer, size: 60, color: Colors.white24),
+                          child: Icon(
+                            Icons.sports_soccer,
+                            size: 60,
+                            color: Colors.white24,
+                          ),
                         ),
                       )
                     else
                       const Center(
-                        child: Icon(Icons.sports_soccer, size: 60, color: Colors.white24),
+                        child: Icon(
+                          Icons.sports_soccer,
+                          size: 60,
+                          color: Colors.white24,
+                        ),
                       ),
                     Positioned(
                       top: 12,
@@ -453,7 +541,11 @@ class _FieldListScreenState extends State<FieldListScreen> {
                         backgroundColor: Colors.black45,
                         child: Text(
                           field.fieldType.isNotEmpty ? field.fieldType : 'Sân',
-                          style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
@@ -484,14 +576,21 @@ class _FieldListScreenState extends State<FieldListScreen> {
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFFFEF3C7),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: const Row(
                           children: [
-                            Icon(Icons.star, size: 14, color: AppTheme.accentGold),
+                            Icon(
+                              Icons.star,
+                              size: 14,
+                              color: AppTheme.accentGold,
+                            ),
                             SizedBox(width: 4),
                             Text(
                               '4.8',
@@ -509,14 +608,21 @@ class _FieldListScreenState extends State<FieldListScreen> {
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      const Icon(Icons.location_on_outlined, size: 15, color: AppTheme.textMuted),
+                      const Icon(
+                        Icons.location_on_outlined,
+                        size: 15,
+                        color: AppTheme.textMuted,
+                      ),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
                           field.address.isNotEmpty
                               ? field.address
                               : '${field.district}, ${field.city}',
-                          style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: AppTheme.textSecondary,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -536,9 +642,14 @@ class _FieldListScreenState extends State<FieldListScreen> {
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
-                          color: isActive ? AppTheme.primaryLightGreen : const Color(0xFFF3F4F6),
+                          color: isActive
+                              ? AppTheme.primaryLightGreen
+                              : const Color(0xFFF3F4F6),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
@@ -546,7 +657,9 @@ class _FieldListScreenState extends State<FieldListScreen> {
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
-                            color: isActive ? AppTheme.primaryDarkGreen : const Color(0xFF6B7280),
+                            color: isActive
+                                ? AppTheme.primaryDarkGreen
+                                : const Color(0xFF6B7280),
                           ),
                         ),
                       ),

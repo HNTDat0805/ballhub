@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+
 import '../../../../core/theme/app_theme.dart';
+import '../../data/api_booking_repository.dart';
 import '../../data/booking_repository.dart';
 import '../../domain/models/field_slot.dart';
 import '../../domain/models/football_field.dart';
+import 'booking_detail_screen.dart';
+import 'my_bookings_screen.dart';
 
 /// Màn hình Chi tiết Sân bóng & Chọn lịch đặt sân (Page 8 - figma.pdf)
 ///
@@ -42,6 +46,7 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> {
   int _selectedDayIndex = 0;
   String? _selectedSlotId;
   bool _isFavorite = false;
+  final Set<String> _justBookedSlotIds = {};
 
   late final List<DateTime> _days;
 
@@ -50,7 +55,20 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> {
     super.initState();
     final now = DateTime.now();
     _days = List.generate(7, (i) => DateTime(now.year, now.month, now.day + i));
+    ApiBookingRepository.bookingChanged.addListener(_onBookingChanged);
     _loadField();
+  }
+
+  @override
+  void dispose() {
+    ApiBookingRepository.bookingChanged.removeListener(_onBookingChanged);
+    super.dispose();
+  }
+
+  void _onBookingChanged() {
+    if (mounted) {
+      _loadSlotsForDay(_selectedDayIndex);
+    }
   }
 
   String _formatDateKey(DateTime dt) {
@@ -125,10 +143,16 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> {
       setState(() {
         _slots = slots;
         _isLoadingSlots = false;
-        // Tự động chọn slot còn trống đầu tiên nếu có
-        final available = slots.where((s) => s.status == FieldSlotStatus.available);
+        // Tự động chọn slot còn trống đầu tiên nếu có (bỏ qua các slot vừa đặt)
+        final available = slots.where(
+          (s) =>
+              s.status == FieldSlotStatus.available &&
+              !_justBookedSlotIds.contains(s.id),
+        );
         if (available.isNotEmpty) {
           _selectedSlotId = available.first.id;
+        } else {
+          _selectedSlotId = null;
         }
       });
     } catch (e) {
@@ -159,9 +183,13 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> {
     if (field == null) return;
 
     final selectedDate = _days[_selectedDayIndex];
-    final dateStr = '${_weekdayLabel(selectedDate.weekday)}, ${selectedDate.day}/${selectedDate.month}/${selectedDate.year}';
-    final timeStr = '${_formatTime(slot.startsAt)} – ${_formatTime(slot.endsAt)}';
-    final priceStr = _formatMoney(slot.basePrice > 0 ? slot.basePrice : field.basePrice);
+    final dateStr =
+        '${_weekdayLabel(selectedDate.weekday)}, ${selectedDate.day}/${selectedDate.month}/${selectedDate.year}';
+    final timeStr =
+        '${_formatTime(slot.startsAt)} – ${_formatTime(slot.endsAt)}';
+    final priceStr = _formatMoney(
+      slot.basePrice > 0 ? slot.basePrice : field.basePrice,
+    );
 
     final confirmed = await showModalBottomSheet<bool>(
       context: context,
@@ -185,7 +213,11 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> {
             const SizedBox(height: 12),
             Text(
               'Khung giờ: $timeStr ($dateStr)\nLoại sân: ${field.fieldType.isNotEmpty ? field.fieldType : 'Sân tiêu chuẩn'}\nĐịa chỉ: ${field.address.isNotEmpty ? field.address : '${field.district}, ${field.city}'}\nTổng thanh toán: $priceStr',
-              style: const TextStyle(fontSize: 14, height: 1.6, color: AppTheme.textSecondary),
+              style: const TextStyle(
+                fontSize: 14,
+                height: 1.6,
+                color: AppTheme.textSecondary,
+              ),
             ),
             const SizedBox(height: 24),
             ElevatedButton(
@@ -201,20 +233,41 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> {
 
     setState(() => _isSubmitting = true);
     try {
-      await widget.repository.createBooking(
+      final newBooking = await widget.repository.createBooking(
         fieldId: field.id,
         slotIds: [slot.id],
       );
+      _justBookedSlotIds.add(slot.id);
       if (!mounted) return;
-      setState(() => _isSubmitting = false);
+      setState(() {
+        _isSubmitting = false;
+        _selectedSlotId = null;
+      });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Đặt sân thành công! Bạn có thể xem lịch trong mục Cá nhân.'),
+        SnackBar(
+          content: Text('Đặt thành công ${field.name}! Khung giờ $timeStr.'),
           backgroundColor: AppTheme.primaryDarkGreen,
+          duration: const Duration(seconds: 4),
+          action: SnackBarAction(
+            label: 'Xem đơn đặt',
+            textColor: Colors.amberAccent,
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => BookingDetailScreen(
+                    bookingId: newBooking.id,
+                    repository: widget.repository,
+                    isNewBooking: true,
+                  ),
+                ),
+              );
+            },
+          ),
         ),
       );
-      _loadSlotsForDay(_selectedDayIndex);
+      await _loadSlotsForDay(_selectedDayIndex);
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSubmitting = false);
@@ -249,12 +302,19 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.error_outline, size: 56, color: AppTheme.errorRed),
+                const Icon(
+                  Icons.error_outline,
+                  size: 56,
+                  color: AppTheme.errorRed,
+                ),
                 const SizedBox(height: 16),
                 Text(
                   _errorMessage ?? 'Không tìm thấy thông tin sân bóng',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 16, color: AppTheme.textPrimary),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: AppTheme.textPrimary,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton(
@@ -283,6 +343,16 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.receipt_long_rounded),
+            tooltip: 'Lịch sử đặt sân',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => MyBookingsScreen(repository: widget.repository),
+              ),
+            ),
+          ),
           IconButton(
             icon: Icon(
               _isFavorite ? Icons.favorite : Icons.favorite_border,
@@ -314,11 +384,19 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> {
                           field.coverImageUrl,
                           fit: BoxFit.cover,
                           errorBuilder: (ctx, err, stack) => const Center(
-                            child: Icon(Icons.stadium, size: 80, color: Colors.white24),
+                            child: Icon(
+                              Icons.stadium,
+                              size: 80,
+                              color: Colors.white24,
+                            ),
                           ),
                         )
                       : const Center(
-                          child: Icon(Icons.stadium, size: 80, color: Colors.white24),
+                          child: Icon(
+                            Icons.stadium,
+                            size: 80,
+                            color: Colors.white24,
+                          ),
                         ),
                 ),
 
@@ -343,14 +421,21 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> {
                             ),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
                             decoration: BoxDecoration(
                               color: const Color(0xFFFEF3C7),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: const Row(
                               children: [
-                                Icon(Icons.star, size: 16, color: AppTheme.accentGold),
+                                Icon(
+                                  Icons.star,
+                                  size: 16,
+                                  color: AppTheme.accentGold,
+                                ),
                                 SizedBox(width: 4),
                                 Text(
                                   '4.8',
@@ -370,14 +455,21 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> {
                       // Địa chỉ
                       Row(
                         children: [
-                          const Icon(Icons.location_on_outlined, size: 16, color: AppTheme.textMuted),
+                          const Icon(
+                            Icons.location_on_outlined,
+                            size: 16,
+                            color: AppTheme.textMuted,
+                          ),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
                               field.address.isNotEmpty
                                   ? field.address
                                   : '${field.district}, ${field.city}',
-                              style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: AppTheme.textSecondary,
+                              ),
                             ),
                           ),
                         ],
@@ -399,11 +491,20 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> {
                       else
                         const Row(
                           children: [
-                            _AmenityPill(icon: Icons.lightbulb_outline, label: 'Đèn chiếu sáng'),
+                            _AmenityPill(
+                              icon: Icons.lightbulb_outline,
+                              label: 'Đèn chiếu sáng',
+                            ),
                             SizedBox(width: 12),
-                            _AmenityPill(icon: Icons.directions_car_outlined, label: 'Chỗ gửi xe'),
+                            _AmenityPill(
+                              icon: Icons.directions_car_outlined,
+                              label: 'Chỗ gửi xe',
+                            ),
                             SizedBox(width: 12),
-                            _AmenityPill(icon: Icons.sports_soccer, label: 'Bóng & Áo bib'),
+                            _AmenityPill(
+                              icon: Icons.sports_soccer,
+                              label: 'Bóng & Áo bib',
+                            ),
                           ],
                         ),
                       const SizedBox(height: 24),
@@ -423,8 +524,13 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> {
                             ),
                           ),
                           Text(
-                            field.fieldType.isNotEmpty ? field.fieldType : 'Sân tiêu chuẩn',
-                            style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                            field.fieldType.isNotEmpty
+                                ? field.fieldType
+                                : 'Sân tiêu chuẩn',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: AppTheme.textSecondary,
+                            ),
                           ),
                         ],
                       ),
@@ -436,12 +542,14 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> {
                         child: ListView.separated(
                           scrollDirection: Axis.horizontal,
                           itemCount: _days.length,
-                          separatorBuilder: (context, index) => const SizedBox(width: 10),
+                          separatorBuilder: (context, index) =>
+                              const SizedBox(width: 10),
                           itemBuilder: (context, i) {
                             final date = _days[i];
                             final active = _selectedDayIndex == i;
                             final dayLabel = _weekdayLabel(date.weekday);
-                            final dateLabel = '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}';
+                            final dateLabel =
+                                '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}';
 
                             return GestureDetector(
                               onTap: () {
@@ -451,10 +559,14 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> {
                               child: Container(
                                 width: 58,
                                 decoration: BoxDecoration(
-                                  color: active ? AppTheme.primaryDarkGreen : Colors.white,
+                                  color: active
+                                      ? AppTheme.primaryDarkGreen
+                                      : Colors.white,
                                   borderRadius: BorderRadius.circular(14),
                                   border: Border.all(
-                                    color: active ? AppTheme.primaryDarkGreen : AppTheme.borderColor,
+                                    color: active
+                                        ? AppTheme.primaryDarkGreen
+                                        : AppTheme.borderColor,
                                   ),
                                 ),
                                 child: Column(
@@ -465,7 +577,9 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> {
                                       style: TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w600,
-                                        color: active ? Colors.white70 : AppTheme.textSecondary,
+                                        color: active
+                                            ? Colors.white70
+                                            : AppTheme.textSecondary,
                                       ),
                                     ),
                                     const SizedBox(height: 4),
@@ -474,7 +588,9 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> {
                                       style: TextStyle(
                                         fontSize: 13,
                                         fontWeight: FontWeight.bold,
-                                        color: active ? Colors.white : AppTheme.textPrimary,
+                                        color: active
+                                            ? Colors.white
+                                            : AppTheme.textPrimary,
                                       ),
                                     ),
                                   ],
@@ -489,7 +605,11 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> {
                       // Chú thích Status Legend
                       const Row(
                         children: [
-                          _LegendItem(color: Colors.white, borderColor: AppTheme.borderColor, label: 'Còn trống'),
+                          _LegendItem(
+                            color: Colors.white,
+                            borderColor: AppTheme.borderColor,
+                            label: 'Còn trống',
+                          ),
                           SizedBox(width: 16),
                           _LegendItem(
                             color: AppTheme.primaryLightGreen,
@@ -498,7 +618,11 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> {
                             hasCheck: true,
                           ),
                           SizedBox(width: 16),
-                          _LegendItem(color: Color(0xFFF3F4F6), borderColor: Color(0xFFE5E7EB), label: 'Đã đặt'),
+                          _LegendItem(
+                            color: Color(0xFFF3F4F6),
+                            borderColor: Color(0xFFE5E7EB),
+                            label: 'Đã đặt',
+                          ),
                         ],
                       ),
                       const SizedBox(height: 16),
@@ -508,7 +632,9 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> {
                         const Padding(
                           padding: EdgeInsets.symmetric(vertical: 24),
                           child: Center(
-                            child: CircularProgressIndicator(color: AppTheme.primaryDarkGreen),
+                            child: CircularProgressIndicator(
+                              color: AppTheme.primaryDarkGreen,
+                            ),
                           ),
                         )
                       else if (_slots.isEmpty)
@@ -522,11 +648,18 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> {
                           child: const Center(
                             child: Column(
                               children: [
-                                Icon(Icons.event_busy, size: 36, color: AppTheme.textMuted),
+                                Icon(
+                                  Icons.event_busy,
+                                  size: 36,
+                                  color: AppTheme.textMuted,
+                                ),
                                 SizedBox(height: 8),
                                 Text(
                                   'Chưa có khung giờ nào được mở trong ngày này',
-                                  style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: AppTheme.textSecondary,
+                                  ),
                                   textAlign: TextAlign.center,
                                 ),
                               ],
@@ -538,41 +671,121 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> {
                           physics: const NeverScrollableScrollPhysics(),
                           shrinkWrap: true,
                           itemCount: _slots.length,
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            childAspectRatio: 2.2,
-                            crossAxisSpacing: 12,
-                            mainAxisSpacing: 12,
-                          ),
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                childAspectRatio: 2.2,
+                                crossAxisSpacing: 12,
+                                mainAxisSpacing: 12,
+                              ),
                           itemBuilder: (context, idx) {
                             final slot = _slots[idx];
-                            final isAvailable = slot.status == FieldSlotStatus.available;
+                            final isJustBooked = _justBookedSlotIds.contains(
+                              slot.id,
+                            );
+                            final isAvailable =
+                                slot.status == FieldSlotStatus.available &&
+                                !isJustBooked;
                             final isSelected = _selectedSlotId == slot.id;
-                            final timeLabel = '${_formatTime(slot.startsAt)} – ${_formatTime(slot.endsAt)}';
-                            final priceLabel = isAvailable
-                                ? (slot.basePrice > 0 ? _formatMoney(slot.basePrice) : _formatMoney(field.basePrice))
-                                : 'Đã đặt';
+                            final timeLabel =
+                                '${_formatTime(slot.startsAt)} – ${_formatTime(slot.endsAt)}';
+                            final priceLabel = isJustBooked
+                                ? 'Bạn vừa đặt'
+                                : isAvailable
+                                ? (slot.basePrice > 0
+                                      ? _formatMoney(slot.basePrice)
+                                      : _formatMoney(field.basePrice))
+                                : (slot.status == FieldSlotStatus.held
+                                      ? 'Đang giữ chỗ'
+                                      : 'Đã đặt');
 
                             return GestureDetector(
                               onTap: isAvailable
-                                  ? () => setState(() => _selectedSlotId = slot.id)
-                                  : null,
+                                  ? () => setState(
+                                      () => _selectedSlotId = slot.id,
+                                    )
+                                  : isJustBooked
+                                  ? () {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            'Khung giờ $timeLabel đã được bạn đặt chỗ thành công.',
+                                          ),
+                                          duration: const Duration(seconds: 4),
+                                          action: SnackBarAction(
+                                            label: 'Xem đơn đặt',
+                                            textColor: Colors.amberAccent,
+                                            onPressed: () {
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (_) =>
+                                                      MyBookingsScreen(
+                                                        repository:
+                                                            widget.repository,
+                                                      ),
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  : () {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            'Khung giờ $timeLabel đã có người đặt chỗ. Bạn có thể xem hoặc hủy trong mục Sân đã đặt.',
+                                          ),
+                                          duration: const Duration(seconds: 4),
+                                          action: SnackBarAction(
+                                            label: 'Xem đơn đặt',
+                                            textColor: Colors.amberAccent,
+                                            onPressed: () {
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (_) =>
+                                                      MyBookingsScreen(
+                                                        repository:
+                                                            widget.repository,
+                                                      ),
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                      );
+                                    },
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
                                 decoration: BoxDecoration(
                                   color: isSelected
                                       ? AppTheme.primaryLightGreen
+                                      : isJustBooked
+                                      ? Colors.green.shade50
                                       : !isAvailable
-                                          ? const Color(0xFFF3F4F6)
-                                          : Colors.white,
+                                      ? const Color(0xFFF3F4F6)
+                                      : Colors.white,
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
                                     color: isSelected
                                         ? AppTheme.primaryDarkGreen
+                                        : isJustBooked
+                                        ? AppTheme.primaryDarkGreen
                                         : !isAvailable
-                                            ? const Color(0xFFE5E7EB)
-                                            : AppTheme.borderColor,
-                                    width: isSelected ? 1.5 : 1,
+                                        ? const Color(0xFFE5E7EB)
+                                        : AppTheme.borderColor,
+                                    width: (isSelected || isJustBooked)
+                                        ? 1.5
+                                        : 1,
                                   ),
                                 ),
                                 child: Column(
@@ -582,7 +795,25 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> {
                                     Row(
                                       children: [
                                         if (isSelected) ...[
-                                          const Icon(Icons.check, size: 14, color: AppTheme.primaryDarkGreen),
+                                          const Icon(
+                                            Icons.check,
+                                            size: 14,
+                                            color: AppTheme.primaryDarkGreen,
+                                          ),
+                                          const SizedBox(width: 4),
+                                        ] else if (isJustBooked) ...[
+                                          const Icon(
+                                            Icons.check_circle_rounded,
+                                            size: 14,
+                                            color: AppTheme.primaryDarkGreen,
+                                          ),
+                                          const SizedBox(width: 4),
+                                        ] else if (!isAvailable) ...[
+                                          const Icon(
+                                            Icons.lock_outline,
+                                            size: 14,
+                                            color: AppTheme.textMuted,
+                                          ),
                                           const SizedBox(width: 4),
                                         ],
                                         Expanded(
@@ -591,7 +822,11 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> {
                                             style: TextStyle(
                                               fontSize: 13,
                                               fontWeight: FontWeight.bold,
-                                              color: !isAvailable ? AppTheme.textMuted : AppTheme.textPrimary,
+                                              color: isJustBooked
+                                                  ? AppTheme.primaryDarkGreen
+                                                  : !isAvailable
+                                                  ? AppTheme.textMuted
+                                                  : AppTheme.textPrimary,
                                             ),
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
@@ -604,11 +839,16 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> {
                                       priceLabel,
                                       style: TextStyle(
                                         fontSize: 11,
-                                        color: !isAvailable
+                                        fontWeight: isJustBooked
+                                            ? FontWeight.bold
+                                            : FontWeight.normal,
+                                        color: isJustBooked
+                                            ? AppTheme.primaryDarkGreen
+                                            : !isAvailable
                                             ? AppTheme.textMuted
                                             : isSelected
-                                                ? AppTheme.primaryDarkGreen
-                                                : AppTheme.textSecondary,
+                                            ? AppTheme.primaryDarkGreen
+                                            : AppTheme.textSecondary,
                                       ),
                                     ),
                                   ],
@@ -641,45 +881,95 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          _formatMoney(slotPrice),
-                          style: const TextStyle(
+                          selectedSlot != null
+                              ? _formatMoney(slotPrice)
+                              : (_justBookedSlotIds.isNotEmpty
+                                    ? 'Đã đặt xong'
+                                    : '-- đ'),
+                          style: TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.w900,
-                            color: AppTheme.primaryDarkGreen,
+                            color:
+                                selectedSlot != null ||
+                                    _justBookedSlotIds.isNotEmpty
+                                ? AppTheme.primaryDarkGreen
+                                : AppTheme.textMuted,
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           selectedSlot != null
                               ? '${_formatTime(selectedSlot.startsAt)} – ${_formatTime(selectedSlot.endsAt)}'
-                              : 'Chưa chọn khung giờ',
-                          style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                              : (_justBookedSlotIds.isNotEmpty
+                                    ? 'Khung giờ vừa chọn đã giữ chỗ'
+                                    : 'Chưa chọn khung giờ'),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.textSecondary,
+                          ),
                         ),
                         const SizedBox(height: 2),
                         const Text(
                           'Hủy miễn phí trước giờ nhận sân 24 giờ.',
-                          style: TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: AppTheme.textMuted,
+                          ),
                         ),
                       ],
                     ),
                   ),
-                  ElevatedButton(
-                    onPressed: _isSubmitting || selectedSlot == null ? null : _onBookPressed,
-                    child: _isSubmitting
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                          )
-                        : const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.arrow_forward, size: 16),
-                              SizedBox(width: 6),
-                              Text('Đặt sân'),
-                            ],
+                  if (selectedSlot != null)
+                    ElevatedButton(
+                      onPressed: _isSubmitting ? null : _onBookPressed,
+                      child: _isSubmitting
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.arrow_forward, size: 16),
+                                SizedBox(width: 6),
+                                Text('Đặt sân'),
+                              ],
+                            ),
+                    )
+                  else if (_justBookedSlotIds.isNotEmpty)
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryDarkGreen,
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                MyBookingsScreen(repository: widget.repository),
                           ),
-                  ),
+                        );
+                      },
+                      icon: const Icon(Icons.receipt_long_rounded, size: 16),
+                      label: const Text('Xem đơn đặt'),
+                    )
+                  else
+                    const ElevatedButton(
+                      onPressed: null,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.arrow_forward, size: 16),
+                          SizedBox(width: 6),
+                          Text('Đặt sân'),
+                        ],
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -691,7 +981,9 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> {
 
   IconData _mapAmenityIcon(String name) {
     final lower = name.toLowerCase();
-    if (lower.contains('đèn') || lower.contains('led') || lower.contains('sáng')) {
+    if (lower.contains('đèn') ||
+        lower.contains('led') ||
+        lower.contains('sáng')) {
       return Icons.lightbulb_outline;
     }
     if (lower.contains('xe') || lower.contains('đỗ')) {
@@ -755,7 +1047,11 @@ class _LegendItem extends StatelessWidget {
             border: Border.all(color: borderColor),
           ),
           child: hasCheck
-              ? const Icon(Icons.check, size: 10, color: AppTheme.primaryDarkGreen)
+              ? const Icon(
+                  Icons.check,
+                  size: 10,
+                  color: AppTheme.primaryDarkGreen,
+                )
               : null,
         ),
         const SizedBox(width: 6),

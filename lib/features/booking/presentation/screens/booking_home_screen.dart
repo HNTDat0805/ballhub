@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../../core/auth/auth_context.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../data/api_booking_repository.dart';
@@ -70,10 +71,7 @@ class _BookingHomeScreenState extends State<BookingHomeScreen> {
         : _buildUserNav();
 
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: screens,
-      ),
+      body: IndexedStack(index: _currentIndex, children: screens),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (index) {
@@ -172,10 +170,16 @@ class _ProfileTabState extends State<_ProfileTab> {
                 children: [
                   CircleAvatar(
                     radius: 32,
-                    backgroundColor: AppTheme.primaryGreen.withValues(alpha: 0.15),
+                    backgroundColor: AppTheme.primaryGreen.withValues(
+                      alpha: 0.15,
+                    ),
                     child: Text(
                       user.name.isNotEmpty ? user.name[0].toUpperCase() : 'U',
-                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.primaryGreen),
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.primaryGreen,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -185,13 +189,22 @@ class _ProfileTabState extends State<_ProfileTab> {
                       children: [
                         Text(
                           user.name,
-                          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         const SizedBox(height: 4),
-                        Text(user.email, style: const TextStyle(color: AppTheme.textSecondary)),
+                        Text(
+                          user.email,
+                          style: const TextStyle(color: AppTheme.textSecondary),
+                        ),
                         const SizedBox(height: 6),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: AppTheme.primaryGreen.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(16),
@@ -230,7 +243,9 @@ class _ProfileTabState extends State<_ProfileTab> {
             final isActive = sampleUser.id == user.id;
             return Card(
               margin: const EdgeInsets.only(bottom: 8),
-              color: isActive ? AppTheme.primaryGreen.withValues(alpha: 0.05) : null,
+              color: isActive
+                  ? AppTheme.primaryGreen.withValues(alpha: 0.05)
+                  : null,
               child: ListTile(
                 leading: CircleAvatar(
                   backgroundColor: isActive
@@ -244,11 +259,23 @@ class _ProfileTabState extends State<_ProfileTab> {
                     ),
                   ),
                 ),
-                title: Text(sampleUser.name, style: const TextStyle(fontSize: 14)),
-                subtitle: Text(sampleUser.role.displayName, style: const TextStyle(fontSize: 12)),
+                title: Text(
+                  sampleUser.name,
+                  style: const TextStyle(fontSize: 14),
+                ),
+                subtitle: Text(
+                  sampleUser.role.displayName,
+                  style: const TextStyle(fontSize: 12),
+                ),
                 trailing: isActive
-                    ? const Icon(Icons.check_circle_rounded, color: AppTheme.primaryGreen)
-                    : const Icon(Icons.radio_button_unchecked_rounded, color: AppTheme.textSecondary),
+                    ? const Icon(
+                        Icons.check_circle_rounded,
+                        color: AppTheme.primaryGreen,
+                      )
+                    : const Icon(
+                        Icons.radio_button_unchecked_rounded,
+                        color: AppTheme.textSecondary,
+                      ),
                 onTap: isActive
                     ? null
                     : () {
@@ -257,7 +284,9 @@ class _ProfileTabState extends State<_ProfileTab> {
                         // Show restart hint
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text('Đã chuyển sang ${sampleUser.name}. Quay lại màn hình chính để cập nhật UI.'),
+                            content: Text(
+                              'Đã chuyển sang ${sampleUser.name}. Quay lại màn hình chính để cập nhật UI.',
+                            ),
                             action: SnackBarAction(
                               label: 'OK',
                               onPressed: () {},
@@ -273,13 +302,25 @@ class _ProfileTabState extends State<_ProfileTab> {
           const SizedBox(height: 8),
           // App info
           const ListTile(
-            leading: Icon(Icons.info_outline_rounded, color: AppTheme.textSecondary),
+            leading: Icon(
+              Icons.info_outline_rounded,
+              color: AppTheme.textSecondary,
+            ),
             title: Text('Phiên bản', style: TextStyle(fontSize: 14)),
-            trailing: Text('v1.0.0', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+            trailing: Text(
+              'v1.0.0',
+              style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+            ),
           ),
           const ListTile(
-            leading: Icon(Icons.sports_soccer_rounded, color: AppTheme.primaryGreen),
-            title: Text('Ballhub - Đặt sân bóng', style: TextStyle(fontSize: 14)),
+            leading: Icon(
+              Icons.sports_soccer_rounded,
+              color: AppTheme.primaryGreen,
+            ),
+            title: Text(
+              'Ballhub - Đặt sân bóng',
+              style: TextStyle(fontSize: 14),
+            ),
             subtitle: Text('Kết nối sân bóng và cộng đồng thể thao'),
           ),
         ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../domain/models/match.dart';
 import '../../domain/models/tournament.dart';
 import '../../domain/models/tournament_team.dart';
@@ -13,9 +14,18 @@ class TournamentStatusBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final (bg, fg) = switch (status) {
       TournamentStatus.preparing => (Colors.blue.shade50, Colors.blue.shade800),
-      TournamentStatus.registrationOpen => (Colors.green.shade50, Colors.green.shade800),
-      TournamentStatus.inProgress => (Colors.orange.shade50, Colors.orange.shade900),
-      TournamentStatus.completed => (Colors.purple.shade50, Colors.purple.shade800),
+      TournamentStatus.registrationOpen => (
+        Colors.green.shade50,
+        Colors.green.shade800,
+      ),
+      TournamentStatus.inProgress => (
+        Colors.orange.shade50,
+        Colors.orange.shade900,
+      ),
+      TournamentStatus.completed => (
+        Colors.purple.shade50,
+        Colors.purple.shade800,
+      ),
       TournamentStatus.cancelled => (Colors.red.shade50, Colors.red.shade800),
     };
 
@@ -28,11 +38,7 @@ class TournamentStatusBadge extends StatelessWidget {
       ),
       child: Text(
         status.displayName,
-        style: TextStyle(
-          color: fg,
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-        ),
+        style: TextStyle(color: fg, fontSize: 12, fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -47,10 +53,19 @@ class RegistrationStatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (bg, fg) = switch (status) {
-      RegistrationStatus.pending => (Colors.amber.shade50, Colors.amber.shade900),
-      RegistrationStatus.approved => (Colors.green.shade50, Colors.green.shade800),
+      RegistrationStatus.pending => (
+        Colors.amber.shade50,
+        Colors.amber.shade900,
+      ),
+      RegistrationStatus.approved => (
+        Colors.green.shade50,
+        Colors.green.shade800,
+      ),
       RegistrationStatus.rejected => (Colors.red.shade50, Colors.red.shade800),
-      RegistrationStatus.cancelled => (Colors.grey.shade100, Colors.grey.shade700),
+      RegistrationStatus.cancelled => (
+        Colors.grey.shade100,
+        Colors.grey.shade700,
+      ),
     };
 
     return Container(
@@ -61,11 +76,7 @@ class RegistrationStatusBadge extends StatelessWidget {
       ),
       child: Text(
         status.displayName,
-        style: TextStyle(
-          color: fg,
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-        ),
+        style: TextStyle(color: fg, fontSize: 11, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -120,11 +131,7 @@ class MatchStatusBadge extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: TextStyle(
-          color: fg,
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-        ),
+        style: TextStyle(color: fg, fontSize: 11, fontWeight: FontWeight.w600),
       ),
     );
   }

@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+
 import '../../../../core/auth/auth_context.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../../models/place_location.dart';
+import '../../../../widgets/address_autocomplete_field.dart';
 import '../../domain/models/tournament.dart';
 import '../controllers/tournament_controller.dart';
 
@@ -20,14 +24,17 @@ class CreateEditTournamentScreen extends StatefulWidget {
   });
 
   @override
-  State<CreateEditTournamentScreen> createState() => _CreateEditTournamentScreenState();
+  State<CreateEditTournamentScreen> createState() =>
+      _CreateEditTournamentScreenState();
 }
 
-class _CreateEditTournamentScreenState extends State<CreateEditTournamentScreen> {
+class _CreateEditTournamentScreenState
+    extends State<CreateEditTournamentScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _descController = TextEditingController();
   final _locationController = TextEditingController();
+  PlaceLocation? _selectedPlaceLocation;
 
   late TournamentFormat _format;
   late TournamentStatus _status;
@@ -48,6 +55,18 @@ class _CreateEditTournamentScreenState extends State<CreateEditTournamentScreen>
       _nameController.text = t.name;
       _descController.text = t.description;
       _locationController.text = t.location;
+      if (t.placeId != null || t.latitude != null || t.province != null) {
+        _selectedPlaceLocation = PlaceLocation(
+          placeId: t.placeId ?? '',
+          name: t.location,
+          formattedAddress: t.location,
+          latitude: t.latitude,
+          longitude: t.longitude,
+          province: t.province,
+          district: t.district,
+          ward: t.ward,
+        );
+      }
       _format = t.format;
       _status = t.status;
       _maxTeams = t.maxTeams;
@@ -93,14 +112,18 @@ class _CreateEditTournamentScreenState extends State<CreateEditTournamentScreen>
 
     if (_endDate.isBefore(_startDate)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ngày kết thúc không được trước ngày bắt đầu!')),
+        const SnackBar(
+          content: Text('Ngày kết thúc không được trước ngày bắt đầu!'),
+        ),
       );
       return;
     }
 
     if (_registrationDeadline.isAfter(_startDate)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Hạn đăng ký phải trước hoặc bằng ngày bắt đầu giải!')),
+        const SnackBar(
+          content: Text('Hạn đăng ký phải trước hoặc bằng ngày bắt đầu giải!'),
+        ),
       );
       return;
     }
@@ -113,6 +136,13 @@ class _CreateEditTournamentScreenState extends State<CreateEditTournamentScreen>
       name: _nameController.text.trim(),
       description: _descController.text.trim(),
       location: _locationController.text.trim(),
+      placeId: _selectedPlaceLocation?.placeId ?? widget.tournament?.placeId,
+      latitude: _selectedPlaceLocation?.latitude ?? widget.tournament?.latitude,
+      longitude:
+          _selectedPlaceLocation?.longitude ?? widget.tournament?.longitude,
+      province: _selectedPlaceLocation?.province ?? widget.tournament?.province,
+      district: _selectedPlaceLocation?.district ?? widget.tournament?.district,
+      ward: _selectedPlaceLocation?.ward ?? widget.tournament?.ward,
       startDate: _startDate,
       endDate: _endDate,
       registrationDeadline: _registrationDeadline,
@@ -125,20 +155,68 @@ class _CreateEditTournamentScreenState extends State<CreateEditTournamentScreen>
       updatedAt: now,
     );
 
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => PopScope(
+        canPop: false,
+        child: AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          content: Row(
+            children: [
+              const CircularProgressIndicator(color: AppTheme.primaryDarkGreen),
+              const SizedBox(width: 20),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isEditing
+                          ? 'Đang cập nhật giải đấu...'
+                          : 'Đang tạo giải đấu...',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Đang đồng bộ dữ liệu vào hệ thống...',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
     final success = isEditing
         ? await widget.controller.updateTournament(tournament)
         : await widget.controller.createTournament(tournament);
 
     if (!mounted) return;
+    Navigator.of(context, rootNavigator: true).pop(); // Đóng loading dialog
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(isEditing ? 'Đã cập nhật giải đấu!' : 'Đã tạo giải đấu thành công!')),
+        SnackBar(
+          content: Text(
+            isEditing ? 'Đã cập nhật giải đấu!' : 'Đã tạo giải đấu thành công!',
+          ),
+        ),
       );
-      Navigator.of(context).pop();
+      Navigator.of(context).pop(true);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(widget.controller.errorMessage ?? 'Có lỗi xảy ra')),
+        SnackBar(
+          content: Text(widget.controller.errorMessage ?? 'Có lỗi xảy ra'),
+        ),
       );
     }
   }
@@ -164,21 +242,35 @@ class _CreateEditTournamentScreenState extends State<CreateEditTournamentScreen>
                   prefixIcon: Icon(Icons.emoji_events_outlined),
                 ),
                 validator: (val) {
-                  if (val == null || val.trim().isEmpty) return 'Vui lòng nhập tên giải đấu';
-                  if (val.trim().length < 3) return 'Tên giải đấu phải từ 3 ký tự';
+                  if (val == null || val.trim().isEmpty) {
+                    return 'Vui lòng nhập tên giải đấu';
+                  }
+                  if (val.trim().length < 3) {
+                    return 'Tên giải đấu phải từ 3 ký tự';
+                  }
                   return null;
                 },
               ),
               const SizedBox(height: 14),
-              TextFormField(
+              AddressAutocompleteField(
                 controller: _locationController,
-                decoration: const InputDecoration(
-                  labelText: 'Địa điểm tổ chức *',
-                  hintText: 'Sân vận động, quận/thành phố',
-                  prefixIcon: Icon(Icons.location_on_outlined),
-                ),
+                labelText: 'Địa điểm tổ chức *',
+                hintText: 'Tìm kiếm sân vận động, địa chỉ, quận/thành phố...',
+                isRequired: true,
+                onPlaceSelected: (place) {
+                  setState(() {
+                    _selectedPlaceLocation = place;
+                  });
+                },
+                onCleared: () {
+                  setState(() {
+                    _selectedPlaceLocation = null;
+                  });
+                },
                 validator: (val) {
-                  if (val == null || val.trim().isEmpty) return 'Vui lòng nhập địa điểm tổ chức';
+                  if (val == null || val.trim().isEmpty) {
+                    return 'Vui lòng nhập địa điểm tổ chức';
+                  }
                   return null;
                 },
               ),
@@ -188,7 +280,8 @@ class _CreateEditTournamentScreenState extends State<CreateEditTournamentScreen>
                 maxLines: 3,
                 decoration: const InputDecoration(
                   labelText: 'Mô tả giải đấu',
-                  hintText: 'Thông tin thể thức, giải thưởng, quy định tham gia...',
+                  hintText:
+                      'Thông tin thể thức, giải thưởng, quy định tham gia...',
                   alignLabelWithHint: true,
                 ),
               ),
@@ -203,7 +296,9 @@ class _CreateEditTournamentScreenState extends State<CreateEditTournamentScreen>
                     child: DropdownButtonFormField<TournamentFormat>(
                       initialValue: _format,
                       isExpanded: true,
-                      decoration: const InputDecoration(labelText: 'Thể thức thi đấu'),
+                      decoration: const InputDecoration(
+                        labelText: 'Thể thức thi đấu',
+                      ),
                       items: TournamentFormat.values.map((f) {
                         return DropdownMenuItem(
                           value: f,
@@ -225,11 +320,17 @@ class _CreateEditTournamentScreenState extends State<CreateEditTournamentScreen>
                     child: DropdownButtonFormField<int>(
                       initialValue: _maxTeams,
                       isExpanded: true,
-                      decoration: const InputDecoration(labelText: 'Số đội tối đa'),
+                      decoration: const InputDecoration(
+                        labelText: 'Số đội tối đa',
+                      ),
                       items: [4, 6, 8, 10, 12, 16, 24, 32].map((count) {
                         return DropdownMenuItem(
                           value: count,
-                          child: Text('$count đội', overflow: TextOverflow.ellipsis, maxLines: 1),
+                          child: Text(
+                            '$count đội',
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
                         );
                       }).toList(),
                       onChanged: (val) {
@@ -245,11 +346,17 @@ class _CreateEditTournamentScreenState extends State<CreateEditTournamentScreen>
                 DropdownButtonFormField<TournamentStatus>(
                   initialValue: _status,
                   isExpanded: true,
-                  decoration: const InputDecoration(labelText: 'Trạng thái giải đấu'),
+                  decoration: const InputDecoration(
+                    labelText: 'Trạng thái giải đấu',
+                  ),
                   items: TournamentStatus.values.map((s) {
                     return DropdownMenuItem(
                       value: s,
-                      child: Text(s.displayName, overflow: TextOverflow.ellipsis, maxLines: 1),
+                      child: Text(
+                        s.displayName,
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
                     );
                   }).toList(),
                   onChanged: (val) {
@@ -267,8 +374,17 @@ class _CreateEditTournamentScreenState extends State<CreateEditTournamentScreen>
                   child: Column(
                     children: [
                       ListTile(
-                        leading: const Icon(Icons.how_to_reg_outlined, color: Color(0xFFF57C00)),
-                        title: const Text('Hạn chót đăng ký đội', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                        leading: const Icon(
+                          Icons.how_to_reg_outlined,
+                          color: Color(0xFFF57C00),
+                        ),
+                        title: const Text(
+                          'Hạn chót đăng ký đội',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                         subtitle: Text(
                           '${_registrationDeadline.day}/${_registrationDeadline.month}/${_registrationDeadline.year}',
                         ),
@@ -281,9 +397,20 @@ class _CreateEditTournamentScreenState extends State<CreateEditTournamentScreen>
                       ),
                       const Divider(height: 1),
                       ListTile(
-                        leading: const Icon(Icons.event_available, color: Color(0xFF0F9D58)),
-                        title: const Text('Ngày khai mạc (Bắt đầu)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                        subtitle: Text('${_startDate.day}/${_startDate.month}/${_startDate.year}'),
+                        leading: const Icon(
+                          Icons.event_available,
+                          color: Color(0xFF0F9D58),
+                        ),
+                        title: const Text(
+                          'Ngày khai mạc (Bắt đầu)',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        subtitle: Text(
+                          '${_startDate.day}/${_startDate.month}/${_startDate.year}',
+                        ),
                         trailing: const Icon(Icons.calendar_month, size: 20),
                         onTap: () => _selectDate(
                           context: context,
@@ -293,9 +420,20 @@ class _CreateEditTournamentScreenState extends State<CreateEditTournamentScreen>
                       ),
                       const Divider(height: 1),
                       ListTile(
-                        leading: const Icon(Icons.event_busy, color: Color(0xFFD32F2F)),
-                        title: const Text('Ngày bế mạc (Kết thúc)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                        subtitle: Text('${_endDate.day}/${_endDate.month}/${_endDate.year}'),
+                        leading: const Icon(
+                          Icons.event_busy,
+                          color: Color(0xFFD32F2F),
+                        ),
+                        title: const Text(
+                          'Ngày bế mạc (Kết thúc)',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        subtitle: Text(
+                          '${_endDate.day}/${_endDate.month}/${_endDate.year}',
+                        ),
                         trailing: const Icon(Icons.calendar_month, size: 20),
                         onTap: () => _selectDate(
                           context: context,
@@ -318,9 +456,15 @@ class _CreateEditTournamentScreenState extends State<CreateEditTournamentScreen>
                     ? const SizedBox(
                         height: 20,
                         width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
                       )
-                    : Text(isEditing ? 'Lưu cập nhật' : 'Tạo giải đấu ngay', style: const TextStyle(fontSize: 16)),
+                    : Text(
+                        isEditing ? 'Lưu cập nhật' : 'Tạo giải đấu ngay',
+                        style: const TextStyle(fontSize: 16),
+                      ),
               ),
             ],
           ),

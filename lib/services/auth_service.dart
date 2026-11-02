@@ -1,13 +1,15 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+
 import '../models/app_user.dart';
 
 class AuthService {
   static final _auth = FirebaseAuth.instance;
   static final _db = FirebaseFirestore.instance;
 
-  static CollectionReference<Map<String, dynamic>> get users => _db.collection('users');
+  static CollectionReference<Map<String, dynamic>> get users =>
+      _db.collection('users');
 
   @visibleForTesting
   static String? mockUid;
@@ -39,7 +41,10 @@ class AuthService {
     required String password,
     String? phone,
   }) async {
-    final cred = await _auth.createUserWithEmailAndPassword(email: email, password: password);
+    final cred = await _auth.createUserWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
     final id = cred.user!.uid;
 
     // Cập nhật tên hiển thị lên Firebase Auth
@@ -49,17 +54,20 @@ class AuthService {
 
     // Ghi thông tin profile vào Firestore nếu có, giới hạn timeout 2 giây để tránh treo ứng dụng khi Firestore chưa được kích hoạt
     try {
-      await users.doc(id).set({
-        'userId': id,
-        'fullName': fullName,
-        'email': email,
-        'phone': phone,
-        'avatarUrl': null,
-        'position': null,
-        'area': null,
-        'role': 'User',
-        'createdAt': FieldValue.serverTimestamp(),
-      }).timeout(const Duration(seconds: 2));
+      await users
+          .doc(id)
+          .set({
+            'userId': id,
+            'fullName': fullName,
+            'email': email,
+            'phone': phone,
+            'avatarUrl': null,
+            'position': null,
+            'area': null,
+            'role': 'User',
+            'createdAt': FieldValue.serverTimestamp(),
+          })
+          .timeout(const Duration(seconds: 2));
     } catch (_) {
       // Tiếp tục hoàn tất đăng ký dù Firestore chưa bật hoặc API-First chặn direct write
     }

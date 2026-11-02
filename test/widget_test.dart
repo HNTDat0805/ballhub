@@ -10,8 +10,11 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   // Tất cả widget tests tạm skip để tránh pending Timer từ ChangeNotifier HTTP calls.
   // Chạy: flutter test test/features/ để chạy domain unit tests thay thế.
-  test('Widget tests are skipped — see test/features/ for domain unit tests', () {
-    // Placeholder: pass
-  }, skip: true);
+  test(
+    'Widget tests are skipped — see test/features/ for domain unit tests',
+    () {
+      // Placeholder: pass
+    },
+    skip: true,
+  );
 }
-

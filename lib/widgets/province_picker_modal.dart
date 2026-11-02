@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../core/theme/app_theme.dart';
 import '../services/province_service.dart';
 
@@ -6,13 +7,13 @@ import '../services/province_service.dart';
 class ProvincePickerModal extends StatefulWidget {
   final String currentProvince;
 
-  const ProvincePickerModal({
-    super.key,
-    required this.currentProvince,
-  });
+  const ProvincePickerModal({super.key, required this.currentProvince});
 
   /// Hiển thị Modal chọn Tỉnh thành và trả về tên Tỉnh thành được chọn
-  static Future<String?> show(BuildContext context, {required String currentProvince}) {
+  static Future<String?> show(
+    BuildContext context, {
+    required String currentProvince,
+  }) {
     return showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
@@ -55,7 +56,10 @@ class _ProvincePickerModalState extends State<ProvincePickerModal> {
 
   void _onSearchChanged(String query) {
     setState(() {
-      _filteredProvinces = ProvinceService.searchProvinces(_allProvinces, query);
+      _filteredProvinces = ProvinceService.searchProvinces(
+        _allProvinces,
+        query,
+      );
     });
   }
 
@@ -93,7 +97,11 @@ class _ProvincePickerModalState extends State<ProvincePickerModal> {
               children: [
                 const Row(
                   children: [
-                    Icon(Icons.location_on, color: AppTheme.primaryDarkGreen, size: 22),
+                    Icon(
+                      Icons.location_on,
+                      color: AppTheme.primaryDarkGreen,
+                      size: 22,
+                    ),
                     SizedBox(width: 8),
                     Text(
                       'Chọn Tỉnh / Thành phố',
@@ -133,7 +141,10 @@ class _ProvincePickerModalState extends State<ProvincePickerModal> {
                       )
                     : null,
                 isDense: true,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
               ),
             ),
           ),
@@ -160,64 +171,87 @@ class _ProvincePickerModalState extends State<ProvincePickerModal> {
           Expanded(
             child: _isLoading
                 ? const Center(
-                    child: CircularProgressIndicator(color: AppTheme.primaryDarkGreen),
+                    child: CircularProgressIndicator(
+                      color: AppTheme.primaryDarkGreen,
+                    ),
                   )
                 : _filteredProvinces.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.location_off_outlined, size: 48, color: Colors.grey.shade400),
-                            const SizedBox(height: 12),
-                            Text(
-                              'Không tìm thấy tỉnh thành "${_searchController.text}"',
-                              style: const TextStyle(color: AppTheme.textSecondary),
-                            ),
-                          ],
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.location_off_outlined,
+                          size: 48,
+                          color: Colors.grey.shade400,
                         ),
-                      )
-                    : ListView.separated(
-                        itemCount: _filteredProvinces.length,
-                        separatorBuilder: (_, index) => const Divider(height: 1, indent: 56),
-                        itemBuilder: (context, index) {
-                          final p = _filteredProvinces[index];
-                          final isSelected = widget.currentProvince.toLowerCase().contains(p.displayName.toLowerCase()) ||
-                              widget.currentProvince.toLowerCase().contains(p.name.toLowerCase());
-
-                          return ListTile(
-                            leading: CircleAvatar(
-                              radius: 18,
-                              backgroundColor: isSelected
-                                  ? AppTheme.primaryLightGreen
-                                  : AppTheme.surfaceColor,
-                              child: Icon(
-                                Icons.location_city_outlined,
-                                size: 18,
-                                color: isSelected
-                                    ? AppTheme.primaryDarkGreen
-                                    : AppTheme.textSecondary,
-                              ),
-                            ),
-                            title: Text(
-                              p.displayName,
-                              style: TextStyle(
-                                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                                color: isSelected ? AppTheme.primaryDarkGreen : AppTheme.textPrimary,
-                              ),
-                            ),
-                            subtitle: Text(
-                              p.name,
-                              style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
-                            ),
-                            trailing: isSelected
-                                ? const Icon(Icons.check_circle, color: AppTheme.primaryDarkGreen, size: 20)
-                                : null,
-                            onTap: () {
-                              Navigator.pop(context, p.displayName);
-                            },
+                        const SizedBox(height: 12),
+                        Text(
+                          'Không tìm thấy tỉnh thành "${_searchController.text}"',
+                          style: const TextStyle(color: AppTheme.textSecondary),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.separated(
+                    itemCount: _filteredProvinces.length,
+                    separatorBuilder: (_, index) =>
+                        const Divider(height: 1, indent: 56),
+                    itemBuilder: (context, index) {
+                      final p = _filteredProvinces[index];
+                      final isSelected =
+                          widget.currentProvince.toLowerCase().contains(
+                            p.displayName.toLowerCase(),
+                          ) ||
+                          widget.currentProvince.toLowerCase().contains(
+                            p.name.toLowerCase(),
                           );
+
+                      return ListTile(
+                        leading: CircleAvatar(
+                          radius: 18,
+                          backgroundColor: isSelected
+                              ? AppTheme.primaryLightGreen
+                              : AppTheme.surfaceColor,
+                          child: Icon(
+                            Icons.location_city_outlined,
+                            size: 18,
+                            color: isSelected
+                                ? AppTheme.primaryDarkGreen
+                                : AppTheme.textSecondary,
+                          ),
+                        ),
+                        title: Text(
+                          p.displayName,
+                          style: TextStyle(
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.w500,
+                            color: isSelected
+                                ? AppTheme.primaryDarkGreen
+                                : AppTheme.textPrimary,
+                          ),
+                        ),
+                        subtitle: Text(
+                          p.name,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.textMuted,
+                          ),
+                        ),
+                        trailing: isSelected
+                            ? const Icon(
+                                Icons.check_circle,
+                                color: AppTheme.primaryDarkGreen,
+                                size: 20,
+                              )
+                            : null,
+                        onTap: () {
+                          Navigator.pop(context, p.displayName);
                         },
-                      ),
+                      );
+                    },
+                  ),
           ),
         ],
       ),
@@ -225,7 +259,9 @@ class _ProvincePickerModalState extends State<ProvincePickerModal> {
   }
 
   Widget _buildQuickChip(String label) {
-    final isSelected = widget.currentProvince.toLowerCase().contains(label.toLowerCase());
+    final isSelected = widget.currentProvince.toLowerCase().contains(
+      label.toLowerCase(),
+    );
 
     return Padding(
       padding: const EdgeInsets.only(right: 8, bottom: 8),
@@ -236,7 +272,9 @@ class _ProvincePickerModalState extends State<ProvincePickerModal> {
           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
           color: isSelected ? Colors.white : AppTheme.textPrimary,
         ),
-        backgroundColor: isSelected ? AppTheme.primaryDarkGreen : AppTheme.surfaceColor,
+        backgroundColor: isSelected
+            ? AppTheme.primaryDarkGreen
+            : AppTheme.surfaceColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         side: BorderSide(
           color: isSelected ? AppTheme.primaryDarkGreen : Colors.grey.shade300,

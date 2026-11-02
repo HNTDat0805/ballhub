@@ -79,7 +79,11 @@ class StandingsCalculator {
       if (gfCompare != 0) return gfCompare;
 
       // Criterion 4: Head-to-Head points between tied teams
-      final h2hCompare = _compareHeadToHead(a.teamId, b.teamId, confirmedMatches);
+      final h2hCompare = _compareHeadToHead(
+        a.teamId,
+        b.teamId,
+        confirmedMatches,
+      );
       if (h2hCompare != 0) return h2hCompare;
 
       // Fallback: Alphabetical
@@ -90,27 +94,33 @@ class StandingsCalculator {
     final standings = <StandingsRow>[];
     for (int i = 0; i < list.length; i++) {
       final item = list[i];
-      standings.add(StandingsRow(
-        teamId: item.teamId,
-        teamName: item.teamName,
-        logoUrl: item.logoUrl,
-        played: item.played,
-        won: item.won,
-        drawn: item.drawn,
-        lost: item.lost,
-        goalsFor: item.goalsFor,
-        goalsAgainst: item.goalsAgainst,
-        goalDifference: item.goalDifference,
-        points: item.points,
-        rank: i + 1,
-      ));
+      standings.add(
+        StandingsRow(
+          teamId: item.teamId,
+          teamName: item.teamName,
+          logoUrl: item.logoUrl,
+          played: item.played,
+          won: item.won,
+          drawn: item.drawn,
+          lost: item.lost,
+          goalsFor: item.goalsFor,
+          goalsAgainst: item.goalsAgainst,
+          goalDifference: item.goalDifference,
+          points: item.points,
+          rank: i + 1,
+        ),
+      );
     }
 
     return standings;
   }
 
   /// Calculates head-to-head point difference between two tied teams
-  static int _compareHeadToHead(String teamA, String teamB, List<TournamentMatch> matches) {
+  static int _compareHeadToHead(
+    String teamA,
+    String teamB,
+    List<TournamentMatch> matches,
+  ) {
     int pointsA = 0;
     int pointsB = 0;
 

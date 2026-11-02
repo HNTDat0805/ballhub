@@ -33,6 +33,12 @@ export interface TournamentEntity {
   description: string;
   bannerUrl: string;
   location: string;
+  placeId?: string;
+  latitude?: number;
+  longitude?: number;
+  province?: string;
+  district?: string;
+  ward?: string;
   startDate: string; // ISO 8601
   endDate: string; // ISO 8601
   registrationDeadline: string; // ISO 8601

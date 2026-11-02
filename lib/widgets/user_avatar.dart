@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 class UserAvatar extends StatelessWidget {
@@ -6,7 +7,12 @@ class UserAvatar extends StatelessWidget {
   final String name;
   final double radius;
 
-  const UserAvatar({super.key, this.avatarBase64, required this.name, this.radius = 22});
+  const UserAvatar({
+    super.key,
+    this.avatarBase64,
+    required this.name,
+    this.radius = 22,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -21,7 +27,13 @@ class UserAvatar extends StatelessWidget {
       radius: radius,
       backgroundImage: image,
       child: image == null
-          ? Text(initial, style: TextStyle(fontSize: radius * 0.8, fontWeight: FontWeight.bold))
+          ? Text(
+              initial,
+              style: TextStyle(
+                fontSize: radius * 0.8,
+                fontWeight: FontWeight.bold,
+              ),
+            )
           : null,
     );
   }

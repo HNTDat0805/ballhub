@@ -7,6 +7,12 @@ export interface TeamEntity {
   captainId: string;
   captainName: string;
   memberCount: number;
+  placeId?: string;
+  latitude?: number;
+  longitude?: number;
+  province?: string;
+  district?: string;
+  ward?: string;
   createdAt: string;
   updatedAt: string;
 }

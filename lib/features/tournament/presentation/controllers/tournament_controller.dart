@@ -1,4 +1,7 @@
 import 'package:flutter/foundation.dart';
+
+import '../../../../core/api/api_client.dart';
+import '../../../../services/province_service.dart';
 import '../../data/tournament_repository.dart';
 import '../../domain/models/match.dart';
 import '../../domain/models/standings_row.dart';
@@ -83,14 +86,35 @@ class TournamentController extends ChangeNotifier {
   Stream<List<Tournament>> watchTournaments() {
     return repository.watchTournaments().map((list) {
       return list.where((t) {
-        final matchesQuery = _searchQuery.isEmpty ||
+        final matchesQuery =
+            _searchQuery.isEmpty ||
             t.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
             t.location.toLowerCase().contains(_searchQuery.toLowerCase());
-        final matchesStatus = _selectedStatusFilter == null || t.status == _selectedStatusFilter;
-        final matchesCity = _selectedCityFilter == null ||
-            _selectedCityFilter!.isEmpty ||
-            t.location.toLowerCase().contains(_selectedCityFilter!.toLowerCase());
-        final matchesFormat = _selectedFormatFilter == null || t.format == _selectedFormatFilter;
+        final matchesStatus =
+            _selectedStatusFilter == null || t.status == _selectedStatusFilter;
+
+        bool matchesCity = true;
+        if (_selectedCityFilter != null && _selectedCityFilter!.isNotEmpty) {
+          final filterNorm = ProvinceService.removeAccents(
+            _selectedCityFilter!.toLowerCase(),
+          );
+          final locNorm = ProvinceService.removeAccents(
+            t.location.toLowerCase(),
+          );
+          matchesCity =
+              locNorm.contains(filterNorm) || filterNorm.contains(locNorm);
+          if (!matchesCity) {
+            final districts = ProvinceService.getDistricts(
+              _selectedCityFilter!,
+            );
+            matchesCity = districts.any((d) {
+              final dNorm = ProvinceService.removeAccents(d.toLowerCase());
+              return locNorm.contains(dNorm) || dNorm.contains(locNorm);
+            });
+          }
+        }
+        final matchesFormat =
+            _selectedFormatFilter == null || t.format == _selectedFormatFilter;
         return matchesQuery && matchesStatus && matchesCity && matchesFormat;
       }).toList();
     });
@@ -108,6 +132,15 @@ class TournamentController extends ChangeNotifier {
     return repository.watchStandings(tournamentId);
   }
 
+  String _formatError(dynamic e) {
+    if (e is ApiException) return e.message;
+    final str = e.toString().replaceFirst('Exception: ', '');
+    if (str.contains('is not a subtype of type')) {
+      return 'Lỗi đồng bộ dữ liệu. Vui lòng thử lại hoặc khởi động lại ứng dụng.';
+    }
+    return str;
+  }
+
   Future<bool> createTournament(Tournament tournament) async {
     _isLoading = true;
     _errorMessage = null;
@@ -116,7 +149,7 @@ class TournamentController extends ChangeNotifier {
       await repository.createTournament(tournament);
       return true;
     } catch (e) {
-      _errorMessage = 'Không thể tạo giải đấu: $e';
+      _errorMessage = 'Không thể tạo giải đấu: ${_formatError(e)}';
       return false;
     } finally {
       _isLoading = false;
@@ -132,7 +165,7 @@ class TournamentController extends ChangeNotifier {
       await repository.updateTournament(tournament);
       return true;
     } catch (e) {
-      _errorMessage = 'Không thể cập nhật giải đấu: $e';
+      _errorMessage = 'Không thể cập nhật giải đấu: ${_formatError(e)}';
       return false;
     } finally {
       _isLoading = false;
@@ -148,7 +181,7 @@ class TournamentController extends ChangeNotifier {
       await repository.deleteTournament(tournamentId);
       return true;
     } catch (e) {
-      _errorMessage = 'Không thể xóa giải đấu: $e';
+      _errorMessage = 'Không thể xóa giải đấu: ${_formatError(e)}';
       return false;
     } finally {
       _isLoading = false;
@@ -164,7 +197,7 @@ class TournamentController extends ChangeNotifier {
       await repository.registerTeam(team);
       return true;
     } catch (e) {
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _errorMessage = _formatError(e);
       return false;
     } finally {
       _isLoading = false;
@@ -192,7 +225,7 @@ class TournamentController extends ChangeNotifier {
       );
       return true;
     } catch (e) {
-      _errorMessage = 'Không thể cập nhật trạng thái đội: $e';
+      _errorMessage = 'Không thể cập nhật trạng thái đội: ${_formatError(e)}';
       return false;
     } finally {
       _isLoading = false;
@@ -213,7 +246,7 @@ class TournamentController extends ChangeNotifier {
       await repository.generateSchedule(tournament.id, venue: venue);
       return true;
     } catch (e) {
-      _errorMessage = 'Lỗi tạo lịch thi đấu: $e';
+      _errorMessage = 'Lỗi tạo lịch thi đấu: ${_formatError(e)}';
       return false;
     } finally {
       _isLoading = false;
@@ -249,7 +282,7 @@ class TournamentController extends ChangeNotifier {
       );
       return true;
     } catch (e) {
-      _errorMessage = 'Lỗi cập nhật tỷ số: $e';
+      _errorMessage = 'Lỗi cập nhật tỷ số: ${_formatError(e)}';
       return false;
     } finally {
       _isLoading = false;

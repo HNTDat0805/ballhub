@@ -6,15 +6,52 @@ DateTime? _toDate(dynamic v) {
   return null;
 }
 
+/// Đại diện cho một đội bóng phong trào trong hệ thống Ballhub.
+///
+/// Quản lý thông tin cơ bản của đội (tên, khu vực, đội trưởng, số thành viên)
+/// và tọa độ địa lý (Google Places) phục vụ tính năng tìm đối / cáp kèo giao hữu.
 class Team {
+  /// Mã định danh duy nhất của đội bóng
   final String teamId;
+
+  /// Tên đội bóng (ví dụ: FC Sao Vàng)
   final String teamName;
+
+  /// Khu vực hoạt động / sân nhà (ví dụ: Quận Bình Thạnh, TP.HCM)
   final String area;
+
+  /// Mô tả giới thiệu phong cách thi đấu, trình độ
   final String? description;
+
+  /// Mã người dùng của đội trưởng
   final String captainId;
+
+  /// Họ tên đội trưởng
   final String captainName;
+
+  /// Số lượng thành viên hiện tại trong đội
   final int memberCount;
+
+  /// Thời điểm đội bóng được thành lập trên hệ thống
   final DateTime? createdAt;
+
+  /// Google Place ID của địa bàn hoạt động (nếu có)
+  final String? placeId;
+
+  /// Tọa độ vĩ độ (Latitude)
+  final double? latitude;
+
+  /// Tọa độ kinh độ (Longitude)
+  final double? longitude;
+
+  /// Tỉnh / Thành phố
+  final String? province;
+
+  /// Quận / Huyện
+  final String? district;
+
+  /// Phường / Xã
+  final String? ward;
 
   Team({
     required this.teamId,
@@ -25,18 +62,47 @@ class Team {
     required this.captainName,
     required this.memberCount,
     this.createdAt,
+    this.placeId,
+    this.latitude,
+    this.longitude,
+    this.province,
+    this.district,
+    this.ward,
   });
 
   factory Team.fromMap(Map<String, dynamic> m) => Team(
-        teamId: m['teamId'] ?? '',
-        teamName: m['teamName'] ?? '',
-        area: m['area'] ?? '',
-        description: m['description'],
-        captainId: m['captainId'] ?? '',
-        captainName: m['captainName'] ?? '',
-        memberCount: (m['memberCount'] as num?)?.toInt() ?? 0,
-        createdAt: _toDate(m['createdAt']),
-      );
+    teamId: (m['teamId'] ?? m['id'] ?? '').toString(),
+    teamName: (m['teamName'] ?? m['name'] ?? '').toString(),
+    area: (m['area'] ?? m['location'] ?? '').toString(),
+    description: m['description']?.toString(),
+    captainId: (m['captainId'] ?? m['userId'] ?? '').toString(),
+    captainName: (m['captainName'] ?? m['userName'] ?? '').toString(),
+    memberCount: (m['memberCount'] as num?)?.toInt() ?? 1,
+    createdAt: _toDate(m['createdAt']),
+    placeId: m['placeId'] as String?,
+    latitude: (m['latitude'] as num?)?.toDouble(),
+    longitude: (m['longitude'] as num?)?.toDouble(),
+    province: m['province'] as String?,
+    district: m['district'] as String?,
+    ward: m['ward'] as String?,
+  );
+
+  Map<String, dynamic> toMap() => {
+    'teamId': teamId,
+    'teamName': teamName,
+    'area': area,
+    if (description != null) 'description': description,
+    'captainId': captainId,
+    'captainName': captainName,
+    'memberCount': memberCount,
+    if (createdAt != null) 'createdAt': createdAt!.toIso8601String(),
+    if (placeId != null && placeId!.isNotEmpty) 'placeId': placeId,
+    if (latitude != null) 'latitude': latitude,
+    if (longitude != null) 'longitude': longitude,
+    if (province != null && province!.isNotEmpty) 'province': province,
+    if (district != null && district!.isNotEmpty) 'district': district,
+    if (ward != null && ward!.isNotEmpty) 'ward': ward,
+  };
 }
 
 class TeamMember {
@@ -55,12 +121,12 @@ class TeamMember {
   });
 
   factory TeamMember.fromMap(Map<String, dynamic> m) => TeamMember(
-        userId: m['userId'] ?? '',
-        role: m['role'] ?? 'Member',
-        fullName: m['fullName'] ?? '(Không rõ)',
-        avatarBase64: m['avatarBase64'],
-        position: m['position'],
-      );
+    userId: m['userId'] ?? '',
+    role: m['role'] ?? 'Member',
+    fullName: m['fullName'] ?? '(Không rõ)',
+    avatarBase64: m['avatarBase64'],
+    position: m['position'],
+  );
 }
 
 class JoinRequest {
@@ -83,14 +149,14 @@ class JoinRequest {
   });
 
   factory JoinRequest.fromMap(Map<String, dynamic> m) => JoinRequest(
-        requestId: m['requestId'] ?? '',
-        teamId: m['teamId'] ?? '',
-        userId: m['userId'] ?? '',
-        message: m['message'],
-        fullName: m['fullName'] ?? '(Không rõ)',
-        avatarBase64: m['avatarBase64'],
-        position: m['position'],
-      );
+    requestId: m['requestId'] ?? '',
+    teamId: m['teamId'] ?? '',
+    userId: m['userId'] ?? '',
+    message: m['message'],
+    fullName: m['fullName'] ?? '(Không rõ)',
+    avatarBase64: m['avatarBase64'],
+    position: m['position'],
+  );
 }
 
 class MatchmakingCandidate {
@@ -104,7 +170,8 @@ class MatchmakingCandidate {
     required this.reason,
   });
 
-  factory MatchmakingCandidate.fromMap(Map<String, dynamic> m) => MatchmakingCandidate(
+  factory MatchmakingCandidate.fromMap(Map<String, dynamic> m) =>
+      MatchmakingCandidate(
         team: Team.fromMap(Map<String, dynamic>.from(m['team'] as Map)),
         matchScore: (m['matchScore'] as num?)?.toInt() ?? 50,
         reason: m['reason']?.toString() ?? '',
@@ -136,7 +203,8 @@ class FriendlyInvitation {
     this.createdAt,
   });
 
-  factory FriendlyInvitation.fromMap(Map<String, dynamic> m) => FriendlyInvitation(
+  factory FriendlyInvitation.fromMap(Map<String, dynamic> m) =>
+      FriendlyInvitation(
         id: m['id'] ?? '',
         fromTeamId: m['fromTeamId'] ?? '',
         fromTeamName: m['fromTeamName'] ?? '',

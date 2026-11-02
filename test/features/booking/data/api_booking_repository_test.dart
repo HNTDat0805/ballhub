@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:ballhub/core/api/api_client.dart';
@@ -91,10 +92,17 @@ void main() {
       final mock = MockHttpClient((req) async {
         expect(req.url.path, '/api/v1/fields');
         expect(req.url.queryParameters['city'], 'TP. Hồ Chí Minh');
-        return jsonResponse({'success': true, 'data': [sampleFieldMap]});
+        return jsonResponse({
+          'success': true,
+          'data': [sampleFieldMap],
+        });
       });
       final repo = ApiBookingRepository(
-          client: ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock));
+        client: ApiClient(
+          baseUrl: 'http://localhost:5001/api/v1',
+          client: mock,
+        ),
+      );
 
       final fields = await repo.getFields(city: 'TP. Hồ Chí Minh');
       expect(fields.length, 1);
@@ -105,7 +113,11 @@ void main() {
     test('2. getFields returns fallback sample fields on error', () async {
       final mock = MockHttpClient((req) async => jsonResponse('Error', 500));
       final repo = ApiBookingRepository(
-          client: ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock));
+        client: ApiClient(
+          baseUrl: 'http://localhost:5001/api/v1',
+          client: mock,
+        ),
+      );
 
       final fields = await repo.getFields();
       expect(fields.isNotEmpty, true);
@@ -118,7 +130,11 @@ void main() {
         return jsonResponse({'success': true, 'data': sampleFieldMap});
       });
       final repo = ApiBookingRepository(
-          client: ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock));
+        client: ApiClient(
+          baseUrl: 'http://localhost:5001/api/v1',
+          client: mock,
+        ),
+      );
 
       final field = await repo.getFieldById('f_1');
       expect(field.id, 'f_1');
@@ -135,7 +151,11 @@ void main() {
         return jsonResponse({'success': true, 'data': sampleFieldMap}, 201);
       });
       final repo = ApiBookingRepository(
-          client: ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock));
+        client: ApiClient(
+          baseUrl: 'http://localhost:5001/api/v1',
+          client: mock,
+        ),
+      );
 
       final created = await repo.createField({'name': 'Sân Mới'});
       expect(body['name'], 'Sân Mới');
@@ -152,7 +172,11 @@ void main() {
         return jsonResponse({'success': true, 'data': sampleFieldMap});
       });
       final repo = ApiBookingRepository(
-          client: ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock));
+        client: ApiClient(
+          baseUrl: 'http://localhost:5001/api/v1',
+          client: mock,
+        ),
+      );
 
       await repo.updateField('f_1', {'description': 'Mô tả mới'});
       expect(body['description'], 'Mô tả mới');
@@ -168,7 +192,11 @@ void main() {
         return jsonResponse({'success': true, 'data': sampleFieldMap});
       });
       final repo = ApiBookingRepository(
-          client: ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock));
+        client: ApiClient(
+          baseUrl: 'http://localhost:5001/api/v1',
+          client: mock,
+        ),
+      );
 
       await repo.updateFieldStatus('f_1', 'inactive');
       expect(body['status'], 'inactive');
@@ -179,10 +207,17 @@ void main() {
       final mock = MockHttpClient((req) async {
         expect(req.url.path, '/api/v1/fields/f_1/slots');
         expect(req.url.queryParameters['dateKey'], '2026-07-01');
-        return jsonResponse({'success': true, 'data': [sampleSlotMap]});
+        return jsonResponse({
+          'success': true,
+          'data': [sampleSlotMap],
+        });
       });
       final repo = ApiBookingRepository(
-          client: ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock));
+        client: ApiClient(
+          baseUrl: 'http://localhost:5001/api/v1',
+          client: mock,
+        ),
+      );
 
       final slots = await repo.getFieldSlots('f_1', dateKey: '2026-07-01');
       expect(slots.length, 1);
@@ -200,7 +235,11 @@ void main() {
         return jsonResponse({'success': true, 'data': sampleSlotMap}, 201);
       });
       final repo = ApiBookingRepository(
-          client: ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock));
+        client: ApiClient(
+          baseUrl: 'http://localhost:5001/api/v1',
+          client: mock,
+        ),
+      );
 
       final slot = await repo.createSlot('f_1', {'dateKey': '2026-07-01'});
       expect(body['dateKey'], '2026-07-01');
@@ -217,7 +256,11 @@ void main() {
         return jsonResponse({'success': true, 'data': sampleSlotMap});
       });
       final repo = ApiBookingRepository(
-          client: ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock));
+        client: ApiClient(
+          baseUrl: 'http://localhost:5001/api/v1',
+          client: mock,
+        ),
+      );
 
       await repo.updateSlot('f_1', 'slot_1', {'basePrice': 350000});
       expect(body['basePrice'], 350000);
@@ -230,11 +273,17 @@ void main() {
         expect(req.method, 'POST');
         expect(req.url.path, '/api/v1/fields/f_1/slots/slot_1/block');
         body = jsonDecode((req as http.Request).body);
-        return jsonResponse(
-            {'success': true, 'data': {...sampleSlotMap, 'status': 'blocked'}});
+        return jsonResponse({
+          'success': true,
+          'data': {...sampleSlotMap, 'status': 'blocked'},
+        });
       });
       final repo = ApiBookingRepository(
-          client: ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock));
+        client: ApiClient(
+          baseUrl: 'http://localhost:5001/api/v1',
+          client: mock,
+        ),
+      );
 
       final slot = await repo.blockSlot('f_1', 'slot_1', reason: 'Bảo trì sân');
       expect(body['reason'], 'Bảo trì sân');
@@ -249,7 +298,11 @@ void main() {
         return jsonResponse({'success': true, 'data': sampleSlotMap});
       });
       final repo = ApiBookingRepository(
-          client: ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock));
+        client: ApiClient(
+          baseUrl: 'http://localhost:5001/api/v1',
+          client: mock,
+        ),
+      );
 
       final slot = await repo.unblockSlot('f_1', 'slot_1');
       expect(slot.status, FieldSlotStatus.available);
@@ -265,7 +318,11 @@ void main() {
         return jsonResponse({'success': true, 'data': sampleBookingMap}, 201);
       });
       final repo = ApiBookingRepository(
-          client: ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock));
+        client: ApiClient(
+          baseUrl: 'http://localhost:5001/api/v1',
+          client: mock,
+        ),
+      );
 
       final booking = await repo.createBooking(
         fieldId: 'f_1',
@@ -282,10 +339,17 @@ void main() {
     test('13. getMyBookings fetches current user bookings', () async {
       final mock = MockHttpClient((req) async {
         expect(req.url.path, '/api/v1/bookings/me');
-        return jsonResponse({'success': true, 'data': [sampleBookingMap]});
+        return jsonResponse({
+          'success': true,
+          'data': [sampleBookingMap],
+        });
       });
       final repo = ApiBookingRepository(
-          client: ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock));
+        client: ApiClient(
+          baseUrl: 'http://localhost:5001/api/v1',
+          client: mock,
+        ),
+      );
 
       final myBookings = await repo.getMyBookings();
       expect(myBookings.length, 1);
@@ -299,7 +363,11 @@ void main() {
         return jsonResponse({'success': true, 'data': sampleBookingMap});
       });
       final repo = ApiBookingRepository(
-          client: ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock));
+        client: ApiClient(
+          baseUrl: 'http://localhost:5001/api/v1',
+          client: mock,
+        ),
+      );
 
       final booking = await repo.getBooking('bk_1');
       expect(booking.id, 'bk_1');
@@ -315,13 +383,20 @@ void main() {
         body = jsonDecode((req as http.Request).body);
         return jsonResponse({
           'success': true,
-          'data': {...sampleBookingMap, 'status': 'cancelledByUser'}
+          'data': {...sampleBookingMap, 'status': 'cancelledByUser'},
         });
       });
       final repo = ApiBookingRepository(
-          client: ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock));
+        client: ApiClient(
+          baseUrl: 'http://localhost:5001/api/v1',
+          client: mock,
+        ),
+      );
 
-      final cancelled = await repo.cancelBooking('bk_1', reason: 'Trời mưa bão');
+      final cancelled = await repo.cancelBooking(
+        'bk_1',
+        reason: 'Trời mưa bão',
+      );
       expect(body['reason'], 'Trời mưa bão');
       expect(cancelled.status, BookingStatus.cancelledByUser);
     });
@@ -330,10 +405,17 @@ void main() {
     test('16. getOwnerBookings fetches bookings for field owner', () async {
       final mock = MockHttpClient((req) async {
         expect(req.url.path, '/api/v1/owner/bookings');
-        return jsonResponse({'success': true, 'data': [sampleBookingMap]});
+        return jsonResponse({
+          'success': true,
+          'data': [sampleBookingMap],
+        });
       });
       final repo = ApiBookingRepository(
-          client: ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock));
+        client: ApiClient(
+          baseUrl: 'http://localhost:5001/api/v1',
+          client: mock,
+        ),
+      );
 
       final ownerList = await repo.getOwnerBookings();
       expect(ownerList.length, 1);
@@ -347,11 +429,15 @@ void main() {
         expect(req.url.path, '/api/v1/owner/bookings/bk_1/confirm');
         return jsonResponse({
           'success': true,
-          'data': {...sampleBookingMap, 'status': 'confirmed'}
+          'data': {...sampleBookingMap, 'status': 'confirmed'},
         });
       });
       final repo = ApiBookingRepository(
-          client: ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock));
+        client: ApiClient(
+          baseUrl: 'http://localhost:5001/api/v1',
+          client: mock,
+        ),
+      );
 
       final confirmed = await repo.confirmBooking('bk_1');
       expect(confirmed.status, BookingStatus.confirmed);
@@ -366,13 +452,20 @@ void main() {
         body = jsonDecode((req as http.Request).body);
         return jsonResponse({
           'success': true,
-          'data': {...sampleBookingMap, 'status': 'rejected'}
+          'data': {...sampleBookingMap, 'status': 'rejected'},
         });
       });
       final repo = ApiBookingRepository(
-          client: ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock));
+        client: ApiClient(
+          baseUrl: 'http://localhost:5001/api/v1',
+          client: mock,
+        ),
+      );
 
-      final rejected = await repo.rejectBooking('bk_1', reason: 'Hỏng dàn đèn chiếu sáng');
+      final rejected = await repo.rejectBooking(
+        'bk_1',
+        reason: 'Hỏng dàn đèn chiếu sáng',
+      );
       expect(body['reason'], 'Hỏng dàn đèn chiếu sáng');
       expect(rejected.status, BookingStatus.rejected);
     });
@@ -381,10 +474,17 @@ void main() {
     test('19. getFields passes fieldType parameter properly', () async {
       final mock = MockHttpClient((req) async {
         expect(req.url.queryParameters['fieldType'], '7_a_side');
-        return jsonResponse({'success': true, 'data': [sampleFieldMap]});
+        return jsonResponse({
+          'success': true,
+          'data': [sampleFieldMap],
+        });
       });
       final repo = ApiBookingRepository(
-          client: ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock));
+        client: ApiClient(
+          baseUrl: 'http://localhost:5001/api/v1',
+          client: mock,
+        ),
+      );
 
       final fields = await repo.getFields(fieldType: '7_a_side');
       expect(fields.length, 1);
@@ -394,44 +494,264 @@ void main() {
     test('20. getFields passes search keyword properly', () async {
       final mock = MockHttpClient((req) async {
         expect(req.url.queryParameters['search'], 'Chuyên Nghiệp');
-        return jsonResponse({'success': true, 'data': [sampleFieldMap]});
+        return jsonResponse({
+          'success': true,
+          'data': [sampleFieldMap],
+        });
       });
       final repo = ApiBookingRepository(
-          client: ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock));
+        client: ApiClient(
+          baseUrl: 'http://localhost:5001/api/v1',
+          client: mock,
+        ),
+      );
 
       final fields = await repo.getFields(search: 'Chuyên Nghiệp');
       expect(fields.length, 1);
     });
 
     // 21. createBooking fallback calculation
-    test('21. createBooking calculates fallback amounts when offline', () async {
-      final mock = MockHttpClient((req) async => jsonResponse('Network offline', 503));
-      final repo = ApiBookingRepository(
-          client: ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock));
+    test(
+      '21. createBooking calculates fallback amounts when offline',
+      () async {
+        final mock = MockHttpClient(
+          (req) async => jsonResponse('Network offline', 503),
+        );
+        final repo = ApiBookingRepository(
+          client: ApiClient(
+            baseUrl: 'http://localhost:5001/api/v1',
+            client: mock,
+          ),
+        );
 
-      final booking = await repo.createBooking(
-        fieldId: 'field_gia_dinh',
-        slotIds: ['slot_101'],
-        customerNote: 'Ghi chú fallback',
-      );
-      expect(booking.fieldId, 'field_gia_dinh');
-      expect(booking.customerNote, 'Ghi chú fallback');
-      expect(booking.status, BookingStatus.confirmed);
-    });
+        final booking = await repo.createBooking(
+          fieldId: 'field_gia_dinh',
+          slotIds: ['slot_101'],
+          customerNote: 'Ghi chú fallback',
+        );
+        expect(booking.fieldId, 'field_gia_dinh');
+        expect(booking.customerNote, 'Ghi chú fallback');
+        expect(booking.status, BookingStatus.confirmed);
+      },
+    );
 
     // 22. cancelBooking fallback updates offline state
     test('22. cancelBooking updates fallback list when offline', () async {
-      final mock = MockHttpClient((req) async => jsonResponse('Network offline', 503));
+      final mock = MockHttpClient(
+        (req) async => jsonResponse('Network offline', 503),
+      );
       final repo = ApiBookingRepository(
-          client: ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock));
+        client: ApiClient(
+          baseUrl: 'http://localhost:5001/api/v1',
+          client: mock,
+        ),
+      );
 
       final booking = await repo.createBooking(
         fieldId: 'field_offline',
         slotIds: ['slot_off_1'],
       );
-      final cancelled = await repo.cancelBooking(booking.id, reason: 'Bận đột xuất');
+      final cancelled = await repo.cancelBooking(
+        booking.id,
+        reason: 'Bận đột xuất',
+      );
       expect(cancelled.status, BookingStatus.cancelledByUser);
       expect(cancelled.cancellationReason, 'Bận đột xuất');
+    });
+
+    // 23. ownerCancelBooking posts cancellation reason to /owner/bookings/:id/cancel
+    test('23. ownerCancelBooking cancels confirmed booking by owner', () async {
+      late Map<String, dynamic> body;
+      final mock = MockHttpClient((req) async {
+        expect(req.method, 'POST');
+        expect(req.url.path, '/api/v1/owner/bookings/bk_1/cancel');
+        body = jsonDecode((req as http.Request).body);
+        return jsonResponse({
+          'success': true,
+          'data': {...sampleBookingMap, 'status': 'cancelledByOwner'},
+        });
+      });
+      final repo = ApiBookingRepository(
+        client: ApiClient(
+          baseUrl: 'http://localhost:5001/api/v1',
+          client: mock,
+        ),
+      );
+
+      final cancelled = await repo.ownerCancelBooking(
+        'bk_1',
+        reason: 'Sân bị ngập nước',
+      );
+      expect(body['reason'], 'Sân bị ngập nước');
+      expect(cancelled.status, BookingStatus.cancelledByOwner);
+    });
+
+    // 24. createBooking updates local booked slots and triggers bookingChanged notifier
+    test('24. createBooking updates local booked slots and triggers bookingChanged notifier', () async {
+      ApiBookingRepository.clearLocalState();
+      var notificationCount = 0;
+      void listener() => notificationCount++;
+      ApiBookingRepository.bookingChanged.addListener(listener);
+
+      final mock = MockHttpClient((req) async {
+        if (req.url.path.contains('/slots')) {
+          return jsonResponse({
+            'success': true,
+            'data': [sampleSlotMap],
+          });
+        }
+        return jsonResponse({'success': true, 'data': sampleBookingMap});
+      });
+      final repo = ApiBookingRepository(
+        client: ApiClient(
+          baseUrl: 'http://localhost:5001/api/v1',
+          client: mock,
+        ),
+      );
+
+      // Verify slot is initially available
+      final initialSlots = await repo.getFieldSlots(
+        'f_1',
+        dateKey: '2026-07-01',
+      );
+      expect(initialSlots.first.status, FieldSlotStatus.available);
+
+      // Create booking
+      final created = await repo.createBooking(
+        fieldId: 'f_1',
+        slotIds: ['slot_1'],
+        customerNote: 'Đặt sân đá bóng',
+      );
+      expect(created.id, 'bk_1');
+      expect(notificationCount, 1);
+
+      // Slots fetched again should now show booked immediately
+      final updatedSlots = await repo.getFieldSlots(
+        'f_1',
+        dateKey: '2026-07-01',
+      );
+      expect(updatedSlots.first.status, FieldSlotStatus.booked);
+
+      ApiBookingRepository.bookingChanged.removeListener(listener);
+      ApiBookingRepository.clearLocalState();
+    });
+
+    // 25. cancelBooking clears booked slot and notifies listeners
+    test(
+      '25. cancelBooking clears booked slot and notifies listeners',
+      () async {
+        ApiBookingRepository.clearLocalState();
+        var notificationCount = 0;
+        void listener() => notificationCount++;
+        ApiBookingRepository.bookingChanged.addListener(listener);
+
+        final mock = MockHttpClient((req) async {
+          if (req.url.path.contains('/cancel')) {
+            return jsonResponse({
+              'success': true,
+              'data': {...sampleBookingMap, 'status': 'cancelledByUser'},
+            });
+          }
+          if (req.url.path.contains('/slots')) {
+            return jsonResponse({
+              'success': true,
+              'data': [sampleSlotMap],
+            });
+          }
+          return jsonResponse({'success': true, 'data': sampleBookingMap});
+        });
+        final repo = ApiBookingRepository(
+          client: ApiClient(
+            baseUrl: 'http://localhost:5001/api/v1',
+            client: mock,
+          ),
+        );
+
+        // Book slot first
+        await repo.createBooking(
+          fieldId: 'f_1',
+          slotIds: ['slot_1'],
+          customerNote: 'Đặt sân đá bóng',
+        );
+        expect(notificationCount, 1);
+
+        // Cancel booking
+        await repo.cancelBooking('bk_1', reason: 'Bận việc đột xuất');
+        expect(notificationCount, 2);
+
+        // Slots should no longer be booked in local state
+        final afterCancelSlots = await repo.getFieldSlots(
+          'f_1',
+          dateKey: '2026-07-01',
+        );
+        expect(afterCancelSlots.first.status, FieldSlotStatus.available);
+
+        ApiBookingRepository.bookingChanged.removeListener(listener);
+        ApiBookingRepository.clearLocalState();
+      },
+    );
+
+    test('23. createField immediately updates getFields and triggers bookingChanged notification', () async {
+      ApiBookingRepository.clearLocalState();
+      int notificationCount = 0;
+      void listener() => notificationCount++;
+      ApiBookingRepository.bookingChanged.addListener(listener);
+
+      final newFieldData = {
+        'name': 'Sân Bóng Hoa Lư Mới',
+        'description': 'Mặt cỏ nhân tạo mới',
+        'address': '2 Đinh Tiên Hoàng',
+        'district': 'Quận 1',
+        'city': 'TP. Hồ Chí Minh',
+        'fieldType': '7_a_side',
+        'capacity': 14,
+        'basePrice': 400000,
+        'currency': 'VND',
+        'slotDurationMinutes': 60,
+        'status': 'active',
+        'amenities': ['wifi', 'parking'],
+      };
+
+      final mock = MockHttpClient((req) async {
+        if (req.method == 'POST' && req.url.path.contains('/fields')) {
+          return jsonResponse({
+            'success': true,
+            'data': {
+              'id': 'field_hoa_lu_new',
+              'ownerId': 'owner_01',
+              ...newFieldData,
+              'imageUrls': [],
+              'openingHours': {},
+              'timezone': 'Asia/Ho_Chi_Minh',
+              'createdAt': '2026-11-02T00:00:00.000Z',
+              'updatedAt': '2026-11-02T00:00:00.000Z',
+              'createdBy': 'owner_01',
+              'updatedBy': 'owner_01',
+            },
+          });
+        }
+        return jsonResponse({'success': true, 'data': []});
+      });
+
+      final repo = ApiBookingRepository(
+        client: ApiClient(
+          baseUrl: 'http://localhost:5001/api/v1',
+          client: mock,
+        ),
+      );
+
+      final created = await repo.createField(newFieldData);
+      expect(created.id, 'field_hoa_lu_new');
+      expect(created.name, 'Sân Bóng Hoa Lư Mới');
+      expect(notificationCount, 1);
+
+      // getFields must immediately contain the newly created field at the top
+      final fields = await repo.getFields();
+      expect(fields.any((f) => f.id == 'field_hoa_lu_new'), isTrue);
+      expect(fields.first.name, 'Sân Bóng Hoa Lư Mới');
+
+      ApiBookingRepository.bookingChanged.removeListener(listener);
+      ApiBookingRepository.clearLocalState();
     });
   });
 }

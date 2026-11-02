@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../models/team.dart';
 import '../../services/team_service.dart';
 import '../../utils/ui_helpers.dart';
@@ -44,7 +45,10 @@ class _JoinRequestsScreenState extends State<JoinRequestsScreen> {
       }
       if (!mounted) return;
       setState(() => _items!.remove(r));
-      showMessage(context, approve ? 'Đã duyệt ${r.fullName}' : 'Đã từ chối ${r.fullName}');
+      showMessage(
+        context,
+        approve ? 'Đã duyệt ${r.fullName}' : 'Đã từ chối ${r.fullName}',
+      );
     } catch (e) {
       if (mounted) showMessage(context, errorText(e));
     }
@@ -67,12 +71,17 @@ class _JoinRequestsScreenState extends State<JoinRequestsScreen> {
     return RefreshIndicator(
       onRefresh: _load,
       child: items.isEmpty
-          ? ListView(children: const [
-              Padding(
-                padding: EdgeInsets.all(32),
-                child: Text('Chưa có yêu cầu nào', textAlign: TextAlign.center),
-              ),
-            ])
+          ? ListView(
+              children: const [
+                Padding(
+                  padding: EdgeInsets.all(32),
+                  child: Text(
+                    'Chưa có yêu cầu nào',
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
+            )
           : ListView.builder(
               padding: const EdgeInsets.all(12),
               itemCount: items.length,
@@ -85,21 +94,38 @@ class _JoinRequestsScreenState extends State<JoinRequestsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         ListTile(
-                          leading: UserAvatar(avatarBase64: r.avatarBase64, name: r.fullName),
-                          title: Text(r.fullName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                          leading: UserAvatar(
+                            avatarBase64: r.avatarBase64,
+                            name: r.fullName,
+                          ),
+                          title: Text(
+                            r.fullName,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
                           subtitle: Text(r.position ?? 'Chưa cập nhật vị trí'),
                         ),
                         if ((r.message ?? '').isNotEmpty)
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: Text('"${r.message}"', style: const TextStyle(fontStyle: FontStyle.italic)),
+                            child: Text(
+                              '"${r.message}"',
+                              style: const TextStyle(
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
                           ),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
-                            TextButton(onPressed: () => _handle(r, false), child: const Text('Từ chối')),
+                            TextButton(
+                              onPressed: () => _handle(r, false),
+                              child: const Text('Từ chối'),
+                            ),
                             const SizedBox(width: 8),
-                            FilledButton(onPressed: () => _handle(r, true), child: const Text('Duyệt')),
+                            FilledButton(
+                              onPressed: () => _handle(r, true),
+                              child: const Text('Duyệt'),
+                            ),
                           ],
                         ),
                       ],

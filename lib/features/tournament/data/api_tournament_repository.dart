@@ -1,11 +1,17 @@
 import 'dart:async';
+
+import 'package:flutter/foundation.dart';
+
 import '../../../core/api/api_client.dart';
 import '../domain/models/match.dart';
 import '../domain/models/match_audit.dart';
 import '../domain/models/standings_row.dart';
 import '../domain/models/tournament.dart';
 import '../domain/models/tournament_team.dart';
+import '../domain/services/schedule_generator.dart';
+import '../domain/services/standings_calculator.dart';
 import 'tournament_repository.dart';
+import 'seeds/tournament_seed_data.dart';
 
 /// Triển khai thực tế của [TournamentRepository] theo kiến trúc API-first.
 ///
@@ -18,268 +24,36 @@ class ApiTournamentRepository implements TournamentRepository {
   final ApiClient _api;
 
   final _tournamentsController = StreamController<List<Tournament>>.broadcast();
-  final Map<String, StreamController<List<TournamentTeam>>> _teamsControllers = {};
-  final Map<String, StreamController<List<TournamentMatch>>> _matchesControllers = {};
-  final Map<String, StreamController<List<StandingsRow>>> _standingsControllers = {};
+  final Map<String, StreamController<List<TournamentTeam>>> _teamsControllers =
+      {};
+  final Map<String, StreamController<List<TournamentMatch>>>
+  _matchesControllers = {};
+  final Map<String, StreamController<List<StandingsRow>>>
+  _standingsControllers = {};
   final Map<String, StreamController<List<MatchAudit>>> _auditsControllers = {};
-
-  ApiTournamentRepository({ApiClient? apiClient})
-      : _api = apiClient ?? ApiClient();
 
   List<Tournament> _cachedTournaments = [];
 
-  static List<Tournament> _getFallbackSampleTournaments() {
-    return [
-      Tournament(
-        id: 'tour_ballhub_cup_2026',
-        name: 'Ballhub Super Cup 2026',
-        description: 'Giải bóng đá phong trào thường niên Ballhub tranh cúp vô địch.',
-        location: 'Sân bóng Thể thao Quốc gia, TP. Hồ Chí Minh',
-        startDate: DateTime.now().add(const Duration(days: 3)),
-        endDate: DateTime.now().add(const Duration(days: 14)),
-        registrationDeadline: DateTime.now().add(const Duration(days: 2)),
-        maxTeams: 8,
-        format: TournamentFormat.roundRobinSingle,
-        status: TournamentStatus.registrationOpen,
-        organizerId: 'user_organizer_01',
-        organizerName: 'Ban Tổ Chức Ballhub',
-        createdAt: DateTime.now().subtract(const Duration(days: 5)),
-        updatedAt: DateTime.now().subtract(const Duration(days: 1)),
-      ),
-      Tournament(
-        id: 'tour_ha_noi_open_2026',
-        name: 'Hà Nội Premier League Cup',
-        description: 'Giải đấu giao lưu các câu lạc bộ bóng đá phong trào miền Bắc.',
-        location: 'Sân vận động Mỹ Đình, Hà Nội',
-        startDate: DateTime.now().add(const Duration(days: 7)),
-        endDate: DateTime.now().add(const Duration(days: 21)),
-        registrationDeadline: DateTime.now().add(const Duration(days: 5)),
-        maxTeams: 16,
-        format: TournamentFormat.knockout,
-        status: TournamentStatus.preparing,
-        organizerId: 'user_organizer_01',
-        organizerName: 'Ban Tổ Chức Ballhub',
-        createdAt: DateTime.now().subtract(const Duration(days: 2)),
-        updatedAt: DateTime.now().subtract(const Duration(days: 1)),
-      ),
-      Tournament(
-        id: 'tour_da_nang_open',
-        name: 'Đà Nẵng City Champions 2026',
-        description: 'Giải bóng đá các câu lạc bộ miền Trung cúp Tuyên Sơn.',
-        location: 'Làng Thể Thao Tuyên Sơn, Đà Nẵng',
-        startDate: DateTime.now().subtract(const Duration(days: 2)),
-        endDate: DateTime.now().add(const Duration(days: 10)),
-        registrationDeadline: DateTime.now().subtract(const Duration(days: 5)),
-        maxTeams: 8,
-        format: TournamentFormat.roundRobinDouble,
-        status: TournamentStatus.inProgress,
-        organizerId: 'user_organizer_01',
-        organizerName: 'Ban Tổ Chức Đà Nẵng',
-        createdAt: DateTime.now().subtract(const Duration(days: 10)),
-        updatedAt: DateTime.now().subtract(const Duration(days: 1)),
-      ),
-      Tournament(
-        id: 'tour_futsal_saigon',
-        name: 'Cúp Vô Địch Sân 7 Sài Gòn',
-        description: 'Giải đấu sân 7 truyền thống các đội bóng phong trào TP.HCM.',
-        location: 'Sân bóng Gia Định, TP. Hồ Chí Minh',
-        startDate: DateTime.now().subtract(const Duration(days: 20)),
-        endDate: DateTime.now().subtract(const Duration(days: 2)),
-        registrationDeadline: DateTime.now().subtract(const Duration(days: 25)),
-        maxTeams: 16,
-        format: TournamentFormat.knockout,
-        status: TournamentStatus.completed,
-        organizerId: 'user_organizer_01',
-        organizerName: 'Ban Tổ Chức Ballhub',
-        createdAt: DateTime.now().subtract(const Duration(days: 30)),
-        updatedAt: DateTime.now().subtract(const Duration(days: 2)),
-      ),
-    ];
+  /// ID của giải đấu demo duy nhất có sẵn dữ liệu mẫu dự phòng khi chưa có mạng.
+  /// Tuyệt đối KHÔNG gán dữ liệu mẫu cho bất kỳ giải đấu nào do người dùng tạo.
+  static const String sampleDemoTournamentId =
+      TournamentSeedData.sampleDemoTournamentId;
+
+  // Lưu trữ cục bộ cho các giải đấu, đội đăng ký, trận đấu do người dùng tự tạo / thao tác
+  static final Map<String, List<TournamentTeam>> _userRegisteredTeams = {};
+  static final Map<String, List<TournamentMatch>> _userGeneratedMatches = {};
+  static final Map<String, List<StandingsRow>> _userStandings = {};
+
+  ApiTournamentRepository({ApiClient? apiClient})
+    : _api = apiClient ?? ApiClient() {
+    _cachedTournaments = TournamentSeedData.getSampleTournaments();
   }
 
-  static List<TournamentTeam> _getFallbackSampleTeams(String tournamentId) {
-    final now = DateTime.now();
-    return [
-      TournamentTeam(
-        id: 'tt_01',
-        tournamentId: tournamentId,
-        teamId: 'team_sao_vang',
-        teamName: 'FC Sao Vàng',
-        logoUrl: '',
-        captainId: 'captain_01',
-        captainName: 'Nguyễn Văn Đạt',
-        captainPhone: '0901234567',
-        captainEmail: 'dat@ballhub.com',
-        membersCount: 14,
-        status: RegistrationStatus.approved,
-        registeredAt: now.subtract(const Duration(days: 4)),
-      ),
-      TournamentTeam(
-        id: 'tt_02',
-        tournamentId: tournamentId,
-        teamId: 'team_pho_nui',
-        teamName: 'FC Phố Núi',
-        logoUrl: '',
-        captainId: 'captain_02',
-        captainName: 'Trần Văn Nam',
-        captainPhone: '0912345678',
-        captainEmail: 'nam@ballhub.com',
-        membersCount: 16,
-        status: RegistrationStatus.approved,
-        registeredAt: now.subtract(const Duration(days: 4)),
-      ),
-      TournamentTeam(
-        id: 'tt_03',
-        tournamentId: tournamentId,
-        teamId: 'team_con_loc_do',
-        teamName: 'FC Cơn Lốc Đỏ',
-        logoUrl: '',
-        captainId: 'captain_03',
-        captainName: 'Lê Hoàng Minh',
-        captainPhone: '0987654321',
-        captainEmail: 'minh@ballhub.com',
-        membersCount: 15,
-        status: RegistrationStatus.approved,
-        registeredAt: now.subtract(const Duration(days: 3)),
-      ),
-      TournamentTeam(
-        id: 'tt_04',
-        tournamentId: tournamentId,
-        teamId: 'team_song_han',
-        teamName: 'FC Sông Hàn Đà Nẵng',
-        logoUrl: '',
-        captainId: 'captain_04',
-        captainName: 'Phan Đình Tùng',
-        captainPhone: '0933445566',
-        captainEmail: 'tung@ballhub.com',
-        membersCount: 14,
-        status: RegistrationStatus.approved,
-        registeredAt: now.subtract(const Duration(days: 3)),
-      ),
-    ];
-  }
-
-  static List<TournamentMatch> _getFallbackSampleMatches(String tournamentId) {
-    final now = DateTime.now();
-    return [
-      TournamentMatch(
-        id: 'match_01',
-        tournamentId: tournamentId,
-        round: 1,
-        roundName: 'Vòng 1',
-        homeTeamId: 'team_sao_vang',
-        homeTeamName: 'FC Sao Vàng',
-        awayTeamId: 'team_con_loc_do',
-        awayTeamName: 'FC Cơn Lốc Đỏ',
-        scheduledTime: now.subtract(const Duration(hours: 3)),
-        venue: 'Sân bóng Gia Định',
-        status: MatchStatus.finished,
-        homeScore: 3,
-        awayScore: 1,
-        isConfirmed: true,
-      ),
-      TournamentMatch(
-        id: 'match_02',
-        tournamentId: tournamentId,
-        round: 1,
-        roundName: 'Vòng 1',
-        homeTeamId: 'team_song_han',
-        homeTeamName: 'FC Sông Hàn Đà Nẵng',
-        awayTeamId: 'team_pho_nui',
-        awayTeamName: 'FC Phố Núi',
-        scheduledTime: now.subtract(const Duration(minutes: 30)),
-        venue: 'Làng Thể Thao Tuyên Sơn',
-        status: MatchStatus.inProgress,
-        homeScore: 2,
-        awayScore: 2,
-        isConfirmed: false,
-      ),
-      TournamentMatch(
-        id: 'match_03',
-        tournamentId: tournamentId,
-        round: 2,
-        roundName: 'Vòng 2',
-        homeTeamId: 'team_sao_vang',
-        homeTeamName: 'FC Sao Vàng',
-        awayTeamId: 'team_song_han',
-        awayTeamName: 'FC Sông Hàn Đà Nẵng',
-        scheduledTime: now.add(const Duration(days: 1, hours: 2)),
-        venue: 'Sân bóng Gia Định',
-        status: MatchStatus.scheduled,
-        isConfirmed: false,
-      ),
-      TournamentMatch(
-        id: 'match_04',
-        tournamentId: tournamentId,
-        round: 2,
-        roundName: 'Vòng 2',
-        homeTeamId: 'team_pho_nui',
-        homeTeamName: 'FC Phố Núi',
-        awayTeamId: 'team_con_loc_do',
-        awayTeamName: 'FC Cơn Lốc Đỏ',
-        scheduledTime: now.add(const Duration(days: 2, hours: 3)),
-        venue: 'Sân vận động Mỹ Đình',
-        status: MatchStatus.scheduled,
-        isConfirmed: false,
-      ),
-    ];
-  }
-
-  static List<StandingsRow> _getFallbackSampleStandings(String tournamentId) {
-    return const [
-      StandingsRow(
-        teamId: 'team_sao_vang',
-        teamName: 'FC Sao Vàng',
-        played: 1,
-        won: 1,
-        drawn: 0,
-        lost: 0,
-        goalsFor: 3,
-        goalsAgainst: 1,
-        goalDifference: 2,
-        points: 3,
-        rank: 1,
-      ),
-      StandingsRow(
-        teamId: 'team_song_han',
-        teamName: 'FC Sông Hàn Đà Nẵng',
-        played: 1,
-        won: 0,
-        drawn: 1,
-        lost: 0,
-        goalsFor: 2,
-        goalsAgainst: 2,
-        goalDifference: 0,
-        points: 1,
-        rank: 2,
-      ),
-      StandingsRow(
-        teamId: 'team_pho_nui',
-        teamName: 'FC Phố Núi',
-        played: 1,
-        won: 0,
-        drawn: 1,
-        lost: 0,
-        goalsFor: 2,
-        goalsAgainst: 2,
-        goalDifference: 0,
-        points: 1,
-        rank: 3,
-      ),
-      StandingsRow(
-        teamId: 'team_con_loc_do',
-        teamName: 'FC Cơn Lốc Đỏ',
-        played: 1,
-        won: 0,
-        drawn: 0,
-        lost: 1,
-        goalsFor: 1,
-        goalsAgainst: 3,
-        goalDifference: -2,
-        points: 0,
-        rank: 4,
-      ),
-    ];
+  @visibleForTesting
+  static void resetCacheForTesting() {
+    _userRegisteredTeams.clear();
+    _userGeneratedMatches.clear();
+    _userStandings.clear();
   }
 
   // ----------------------------------------------------
@@ -288,7 +62,7 @@ class ApiTournamentRepository implements TournamentRepository {
 
   @override
   Stream<List<Tournament>> watchTournaments() {
-    refreshTournaments();
+    scheduleMicrotask(() => refreshTournaments());
     return _tournamentsController.stream;
   }
 
@@ -306,14 +80,12 @@ class ApiTournamentRepository implements TournamentRepository {
       _cachedTournaments = list;
       _tournamentsController.add(list);
       return list;
-    } catch (e) {
+    } catch (_) {
       if (_cachedTournaments.isEmpty) {
-        _cachedTournaments = _getFallbackSampleTournaments();
-        _tournamentsController.add(_cachedTournaments);
-        return _cachedTournaments;
+        _cachedTournaments = TournamentSeedData.getSampleTournaments();
       }
-      _tournamentsController.addError(e);
-      return [];
+      _tournamentsController.add(_cachedTournaments);
+      return _cachedTournaments;
     }
   }
 
@@ -349,8 +121,37 @@ class ApiTournamentRepository implements TournamentRepository {
       'status': tournament.status.name,
     };
 
-    await _api.post('/tournaments', body: body);
-    await refreshTournaments();
+    try {
+      final res = await _api.post('/tournaments', body: body);
+      final id = (res is Map && res['id'] != null)
+          ? res['id'].toString()
+          : tournament.id;
+      final created = tournament.copyWith(id: id);
+      if (_cachedTournaments.isEmpty) {
+        _cachedTournaments = TournamentSeedData.getSampleTournaments();
+      }
+      _cachedTournaments = [
+        created,
+        ..._cachedTournaments.where((t) => t.id != id),
+      ];
+      _tournamentsController.add(_cachedTournaments);
+    } catch (e) {
+      if (e is ApiException &&
+          (e.code == 'NETWORK_ERROR' ||
+              e.code == 'TIMEOUT' ||
+              e.statusCode == 503)) {
+        if (_cachedTournaments.isEmpty) {
+          _cachedTournaments = TournamentSeedData.getSampleTournaments();
+        }
+        _cachedTournaments = [
+          tournament,
+          ..._cachedTournaments.where((t) => t.id != tournament.id),
+        ];
+        _tournamentsController.add(_cachedTournaments);
+        return;
+      }
+      rethrow;
+    }
   }
 
   @override
@@ -368,33 +169,75 @@ class ApiTournamentRepository implements TournamentRepository {
       'status': tournament.status.name,
     };
 
-    await _api.patch('/tournaments/${tournament.id}', body: body);
-    await refreshTournaments();
+    try {
+      await _api.patch('/tournaments/${tournament.id}', body: body);
+      _cachedTournaments = _cachedTournaments
+          .map((t) => t.id == tournament.id ? tournament : t)
+          .toList();
+      _tournamentsController.add(_cachedTournaments);
+    } catch (e) {
+      if (e is ApiException &&
+          (e.code == 'NETWORK_ERROR' ||
+              e.code == 'TIMEOUT' ||
+              e.statusCode == 503)) {
+        _cachedTournaments = _cachedTournaments
+            .map((t) => t.id == tournament.id ? tournament : t)
+            .toList();
+        _tournamentsController.add(_cachedTournaments);
+        return;
+      }
+      rethrow;
+    }
   }
 
   @override
   Future<void> deleteTournament(String tournamentId) async {
-    await _api.delete('/tournaments/$tournamentId');
-    await refreshTournaments();
+    _userRegisteredTeams.remove(tournamentId);
+    _userGeneratedMatches.remove(tournamentId);
+    _userStandings.remove(tournamentId);
+    try {
+      await _api.delete('/tournaments/$tournamentId');
+      _cachedTournaments = _cachedTournaments
+          .where((t) => t.id != tournamentId)
+          .toList();
+      _tournamentsController.add(_cachedTournaments);
+    } catch (e) {
+      if (e is ApiException &&
+          (e.code == 'NETWORK_ERROR' ||
+              e.code == 'TIMEOUT' ||
+              e.statusCode == 503)) {
+        _cachedTournaments = _cachedTournaments
+            .where((t) => t.id != tournamentId)
+            .toList();
+        _tournamentsController.add(_cachedTournaments);
+        return;
+      }
+      rethrow;
+    }
   }
 
   // ----------------------------------------------------
   // TEAMS & REGISTRATION
   // ----------------------------------------------------
 
-  StreamController<List<TournamentTeam>> _getTeamsController(String tournamentId) {
+  /// Quản lý luồng phát sóng (Broadcast Stream) danh sách đội bóng cho từng giải đấu
+  StreamController<List<TournamentTeam>> _getTeamsController(
+    String tournamentId,
+  ) {
     return _teamsControllers.putIfAbsent(
       tournamentId,
       () => StreamController<List<TournamentTeam>>.broadcast(),
     );
   }
 
+  /// Lắng nghe luồng dữ liệu đội bóng theo thời gian thực cho giải đấu [tournamentId]
   @override
   Stream<List<TournamentTeam>> watchTeams(String tournamentId) {
     refreshTeams(tournamentId);
     return _getTeamsController(tournamentId).stream;
   }
 
+  /// Tải mới danh sách đội bóng từ Backend REST API và cập nhật luồng phát sóng
   Future<List<TournamentTeam>> refreshTeams(String tournamentId) async {
     final controller = _getTeamsController(tournamentId);
     try {
@@ -403,16 +246,32 @@ class ApiTournamentRepository implements TournamentRepository {
       if (res is List) {
         for (final item in res) {
           if (item is Map) {
-            list.add(TournamentTeam.fromMap(item, item['id']?.toString() ?? ''));
+            list.add(
+              TournamentTeam.fromMap(item, item['id']?.toString() ?? ''),
+            );
           }
         }
       }
-      controller.add(list);
-      return list;
+      final local = _userRegisteredTeams[tournamentId] ?? [];
+      final combined = [
+        ...local,
+        ...list.where((t) => !local.any((l) => l.teamId == t.teamId)),
+      ];
+      controller.add(combined);
+      return combined;
     } catch (_) {
-      final fallback = _getFallbackSampleTeams(tournamentId);
-      controller.add(fallback);
-      return fallback;
+      // Chỉ gán dữ liệu mẫu khi là giải đấu demo hệ thống ('tour_ballhub_cup_2026')
+      // Tuyệt đối không để dữ liệu mẫu rò rỉ vào giải đấu do người dùng tự tạo
+      if (tournamentId == sampleDemoTournamentId &&
+          (!_userRegisteredTeams.containsKey(tournamentId) ||
+              _userRegisteredTeams[tournamentId]!.isEmpty)) {
+        final fallback = TournamentSeedData.getSampleTeams(tournamentId);
+        controller.add(fallback);
+        return fallback;
+      }
+      final local = _userRegisteredTeams[tournamentId] ?? [];
+      controller.add(local);
+      return local;
     }
   }
 
@@ -429,7 +288,25 @@ class ApiTournamentRepository implements TournamentRepository {
       'membersCount': team.membersCount,
     };
 
-    await _api.post('/tournaments/${team.tournamentId}/registrations', body: body);
+    final list = _userRegisteredTeams.putIfAbsent(team.tournamentId, () => []);
+    if (!list.any((t) => t.teamId == team.teamId)) {
+      list.add(team);
+    }
+
+    try {
+      await _api.post(
+        '/tournaments/${team.tournamentId}/registrations',
+        body: body,
+      );
+    } catch (e) {
+      if (e is! ApiException ||
+          (e.code != 'NETWORK_ERROR' &&
+              e.code != 'TIMEOUT' &&
+              e.statusCode != 503)) {
+        list.removeWhere((t) => t.id == team.id);
+        rethrow;
+      }
+    }
     await refreshTeams(team.tournamentId);
   }
 
@@ -441,15 +318,34 @@ class ApiTournamentRepository implements TournamentRepository {
     String? note,
     String? reviewedBy,
   }) async {
-    final body = {
-      'status': status.name,
-      'reviewNote': note,
-    };
+    final body = {'status': status.name, 'reviewNote': note};
 
-    await _api.patch(
-      '/tournaments/$tournamentId/registrations/$teamRegistrationId',
-      body: body,
-    );
+    final list = _userRegisteredTeams[tournamentId];
+    if (list != null) {
+      final index = list.indexWhere((t) => t.id == teamRegistrationId);
+      if (index != -1) {
+        list[index] = list[index].copyWith(
+          status: status,
+          reviewNote: note,
+          reviewedBy: reviewedBy ?? 'Admin',
+          reviewedAt: DateTime.now(),
+        );
+      }
+    }
+
+    try {
+      await _api.patch(
+        '/tournaments/$tournamentId/registrations/$teamRegistrationId',
+        body: body,
+      );
+    } catch (e) {
+      if (e is! ApiException ||
+          (e.code != 'NETWORK_ERROR' &&
+              e.code != 'TIMEOUT' &&
+              e.statusCode != 503)) {
+        rethrow;
+      }
+    }
     await refreshTeams(tournamentId);
   }
 
@@ -457,7 +353,9 @@ class ApiTournamentRepository implements TournamentRepository {
   // MATCHES & SCHEDULE
   // ----------------------------------------------------
 
-  StreamController<List<TournamentMatch>> _getMatchesController(String tournamentId) {
+  StreamController<List<TournamentMatch>> _getMatchesController(
+    String tournamentId,
+  ) {
     return _matchesControllers.putIfAbsent(
       tournamentId,
       () => StreamController<List<TournamentMatch>>.broadcast(),
@@ -478,40 +376,101 @@ class ApiTournamentRepository implements TournamentRepository {
       if (res is List) {
         for (final item in res) {
           if (item is Map) {
-            list.add(TournamentMatch.fromMap(item, item['id']?.toString() ?? ''));
+            list.add(
+              TournamentMatch.fromMap(item, item['id']?.toString() ?? ''),
+            );
           }
         }
       }
-      controller.add(list);
-      return list;
+      final local = _userGeneratedMatches[tournamentId] ?? [];
+      final combined = [
+        ...local,
+        ...list.where((m) => !local.any((l) => l.id == m.id)),
+      ];
+      controller.add(combined);
+      return combined;
     } catch (_) {
-      final fallback = _getFallbackSampleMatches(tournamentId);
-      controller.add(fallback);
-      return fallback;
+      // Chỉ gán lịch thi đấu mẫu khi là giải đấu demo hệ thống
+      if (tournamentId == sampleDemoTournamentId &&
+          (!_userGeneratedMatches.containsKey(tournamentId) ||
+              _userGeneratedMatches[tournamentId]!.isEmpty)) {
+        final fallback = TournamentSeedData.getSampleMatches(tournamentId);
+        controller.add(fallback);
+        return fallback;
+      }
+      final local = _userGeneratedMatches[tournamentId] ?? [];
+      controller.add(local);
+      return local;
     }
   }
 
   @override
-  Future<void> generateSchedule(String tournamentId, {String venue = 'Sân vận động chính'}) async {
-    await _api.post('/tournaments/$tournamentId/schedule', body: {
-      'venue': venue,
-    });
+  Future<void> generateSchedule(
+    String tournamentId, {
+    String venue = 'Sân vận động chính',
+  }) async {
+    try {
+      await _api.post(
+        '/tournaments/$tournamentId/schedule',
+        body: {'venue': venue},
+      );
+    } catch (e) {
+      if (e is! ApiException ||
+          (e.code != 'NETWORK_ERROR' &&
+              e.code != 'TIMEOUT' &&
+              e.statusCode != 503)) {
+        rethrow;
+      }
+      final tournament = await getTournament(tournamentId);
+      if (tournament != null) {
+        final teams = (_userRegisteredTeams[tournamentId] ?? [])
+            .where((t) => t.isApproved)
+            .toList();
+        final existing = _userGeneratedMatches[tournamentId] ?? [];
+        if (teams.length >= 2) {
+          final generated = ScheduleGenerator.generate(
+            tournament: tournament,
+            approvedTeams: teams,
+            existingMatches: existing,
+            defaultVenue: venue,
+          );
+          _userGeneratedMatches[tournamentId] = generated;
+        }
+      }
+    }
     await refreshMatches(tournamentId);
     await refreshStandings(tournamentId);
     await refreshTournaments();
   }
 
   @override
-  Future<void> saveMatches(String tournamentId, List<TournamentMatch> matches) async {
-    // In API-first architecture, schedule generation is done by POST /schedule on backend.
-    // If client submits a custom match list:
-    for (final m in matches) {
-      await _api.patch('/matches/${m.id}', body: {
-        'scheduledTime': m.scheduledTime.toIso8601String(),
-        'venue': m.venue,
-        'notes': m.notes,
-        'status': m.status.name,
-      });
+  Future<void> saveMatches(
+    String tournamentId,
+    List<TournamentMatch> matches,
+  ) async {
+    final list = _userGeneratedMatches.putIfAbsent(tournamentId, () => []);
+    list.clear();
+    list.addAll(matches);
+
+    try {
+      for (final m in matches) {
+        await _api.patch(
+          '/matches/${m.id}',
+          body: {
+            'scheduledTime': m.scheduledTime.toIso8601String(),
+            'venue': m.venue,
+            'notes': m.notes,
+            'status': m.status.name,
+          },
+        );
+      }
+    } catch (e) {
+      if (e is! ApiException ||
+          (e.code != 'NETWORK_ERROR' &&
+              e.code != 'TIMEOUT' &&
+              e.statusCode != 503)) {
+        rethrow;
+      }
     }
     await refreshMatches(tournamentId);
   }
@@ -549,7 +508,9 @@ class ApiTournamentRepository implements TournamentRepository {
   // STANDINGS
   // ----------------------------------------------------
 
-  StreamController<List<StandingsRow>> _getStandingsController(String tournamentId) {
+  StreamController<List<StandingsRow>> _getStandingsController(
+    String tournamentId,
+  ) {
     return _standingsControllers.putIfAbsent(
       tournamentId,
       () => StreamController<List<StandingsRow>>.broadcast(),
@@ -570,22 +531,55 @@ class ApiTournamentRepository implements TournamentRepository {
       if (res is List) {
         for (final item in res) {
           if (item is Map) {
-            list.add(StandingsRow.fromMap(item, item['teamId']?.toString() ?? ''));
+            list.add(
+              StandingsRow.fromMap(item, item['teamId']?.toString() ?? ''),
+            );
           }
         }
       }
-      controller.add(list);
-      return list;
+      final local = _userStandings[tournamentId] ?? [];
+      final combined = [
+        ...local,
+        ...list.where((s) => !local.any((l) => l.teamId == s.teamId)),
+      ];
+      controller.add(combined);
+      return combined;
     } catch (_) {
-      final fallback = _getFallbackSampleStandings(tournamentId);
-      controller.add(fallback);
-      return fallback;
+      // Chỉ gán bảng xếp hạng mẫu khi là giải đấu demo hệ thống
+      if (tournamentId == sampleDemoTournamentId &&
+          (!_userStandings.containsKey(tournamentId) ||
+              _userStandings[tournamentId]!.isEmpty)) {
+        final fallback = TournamentSeedData.getSampleStandings(tournamentId);
+        controller.add(fallback);
+        return fallback;
+      }
+      final local = _userStandings[tournamentId] ?? [];
+      controller.add(local);
+      return local;
     }
   }
 
   @override
   Future<void> recalculateAndSaveStandings(String tournamentId) async {
-    await _api.post('/tournaments/$tournamentId/standings/recalculate');
+    try {
+      await _api.post('/tournaments/$tournamentId/standings/recalculate');
+    } catch (e) {
+      if (e is! ApiException ||
+          (e.code != 'NETWORK_ERROR' &&
+              e.code != 'TIMEOUT' &&
+              e.statusCode != 503)) {
+        rethrow;
+      }
+      final teams = (_userRegisteredTeams[tournamentId] ?? [])
+          .where((t) => t.isApproved)
+          .toList();
+      final matches = _userGeneratedMatches[tournamentId] ?? [];
+      final calculated = StandingsCalculator.compute(
+        teams: teams,
+        matches: matches,
+      );
+      _userStandings[tournamentId] = calculated;
+    }
     await refreshStandings(tournamentId);
   }
 

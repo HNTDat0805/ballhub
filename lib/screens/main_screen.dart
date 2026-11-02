@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../core/theme/app_theme.dart';
 import '../features/booking/data/api_booking_repository.dart';
 import '../features/booking/presentation/screens/field_list_screen.dart';
@@ -26,7 +27,9 @@ class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
 
   late final _tournamentRepo = ApiTournamentRepository();
-  late final _tournamentController = TournamentController(repository: _tournamentRepo);
+  late final _tournamentController = TournamentController(
+    repository: _tournamentRepo,
+  );
   late final _bookingRepo = ApiBookingRepository();
 
   void _navigateToTab(int index) {
@@ -38,13 +41,15 @@ class _MainScreenState extends State<MainScreen> {
     return ValueListenableBuilder<AppUser?>(
       valueListenable: UserService.currentUserNotifier,
       builder: (context, userUpdate, _) {
-        final effectiveUser = userUpdate ??
+        final effectiveUser =
+            userUpdate ??
             widget.demoUser ??
             AppUser(
               userId: AuthService.uid ?? '',
               fullName: AuthService.currentUser?.displayName?.isNotEmpty == true
                   ? AuthService.currentUser!.displayName!
-                  : (AuthService.currentUser?.email?.split('@').first ?? 'Cầu thủ Ballhub'),
+                  : (AuthService.currentUser?.email?.split('@').first ??
+                        'Cầu thủ Ballhub'),
               email: AuthService.currentUser?.email ?? '',
               position: 'Cầu thủ',
               area: '',
@@ -75,55 +80,52 @@ class _MainScreenState extends State<MainScreen> {
         ];
 
         return Scaffold(
-          body: IndexedStack(
-            index: _currentIndex,
-            children: pages,
+          body: IndexedStack(index: _currentIndex, children: pages),
+          bottomNavigationBar: Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              border: Border(
+                top: BorderSide(color: AppTheme.borderColor, width: 1),
+              ),
+            ),
+            child: BottomNavigationBar(
+              currentIndex: _currentIndex,
+              onTap: _navigateToTab,
+              selectedItemColor: AppTheme.primaryDarkGreen,
+              unselectedItemColor: AppTheme.textMuted,
+              backgroundColor: Colors.white,
+              elevation: 0,
+              type: BottomNavigationBarType.fixed,
+              items: const [
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.explore_outlined),
+                  activeIcon: Icon(Icons.explore),
+                  label: 'Khám phá',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.emoji_events_outlined),
+                  activeIcon: Icon(Icons.emoji_events),
+                  label: 'Giải đấu',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.stadium_outlined),
+                  activeIcon: Icon(Icons.stadium),
+                  label: 'Đặt sân',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.groups_outlined),
+                  activeIcon: Icon(Icons.groups),
+                  label: 'Đội bóng',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.person_outline),
+                  activeIcon: Icon(Icons.person),
+                  label: 'Cá nhân',
+                ),
+              ],
+            ),
           ),
-      bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          border: Border(
-            top: BorderSide(color: AppTheme.borderColor, width: 1),
-          ),
-        ),
-        child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: _navigateToTab,
-          selectedItemColor: AppTheme.primaryDarkGreen,
-          unselectedItemColor: AppTheme.textMuted,
-          backgroundColor: Colors.white,
-          elevation: 0,
-          type: BottomNavigationBarType.fixed,
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.explore_outlined),
-              activeIcon: Icon(Icons.explore),
-              label: 'Khám phá',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.emoji_events_outlined),
-              activeIcon: Icon(Icons.emoji_events),
-              label: 'Giải đấu',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.stadium_outlined),
-              activeIcon: Icon(Icons.stadium),
-              label: 'Đặt sân',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.groups_outlined),
-              activeIcon: Icon(Icons.groups),
-              label: 'Đội bóng',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline),
-              activeIcon: Icon(Icons.person),
-              label: 'Cá nhân',
-            ),
-          ],
-        ),
-      ),
-    );
+        );
       },
     );
   }

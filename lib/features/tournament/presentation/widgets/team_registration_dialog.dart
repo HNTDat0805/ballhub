@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../../core/auth/auth_context.dart';
 import '../../domain/models/tournament.dart';
 import '../../domain/models/tournament_team.dart';
@@ -30,6 +31,7 @@ class _TeamRegistrationDialogState extends State<TeamRegistrationDialog> {
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
   int _membersCount = 11;
+  bool _isSubmitting = false;
 
   @override
   void initState() {
@@ -48,28 +50,45 @@ class _TeamRegistrationDialogState extends State<TeamRegistrationDialog> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
+    if (_isSubmitting) return;
     if (_formKey.currentState?.validate() ?? false) {
-      final user = AuthContext.instance.currentUser;
-      final teamId = 'team_${DateTime.now().millisecondsSinceEpoch}';
-      final registrationId = 'reg_${DateTime.now().millisecondsSinceEpoch}_${user.id}';
+      setState(() => _isSubmitting = true);
+      try {
+        final user = AuthContext.instance.currentUser;
+        final teamId = 'team_${DateTime.now().millisecondsSinceEpoch}';
+        final registrationId =
+            'reg_${DateTime.now().millisecondsSinceEpoch}_${user.id}';
 
-      final team = TournamentTeam(
-        id: registrationId,
-        tournamentId: widget.tournament.id,
-        teamId: user.teamId ?? teamId,
-        teamName: _teamNameController.text.trim(),
-        captainId: user.id,
-        captainName: _captainNameController.text.trim(),
-        captainPhone: _phoneController.text.trim(),
-        captainEmail: _emailController.text.trim(),
-        membersCount: _membersCount,
-        status: RegistrationStatus.pending,
-        registeredAt: DateTime.now(),
-      );
+        final team = TournamentTeam(
+          id: registrationId,
+          tournamentId: widget.tournament.id,
+          teamId: user.teamId ?? teamId,
+          teamName: _teamNameController.text.trim(),
+          captainId: user.id,
+          captainName: _captainNameController.text.trim(),
+          captainPhone: _phoneController.text.trim(),
+          captainEmail: _emailController.text.trim(),
+          membersCount: _membersCount,
+          status: RegistrationStatus.pending,
+          registeredAt: DateTime.now(),
+        );
 
-      widget.onRegister(team);
-      Navigator.of(context).pop();
+        final dynamic result = widget.onRegister(team);
+        if (result is Future) {
+          await result;
+        }
+
+        if (mounted) {
+          Navigator.of(context).pop();
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() => _isSubmitting = false);
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text('Lỗi khi đăng ký đội: $e')));
+        }
+      }
     }
   }
 
@@ -80,7 +99,10 @@ class _TeamRegistrationDialogState extends State<TeamRegistrationDialog> {
         children: [
           const Icon(Icons.group_add, color: Color(0xFF0F9D58)),
           const SizedBox(width: 8),
-          const Text('Đăng ký đội tham gia', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text(
+            'Đăng ký đội tham gia',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
         ],
       ),
       content: SingleChildScrollView(
@@ -92,7 +114,10 @@ class _TeamRegistrationDialogState extends State<TeamRegistrationDialog> {
             children: [
               Text(
                 'Giải đấu: ${widget.tournament.name}',
-                style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF1A237E)),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1A237E),
+                ),
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -103,8 +128,12 @@ class _TeamRegistrationDialogState extends State<TeamRegistrationDialog> {
                   prefixIcon: Icon(Icons.shield_outlined),
                 ),
                 validator: (val) {
-                  if (val == null || val.trim().isEmpty) return 'Vui lòng nhập tên đội bóng';
-                  if (val.trim().length < 3) return 'Tên đội phải từ 3 ký tự trở lên';
+                  if (val == null || val.trim().isEmpty) {
+                    return 'Vui lòng nhập tên đội bóng';
+                  }
+                  if (val.trim().length < 3) {
+                    return 'Tên đội phải từ 3 ký tự trở lên';
+                  }
                   return null;
                 },
               ),
@@ -116,7 +145,9 @@ class _TeamRegistrationDialogState extends State<TeamRegistrationDialog> {
                   prefixIcon: Icon(Icons.person_outline),
                 ),
                 validator: (val) {
-                  if (val == null || val.trim().isEmpty) return 'Vui lòng nhập tên đội trưởng';
+                  if (val == null || val.trim().isEmpty) {
+                    return 'Vui lòng nhập tên đội trưởng';
+                  }
                   return null;
                 },
               ),
@@ -130,7 +161,9 @@ class _TeamRegistrationDialogState extends State<TeamRegistrationDialog> {
                   prefixIcon: Icon(Icons.phone_outlined),
                 ),
                 validator: (val) {
-                  if (val == null || val.trim().isEmpty) return 'Vui lòng nhập số điện thoại';
+                  if (val == null || val.trim().isEmpty) {
+                    return 'Vui lòng nhập số điện thoại';
+                  }
                   if (!RegExp(r'^\d{9,11}$').hasMatch(val.trim())) {
                     return 'Số điện thoại không hợp lệ (9-11 chữ số)';
                   }
@@ -146,8 +179,12 @@ class _TeamRegistrationDialogState extends State<TeamRegistrationDialog> {
                   prefixIcon: Icon(Icons.email_outlined),
                 ),
                 validator: (val) {
-                  if (val == null || val.trim().isEmpty) return 'Vui lòng nhập email';
-                  if (!val.contains('@') || !val.contains('.')) return 'Email không hợp lệ';
+                  if (val == null || val.trim().isEmpty) {
+                    return 'Vui lòng nhập email';
+                  }
+                  if (!val.contains('@') || !val.contains('.')) {
+                    return 'Email không hợp lệ';
+                  }
                   return null;
                 },
               ),
@@ -176,12 +213,21 @@ class _TeamRegistrationDialogState extends State<TeamRegistrationDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
           child: const Text('Hủy bỏ'),
         ),
         ElevatedButton(
-          onPressed: _submit,
-          child: const Text('Xác nhận đăng ký'),
+          onPressed: _isSubmitting ? null : _submit,
+          child: _isSubmitting
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : const Text('Xác nhận đăng ký'),
         ),
       ],
     );

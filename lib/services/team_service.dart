@@ -1,6 +1,9 @@
 import 'package:flutter/foundation.dart';
+
 import '../core/api/api_client.dart';
+import '../core/auth/auth_context.dart' hide AppUser;
 import '../models/team.dart';
+import '../data/seeds/team_seed_data.dart';
 import 'auth_service.dart';
 
 class AppException implements Exception {
@@ -22,7 +25,9 @@ class TeamService {
   static void resetStateForTesting() {
     _leftTeamIds.clear();
     _deletedTeamIds.clear();
+    _deletedTeamNames.clear();
     _userCreatedTeams.clear();
+    _localInvitations.clear();
   }
 
   // Báo cho các màn hình biết dữ liệu đội đã thay đổi để load lại
@@ -31,19 +36,37 @@ class TeamService {
 
   static final Set<String> _leftTeamIds = {};
   static final Set<String> _deletedTeamIds = {};
+  static final Set<String> _deletedTeamNames = {};
   static final List<Team> _userCreatedTeams = [];
+  static final List<FriendlyInvitation> _localInvitations = [];
+
+  /// Danh sách các đội bóng do người dùng vừa tạo (lưu trong bộ nhớ cục bộ để phản hồi UI ngay lập tức)
+  static List<Team> get localTeams => List.unmodifiable(
+    _userCreatedTeams.where((t) {
+      if (_leftTeamIds.contains(t.teamId)) return false;
+      if (_deletedTeamIds.contains(t.teamId)) return false;
+      if (_deletedTeamNames.contains(t.teamName.toLowerCase())) return false;
+      return true;
+    }),
+  );
 
   /// Dọn dẹp trạng thái cục bộ khi người dùng đăng xuất
   static void clearLocalState() {
     _leftTeamIds.clear();
     _deletedTeamIds.clear();
+    _deletedTeamNames.clear();
     _userCreatedTeams.clear();
+    _localInvitations.clear();
     _notify();
   }
 
   // ================= ĐỘI BÓNG =================
 
-  static Future<List<Team>> search({String keyword = '', String area = ''}) async {
+  static Future<List<Team>> search({
+    String keyword = '',
+    String area = '',
+  }) async {
+    List<Team> list = [];
     try {
       final params = <String, dynamic>{
         if (keyword.isNotEmpty) 'keyword': keyword,
@@ -51,17 +74,53 @@ class TeamService {
       };
       final res = await _api.get('/teams', queryParams: params);
       if (res is List) {
-        final list = res
+        list = res
             .whereType<Map>()
             .map((m) => Team.fromMap(Map<String, dynamic>.from(m)))
             .toList();
-        if (list.isNotEmpty) return list;
       }
-      return _getFallbackSampleTeams(keyword: keyword, area: area);
+      if (list.isEmpty) {
+        list = TeamSeedData.getSampleTeams(keyword: keyword, area: area);
+      }
     } catch (_) {
       // Tự động dự phòng danh sách đội bóng mẫu khi backend chưa khởi động
-      return _getFallbackSampleTeams(keyword: keyword, area: area);
+      list = TeamSeedData.getSampleTeams(keyword: keyword, area: area);
     }
+
+    final matchingCreated = _userCreatedTeams.where((t) {
+      if (area.isNotEmpty &&
+          !t.area.toLowerCase().contains(area.toLowerCase())) {
+        return false;
+      }
+      if (keyword.isNotEmpty &&
+          !t.teamName.toLowerCase().contains(keyword.toLowerCase()) &&
+          !t.area.toLowerCase().contains(keyword.toLowerCase())) {
+        return false;
+      }
+      return true;
+    }).toList();
+
+    final combined =
+        [
+          ...matchingCreated,
+          ...list.where(
+            (t) => !matchingCreated.any(
+              (u) =>
+                  u.teamId == t.teamId ||
+                  u.teamName.toLowerCase() == t.teamName.toLowerCase(),
+            ),
+          ),
+        ].where((t) {
+          if (_deletedTeamIds.contains(t.teamId)) {
+            return false;
+          }
+          if (_deletedTeamNames.contains(t.teamName.toLowerCase())) {
+            return false;
+          }
+          return true;
+        }).toList();
+
+    return combined;
   }
 
   static Future<List<Team>> getMyTeams() async {
@@ -76,35 +135,82 @@ class TeamService {
       }
     } catch (_) {}
 
-    final all = [
-      ..._userCreatedTeams,
-      ...result.where((t) => !_userCreatedTeams.any((u) => u.teamId == t.teamId)),
-    ].where((t) => !_leftTeamIds.contains(t.teamId) && !_deletedTeamIds.contains(t.teamId)).toList();
+    final all =
+        [
+          ..._userCreatedTeams,
+          ...result.where(
+            (t) => !_userCreatedTeams.any(
+              (u) =>
+                  u.teamId == t.teamId ||
+                  u.teamName.toLowerCase() == t.teamName.toLowerCase(),
+            ),
+          ),
+        ].where((t) {
+          if (_leftTeamIds.contains(t.teamId)) {
+            return false;
+          }
+          if (_deletedTeamIds.contains(t.teamId)) {
+            return false;
+          }
+          if (_deletedTeamNames.contains(t.teamName.toLowerCase())) {
+            return false;
+          }
+          return true;
+        }).toList();
 
     return all;
   }
 
   static Future<Team?> getTeam(String teamId) async {
-    if (_deletedTeamIds.contains(teamId)) return null;
-    final created = _userCreatedTeams.where((t) => t.teamId == teamId).firstOrNull;
-    if (created != null) return created;
+    if (_deletedTeamIds.contains(teamId)) {
+      return null;
+    }
+    final created = _userCreatedTeams
+        .where((t) => t.teamId == teamId)
+        .firstOrNull;
+    if (created != null) {
+      if (_deletedTeamNames.contains(created.teamName.toLowerCase())) {
+        return null;
+      }
+      return created;
+    }
 
     try {
       final res = await _api.get('/teams/$teamId');
       if (res is Map) {
-        return Team.fromMap(Map<String, dynamic>.from(res));
+        final t = Team.fromMap(Map<String, dynamic>.from(res));
+        if (_deletedTeamIds.contains(t.teamId) ||
+            _deletedTeamNames.contains(t.teamName.toLowerCase())) {
+          return null;
+        }
+        return t;
       }
     } catch (_) {}
-    return _getFallbackSampleTeams().firstWhere(
-      (t) => t.teamId == teamId,
-      orElse: () => _getFallbackSampleTeams().first,
-    );
+
+    final fallback = TeamSeedData.getSampleTeams().where((t) {
+      if (_deletedTeamIds.contains(t.teamId)) return false;
+      if (_deletedTeamNames.contains(t.teamName.toLowerCase())) return false;
+      return t.teamId == teamId;
+    }).firstOrNull;
+
+    return fallback;
   }
 
-  static Future<void> createTeam(String name, String area, String description) async {
+  static Future<void> createTeam(
+    String name,
+    String area,
+    String description, {
+    String? placeId,
+    double? latitude,
+    double? longitude,
+    String? province,
+    String? district,
+    String? ward,
+  }) async {
     final uid = AuthService.uid ?? 'current_user';
+    final localId = 'team_${DateTime.now().millisecondsSinceEpoch}';
     final newTeam = Team(
-      teamId: 'team_${DateTime.now().millisecondsSinceEpoch}',
+      teamId: localId,
       teamName: name,
       area: area,
       description: description,
@@ -112,18 +218,50 @@ class TeamService {
       captainName: AuthService.currentUser?.displayName ?? 'Tôi (Đội trưởng)',
       memberCount: 1,
       createdAt: DateTime.now(),
+      placeId: placeId,
+      latitude: latitude,
+      longitude: longitude,
+      province: province,
+      district: district,
+      ward: ward,
     );
     _userCreatedTeams.insert(0, newTeam);
     try {
-      await _api.post('/teams', body: {
-        'name': name,
-        'area': area,
-        'description': description,
-      });
+      final res = await _api.post(
+        '/teams',
+        body: {
+          'name': name,
+          'area': area,
+          'description': description,
+          if (placeId != null && placeId.isNotEmpty) 'placeId': placeId,
+          if (latitude != null) 'latitude': latitude,
+          if (longitude != null) 'longitude': longitude,
+          if (province != null && province.isNotEmpty) 'province': province,
+          if (district != null && district.isNotEmpty) 'district': district,
+          if (ward != null && ward.isNotEmpty) 'ward': ward,
+        },
+      );
+      if (res is Map) {
+        final serverTeam = Team.fromMap(Map<String, dynamic>.from(res));
+        final idx = _userCreatedTeams.indexWhere(
+          (t) =>
+              t.teamId == localId ||
+              t.teamName.toLowerCase() == name.toLowerCase(),
+        );
+        if (idx != -1) {
+          _userCreatedTeams[idx] = serverTeam;
+        } else {
+          _userCreatedTeams.insert(0, serverTeam);
+        }
+      }
     } catch (e) {
       if (e is ApiException) {
-        if (e.code == 'NETWORK_ERROR' || e.code == 'TIMEOUT' || e.statusCode == 503) {
-          debugPrint('TeamService.createTeam server offline, keeping local team: $e');
+        if (e.code == 'NETWORK_ERROR' ||
+            e.code == 'TIMEOUT' ||
+            e.statusCode == 503) {
+          debugPrint(
+            'TeamService.createTeam server offline, keeping local team: $e',
+          );
         } else {
           _userCreatedTeams.remove(newTeam);
           throw AppException(e.message);
@@ -136,7 +274,18 @@ class TeamService {
     }
   }
 
-  static Future<void> updateTeam(String teamId, String name, String area, String description) async {
+  static Future<void> updateTeam(
+    String teamId,
+    String name,
+    String area,
+    String description, {
+    String? placeId,
+    double? latitude,
+    double? longitude,
+    String? province,
+    String? district,
+    String? ward,
+  }) async {
     final idx = _userCreatedTeams.indexWhere((t) => t.teamId == teamId);
     if (idx != -1) {
       final old = _userCreatedTeams[idx];
@@ -149,19 +298,38 @@ class TeamService {
         captainName: old.captainName,
         memberCount: old.memberCount,
         createdAt: old.createdAt,
+        placeId: placeId ?? old.placeId,
+        latitude: latitude ?? old.latitude,
+        longitude: longitude ?? old.longitude,
+        province: province ?? old.province,
+        district: district ?? old.district,
+        ward: ward ?? old.ward,
       );
     }
 
     try {
-      await _api.patch('/teams/$teamId', body: {
-        'name': name,
-        'area': area,
-        'description': description,
-      });
+      await _api.patch(
+        '/teams/$teamId',
+        body: {
+          'name': name,
+          'area': area,
+          'description': description,
+          if (placeId != null && placeId.isNotEmpty) 'placeId': placeId,
+          if (latitude != null) 'latitude': latitude,
+          if (longitude != null) 'longitude': longitude,
+          if (province != null && province.isNotEmpty) 'province': province,
+          if (district != null && district.isNotEmpty) 'district': district,
+          if (ward != null && ward.isNotEmpty) 'ward': ward,
+        },
+      );
     } catch (e) {
       if (e is ApiException) {
-        if (e.code == 'NETWORK_ERROR' || e.code == 'TIMEOUT' || e.statusCode == 503) {
-          debugPrint('TeamService.updateTeam server offline, keeping local update: $e');
+        if (e.code == 'NETWORK_ERROR' ||
+            e.code == 'TIMEOUT' ||
+            e.statusCode == 503) {
+          debugPrint(
+            'TeamService.updateTeam server offline, keeping local update: $e',
+          );
         } else {
           throw AppException(e.message);
         }
@@ -173,17 +341,71 @@ class TeamService {
     }
   }
 
-  /// Rã / Giải tán đội bóng (Chỉ dành cho Đội trưởng)
-  static Future<void> deleteTeam(String teamId) async {
+  /// Giải tán đội bóng (Chỉ dành cho Đội trưởng)
+  static Future<void> deleteTeam(String teamId, {String? teamName}) async {
+    final originalIndex = _userCreatedTeams.indexWhere(
+      (t) =>
+          t.teamId == teamId ||
+          (teamName != null &&
+              t.teamName.toLowerCase() == teamName.toLowerCase()),
+    );
+    final originalTeam = originalIndex != -1
+        ? _userCreatedTeams[originalIndex]
+        : null;
+    final resolvedName = teamName ?? originalTeam?.teamName;
+
     _deletedTeamIds.add(teamId);
-    _userCreatedTeams.removeWhere((t) => t.teamId == teamId);
+    if (originalTeam != null && originalTeam.teamId != teamId) {
+      _deletedTeamIds.add(originalTeam.teamId);
+    }
+    if (resolvedName != null && resolvedName.isNotEmpty) {
+      _deletedTeamNames.add(resolvedName.toLowerCase());
+    }
+
+    if (originalIndex != -1) {
+      _userCreatedTeams.removeAt(originalIndex);
+    }
+
     try {
       await _api.delete('/teams/$teamId');
     } catch (e) {
-      if (e is ApiException && e.statusCode != 404 && !e.message.contains('Không tìm thấy')) {
-        throw AppException(e.message);
+      if (e is ApiException) {
+        if (e.code == 'NETWORK_ERROR' ||
+            e.code == 'TIMEOUT' ||
+            e.statusCode == 503) {
+          debugPrint(
+            'TeamService.deleteTeam server offline, keeping local deletion: $e',
+          );
+        } else if (e.statusCode == 404 ||
+            e.message.contains('Không tìm thấy')) {
+          debugPrint(
+            'TeamService.deleteTeam 404 on server, keeping local deletion: $e',
+          );
+        } else {
+          _deletedTeamIds.remove(teamId);
+          if (originalTeam != null && originalTeam.teamId != teamId) {
+            _deletedTeamIds.remove(originalTeam.teamId);
+          }
+          if (resolvedName != null && resolvedName.isNotEmpty) {
+            _deletedTeamNames.remove(resolvedName.toLowerCase());
+          }
+          if (originalTeam != null) {
+            _userCreatedTeams.insert(originalIndex, originalTeam);
+          }
+          throw AppException(e.message);
+        }
+      } else {
+        debugPrint(
+          'TeamService.deleteTeam unexpected error, keeping local deletion: $e',
+        );
       }
     } finally {
+      // Dọn dẹp teamId của người dùng nếu họ đang giữ id của đội này
+      final cur = AuthContext.instance.currentUser;
+      if (cur.teamId == teamId ||
+          (originalTeam != null && cur.teamId == originalTeam.teamId)) {
+        AuthContext.instance.switchUser(cur.copyWith(teamId: null));
+      }
       _notify();
     }
   }
@@ -197,8 +419,26 @@ class TeamService {
         await _api.delete('/teams/$teamId/members/$uid');
       }
     } catch (e) {
-      if (e is ApiException && e.statusCode != 404 && !e.message.contains('Không tìm thấy')) {
-        throw AppException(e.message);
+      if (e is ApiException) {
+        if (e.code == 'NETWORK_ERROR' ||
+            e.code == 'TIMEOUT' ||
+            e.statusCode == 503) {
+          debugPrint(
+            'TeamService.leaveTeam server offline, keeping local leave: $e',
+          );
+        } else if (e.statusCode == 404 ||
+            e.message.contains('Không tìm thấy')) {
+          debugPrint(
+            'TeamService.leaveTeam 404 on server, keeping local leave: $e',
+          );
+        } else {
+          _leftTeamIds.remove(teamId);
+          throw AppException(e.message);
+        }
+      } else {
+        debugPrint(
+          'TeamService.leaveTeam unexpected error, keeping local leave: $e',
+        );
       }
     } finally {
       _notify();
@@ -219,7 +459,9 @@ class TeamService {
       }
     } catch (_) {}
 
-    final created = _userCreatedTeams.where((t) => t.teamId == teamId).firstOrNull;
+    final created = _userCreatedTeams
+        .where((t) => t.teamId == teamId)
+        .firstOrNull;
     if (created != null) {
       return [
         TeamMember(
@@ -231,7 +473,7 @@ class TeamService {
       ];
     }
 
-    final fallback = _getFallbackSampleMembers(teamId);
+    final fallback = TeamSeedData.getSampleMembers(teamId);
     if (_leftTeamIds.contains(teamId)) {
       final uid = AuthService.uid;
       return fallback.where((m) => m.userId != uid).toList();
@@ -253,10 +495,20 @@ class TeamService {
   static Future<void> removeMember(String teamId, String userId) async {
     try {
       await _api.delete('/teams/$teamId/members/$userId');
-      _notify();
     } catch (e) {
-      if (e is ApiException) throw AppException(e.message);
-      throw AppException(e.toString());
+      if (e is ApiException) {
+        if (e.code == 'NETWORK_ERROR' ||
+            e.code == 'TIMEOUT' ||
+            e.statusCode == 503) {
+          debugPrint('TeamService.removeMember server offline: $e');
+        } else {
+          throw AppException(e.message);
+        }
+      } else {
+        throw AppException(e.toString());
+      }
+    } finally {
+      _notify();
     }
   }
 
@@ -275,13 +527,24 @@ class TeamService {
 
   static Future<void> sendJoinRequest(String teamId, String message) async {
     try {
-      await _api.post('/teams/$teamId/join-requests', body: {
-        'message': message,
-      });
-      _notify();
+      await _api.post(
+        '/teams/$teamId/join-requests',
+        body: {'message': message},
+      );
     } catch (e) {
-      if (e is ApiException) throw AppException(e.message);
-      throw AppException(e.toString());
+      if (e is ApiException) {
+        if (e.code == 'NETWORK_ERROR' ||
+            e.code == 'TIMEOUT' ||
+            e.statusCode == 503) {
+          debugPrint('TeamService.sendJoinRequest server offline: $e');
+        } else {
+          throw AppException(e.message);
+        }
+      } else {
+        throw AppException(e.toString());
+      }
+    } finally {
+      _notify();
     }
   }
 
@@ -303,9 +566,10 @@ class TeamService {
 
   static Future<void> approve(JoinRequest r) async {
     try {
-      await _api.patch('/teams/${r.teamId}/join-requests/${r.requestId}', body: {
-        'status': 'Approved',
-      });
+      await _api.patch(
+        '/teams/${r.teamId}/join-requests/${r.requestId}',
+        body: {'status': 'Approved'},
+      );
       _notify();
     } catch (e) {
       if (e is ApiException) throw AppException(e.message);
@@ -315,9 +579,10 @@ class TeamService {
 
   static Future<void> reject(JoinRequest r) async {
     try {
-      await _api.patch('/teams/${r.teamId}/join-requests/${r.requestId}', body: {
-        'status': 'Rejected',
-      });
+      await _api.patch(
+        '/teams/${r.teamId}/join-requests/${r.requestId}',
+        body: {'status': 'Rejected'},
+      );
       _notify();
     } catch (e) {
       if (e is ApiException) throw AppException(e.message);
@@ -328,7 +593,10 @@ class TeamService {
   // ================= MATCHMAKING & GIAO HỮU =================
 
   /// Tìm danh sách đối thủ phù hợp theo khu vực
-  static Future<List<MatchmakingCandidate>> findOpponents({String area = '', String myTeamId = ''}) async {
+  static Future<List<MatchmakingCandidate>> findOpponents({
+    String area = '',
+    String myTeamId = '',
+  }) async {
     try {
       final params = <String, dynamic>{
         if (area.isNotEmpty) 'area': area,
@@ -338,13 +606,15 @@ class TeamService {
       if (res is List) {
         final list = res
             .whereType<Map>()
-            .map((m) => MatchmakingCandidate.fromMap(Map<String, dynamic>.from(m)))
+            .map(
+              (m) => MatchmakingCandidate.fromMap(Map<String, dynamic>.from(m)),
+            )
             .toList();
         if (list.isNotEmpty) return list;
       }
-      return _getFallbackCandidates(area: area);
+      return TeamSeedData.getSampleCandidates(area: area);
     } catch (_) {
-      return _getFallbackCandidates(area: area);
+      return TeamSeedData.getSampleCandidates(area: area);
     }
   }
 
@@ -356,241 +626,176 @@ class TeamService {
     String? proposedDate,
     String? venue,
   }) async {
+    String resolvedFromTeamId = fromTeamId ?? '';
+    String resolvedFromTeamName = 'Đội của tôi';
+
+    if (resolvedFromTeamId.isEmpty) {
+      final myTeams = await getMyTeams();
+      if (myTeams.isNotEmpty) {
+        resolvedFromTeamId = myTeams.first.teamId;
+        resolvedFromTeamName = myTeams.first.teamName;
+      } else {
+        resolvedFromTeamId = 'team_user_default';
+        resolvedFromTeamName =
+            AuthService.currentUser?.displayName ?? 'Tôi (Đội trưởng)';
+      }
+    } else {
+      final t = await getTeam(resolvedFromTeamId);
+      if (t != null) resolvedFromTeamName = t.teamName;
+    }
+
+    final targetTeam = await getTeam(toTeamId);
+    final targetTeamName = targetTeam?.teamName ?? 'Đội đối thủ';
+
     try {
       final body = {
-        if (fromTeamId != null && fromTeamId.isNotEmpty) 'fromTeamId': fromTeamId,
+        if (resolvedFromTeamId.isNotEmpty) 'fromTeamId': resolvedFromTeamId,
         'toTeamId': toTeamId,
         'message': message,
         if (proposedDate != null) 'proposedDate': proposedDate,
         if (venue != null) 'venue': venue,
       };
       final res = await _api.post('/invitations', body: body);
-      return FriendlyInvitation.fromMap(Map<String, dynamic>.from(res as Map));
+      final inv = FriendlyInvitation.fromMap(
+        Map<String, dynamic>.from(res as Map),
+      );
+      _localInvitations.insert(0, inv);
+      _notify();
+      return inv;
     } catch (e) {
-      if (e is ApiException) throw AppException(e.message);
+      if (e is ApiException) {
+        if (e.code == 'NETWORK_ERROR' ||
+            e.code == 'TIMEOUT' ||
+            e.statusCode == 503) {
+          debugPrint(
+            'TeamService.sendFriendlyInvite server offline, keeping local invitation: $e',
+          );
+          final localInv = FriendlyInvitation(
+            id: 'inv_${DateTime.now().millisecondsSinceEpoch}',
+            fromTeamId: resolvedFromTeamId,
+            fromTeamName: resolvedFromTeamName,
+            toTeamId: toTeamId,
+            toTeamName: targetTeamName,
+            status: 'Pending',
+            message: message,
+            proposedDate: proposedDate,
+            venue: venue ?? targetTeam?.area,
+            createdAt: DateTime.now(),
+          );
+          _localInvitations.insert(0, localInv);
+          _notify();
+          return localInv;
+        }
+        throw AppException(e.message);
+      }
       throw AppException(e.toString());
     }
   }
 
   /// Lấy danh sách lời mời giao hữu của đội
   static Future<List<FriendlyInvitation>> getInvitations(String teamId) async {
+    List<FriendlyInvitation> serverInvs = [];
     try {
-      final res = await _api.get('/invitations', queryParams: {'teamId': teamId});
+      final res = await _api.get(
+        '/invitations',
+        queryParams: {'teamId': teamId},
+      );
       if (res is List) {
-        return res
+        serverInvs = res
             .whereType<Map>()
-            .map((m) => FriendlyInvitation.fromMap(Map<String, dynamic>.from(m)))
+            .map(
+              (m) => FriendlyInvitation.fromMap(Map<String, dynamic>.from(m)),
+            )
             .toList();
       }
-      return [];
-    } catch (_) {
-      return [];
-    }
+    } catch (_) {}
+
+    final matchingLocal = _localInvitations.where(
+      (inv) => inv.toTeamId == teamId || inv.fromTeamId == teamId,
+    );
+
+    final all = [
+      ...matchingLocal,
+      ...serverInvs.where((s) => !_localInvitations.any((l) => l.id == s.id)),
+    ];
+    return all;
   }
 
   /// Phản hồi lời mời giao hữu ('Accepted', 'Declined', 'Cancelled')
-  static Future<void> respondInvitation(String invitationId, String status) async {
+  static Future<void> respondInvitation(
+    String invitationId,
+    String status,
+  ) async {
+    final idx = _localInvitations.indexWhere((i) => i.id == invitationId);
+    if (idx != -1) {
+      final old = _localInvitations[idx];
+      _localInvitations[idx] = FriendlyInvitation(
+        id: old.id,
+        fromTeamId: old.fromTeamId,
+        fromTeamName: old.fromTeamName,
+        toTeamId: old.toTeamId,
+        toTeamName: old.toTeamName,
+        status: status,
+        message: old.message,
+        proposedDate: old.proposedDate,
+        venue: old.venue,
+        createdAt: old.createdAt,
+      );
+    }
+
     try {
       await _api.patch('/invitations/$invitationId', body: {'status': status});
     } catch (e) {
-      if (e is ApiException) throw AppException(e.message);
+      if (e is ApiException) {
+        if (e.code == 'NETWORK_ERROR' ||
+            e.code == 'TIMEOUT' ||
+            e.statusCode == 503) {
+          debugPrint(
+            'TeamService.respondInvitation server offline, kept local status: $e',
+          );
+          _notify();
+          return;
+        }
+        throw AppException(e.message);
+      }
       throw AppException(e.toString());
+    } finally {
+      _notify();
     }
   }
 
-  // ================= FALLBACK SAMPLE DATA =================
+  /// Kiểm tra xem đã gửi lời mời giao hữu đến đội này và đang chờ phản hồi hay chưa
+  static bool hasPendingInvitation(String targetTeamId) {
+    return _localInvitations.any(
+      (inv) =>
+          inv.toTeamId == targetTeamId &&
+          (inv.status.toLowerCase() == 'pending' ||
+              inv.status.toLowerCase() == 'chờ phản hồi'),
+    );
+  }
 
-  static List<Team> _getFallbackSampleTeams({String keyword = '', String area = ''}) {
-    final now = DateTime.now();
-    final sample = [
-      Team(
-        teamId: 'team_sao_vang',
-        teamName: 'FC Sao Vàng',
-        area: 'Bình Thạnh, TP. Hồ Chí Minh',
-        description: 'Đội bóng phong trào giao lưu cuối tuần, tinh thần thể thao văn minh.',
-        captainId: 'user_captain_01',
-        captainName: 'Trần Đội Trưởng',
-        memberCount: 14,
-        createdAt: now.subtract(const Duration(days: 60)),
-      ),
-      Team(
-        teamId: 'team_rong_do',
-        teamName: 'FC Rồng Đỏ',
-        area: 'Bình Thạnh, TP. Hồ Chí Minh',
-        description: 'Chuyên cáp kèo sân 7 buổi tối, trình độ phong trào trung bình khá.',
-        captainId: 'user_captain_02',
-        captainName: 'Lê Đội Trưởng',
-        memberCount: 12,
-        createdAt: now.subtract(const Duration(days: 45)),
-      ),
-      Team(
-        teamId: 'team_chien_binh',
-        teamName: 'FC Chiến Binh Sài Gòn',
-        area: 'Quận 1, TP. Hồ Chí Minh',
-        description: 'Tập hợp anh em văn phòng đam mê bóng đá, tìm đối giao hữu thứ 4 & thứ 7.',
-        captainId: 'user_captain_03',
-        captainName: 'Nguyễn Văn Đội Trưởng',
-        memberCount: 16,
-        createdAt: now.subtract(const Duration(days: 30)),
-      ),
-      Team(
-        teamId: 'team_cau_vong',
-        teamName: 'FC Cầu Vồng Trẻ',
-        area: 'Thủ Đức, TP. Hồ Chí Minh',
-        description: 'Đội bóng thanh niên nhiệt huyết, tìm đối giao lưu học hỏi kinh nghiệm.',
-        captainId: 'user_captain_04',
-        captainName: 'Phạm Đội Trưởng',
-        memberCount: 15,
-        createdAt: now.subtract(const Duration(days: 20)),
-      ),
-      Team(
-        teamId: 'team_thu_do',
-        teamName: 'FC Thủ Đô Hà Nội',
-        area: 'Cầu Giấy, Hà Nội',
-        description: 'Đội bóng giao lưu phong trào sân 7 tại Mỹ Đình và Cầu Giấy.',
-        captainId: 'user_captain_05',
-        captainName: 'Hoàng Đội Trưởng',
-        memberCount: 18,
-        createdAt: now.subtract(const Duration(days: 15)),
-      ),
-      Team(
-        teamId: 'team_song_han',
-        teamName: 'FC Sông Hàn Đà Nẵng',
-        area: 'Hải Châu, Đà Nẵng',
-        description: 'Đội bóng trẻ nhiệt huyết khu vực Tuyên Sơn và Hải Châu.',
-        captainId: 'user_captain_06',
-        captainName: 'Vũ Đội Trưởng',
-        memberCount: 14,
-        createdAt: now.subtract(const Duration(days: 10)),
-      ),
-      Team(
-        teamId: 'team_dat_cang',
-        teamName: 'FC Đất Cảng Hải Phòng',
-        area: 'Lê Chân, Hải Phòng',
-        description: 'Đội bóng phong trào cáp kèo sân Lạch Tray và Lê Chân.',
-        captainId: 'user_captain_07',
-        captainName: 'Đặng Đội Trưởng',
-        memberCount: 15,
-        createdAt: now.subtract(const Duration(days: 9)),
-      ),
-      Team(
-        teamId: 'team_tay_do',
-        teamName: 'FC Tây Đô Cần Thơ',
-        area: 'Ninh Kiều, Cần Thơ',
-        description: 'Giao lưu bóng đá sân cỏ nhân tạo bến Ninh Kiều cuối tuần.',
-        captainId: 'user_captain_08',
-        captainName: 'Lâm Đội Trưởng',
-        memberCount: 13,
-        createdAt: now.subtract(const Duration(days: 8)),
-      ),
-      Team(
-        teamId: 'team_dat_thu',
-        teamName: 'FC Đất Thủ Bình Dương',
-        area: 'TP. Thủ Dầu Một, Bình Dương',
-        description: 'Giao lưu phong trào khu vực Thủ Dầu Một và Thuận An.',
-        captainId: 'user_captain_09',
-        captainName: 'Bùi Đội Trưởng',
-        memberCount: 16,
-        createdAt: now.subtract(const Duration(days: 7)),
-      ),
-      Team(
-        teamId: 'team_bien_hoa',
-        teamName: 'FC Miền Đông Đồng Nai',
-        area: 'TP. Biên Hòa, Đồng Nai',
-        description: 'Đội bóng giao hữu thể thao cuối tuần sân Biên Hòa.',
-        captainId: 'user_captain_10',
-        captainName: 'Dương Đội Trưởng',
-        memberCount: 14,
-        createdAt: now.subtract(const Duration(days: 6)),
-      ),
-      Team(
-        teamId: 'team_pho_bien',
-        teamName: 'FC Phố Biển Nha Trang',
-        area: 'TP. Nha Trang, Khánh Hòa',
-        description: 'Đội bóng phong trào biển Nha Trang, tìm đối giao hữu.',
-        captainId: 'user_captain_11',
-        captainName: 'Phan Đội Trưởng',
-        memberCount: 12,
-        createdAt: now.subtract(const Duration(days: 5)),
-      ),
-      Team(
-        teamId: 'team_xu_nghe',
-        teamName: 'FC Xứ Nghệ Vinh',
-        area: 'TP. Vinh, Nghệ An',
-        description: 'Đam mê bóng đá sân cỏ nhân tạo thành phố Vinh.',
-        captainId: 'user_captain_12',
-        captainName: 'Hồ Đội Trưởng',
-        memberCount: 17,
-        createdAt: now.subtract(const Duration(days: 4)),
-      ),
-    ];
-
-    return sample.where((t) {
-      if (area.isNotEmpty && !t.area.toLowerCase().contains(area.toLowerCase())) {
-        return false;
-      }
-      if (keyword.isNotEmpty) {
-        final q = keyword.toLowerCase();
-        if (!t.teamName.toLowerCase().contains(q) &&
-            !t.area.toLowerCase().contains(q) &&
-            !(t.description?.toLowerCase().contains(q) ?? false)) {
-          return false;
+  /// Lấy lời mời thi đấu giao hữu mới nhất liên quan đến đội này
+  static FriendlyInvitation? getInvitationForTeam(
+    String targetTeamId, {
+    Iterable<String>? myTeamIds,
+    bool pendingOnly = true,
+  }) {
+    final ids = myTeamIds?.toSet() ?? <String>{};
+    final match = _localInvitations.where((inv) {
+      if (inv.toTeamId == targetTeamId) {
+        if (ids.isEmpty ||
+            ids.contains(inv.fromTeamId) ||
+            inv.fromTeamId == 'team_user_default' ||
+            inv.fromTeamId.isEmpty) {
+          if (pendingOnly) {
+            final s = inv.status.toLowerCase();
+            return s == 'pending' || s == 'chờ phản hồi';
+          }
+          return true;
         }
       }
-      return true;
-    }).toList();
-  }
-
-  static List<TeamMember> _getFallbackSampleMembers(String teamId) {
-    return [
-      TeamMember(
-        userId: 'user_captain_01',
-        role: 'Captain',
-        fullName: 'Trần Đội Trưởng',
-        position: 'Tiền đạo',
-      ),
-      TeamMember(
-        userId: 'member_02',
-        role: 'Member',
-        fullName: 'Nguyễn Văn Hậu',
-        position: 'Hậu vệ',
-      ),
-      TeamMember(
-        userId: 'member_03',
-        role: 'Member',
-        fullName: 'Lê Minh Tiền',
-        position: 'Tiền vệ',
-      ),
-      TeamMember(
-        userId: 'member_04',
-        role: 'Member',
-        fullName: 'Đặng Thủ Môn',
-        position: 'Thủ môn',
-      ),
-    ];
-  }
-
-  static List<MatchmakingCandidate> _getFallbackCandidates({String area = ''}) {
-    final teams = _getFallbackSampleTeams(area: area);
-    return [
-      if (teams.isNotEmpty)
-        MatchmakingCandidate(
-          team: teams[0],
-          matchScore: 95,
-          reason: 'Cùng khu vực Bình Thạnh, trình độ phong trào cân bằng',
-        ),
-      if (teams.length > 1)
-        MatchmakingCandidate(
-          team: teams[1],
-          matchScore: 88,
-          reason: 'Thường xuyên thi đấu khung giờ tối 19:00 - 20:30',
-        ),
-      if (teams.length > 2)
-        MatchmakingCandidate(
-          team: teams[2],
-          matchScore: 82,
-          reason: 'Tỷ lệ thắng 60%, phong cách thi đấu cởi mở',
-        ),
-    ];
+      return false;
+    });
+    return match.isNotEmpty ? match.first : null;
   }
 }

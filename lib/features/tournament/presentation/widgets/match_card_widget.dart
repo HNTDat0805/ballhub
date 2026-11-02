@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../domain/models/match.dart';
 import 'status_badge.dart';
 
@@ -10,15 +11,12 @@ class MatchCardWidget extends StatelessWidget {
   final TournamentMatch match;
   final VoidCallback? onTap;
 
-  const MatchCardWidget({
-    super.key,
-    required this.match,
-    this.onTap,
-  });
+  const MatchCardWidget({super.key, required this.match, this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final dateStr = '${match.scheduledTime.day.toString().padLeft(2, '0')}/${match.scheduledTime.month.toString().padLeft(2, '0')} ${match.scheduledTime.hour.toString().padLeft(2, '0')}:${match.scheduledTime.minute.toString().padLeft(2, '0')}';
+    final dateStr =
+        '${match.scheduledTime.day.toString().padLeft(2, '0')}/${match.scheduledTime.month.toString().padLeft(2, '0')} ${match.scheduledTime.hour.toString().padLeft(2, '0')}:${match.scheduledTime.minute.toString().padLeft(2, '0')}';
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -36,7 +34,10 @@ class MatchCardWidget extends StatelessWidget {
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.blue.shade50,
                           borderRadius: BorderRadius.circular(6),
@@ -53,7 +54,10 @@ class MatchCardWidget extends StatelessWidget {
                       const SizedBox(width: 8),
                       Text(
                         dateStr,
-                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                        ),
                       ),
                     ],
                   ),
@@ -76,7 +80,10 @@ class MatchCardWidget extends StatelessWidget {
                           child: Text(
                             match.homeTeamName,
                             textAlign: TextAlign.end,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
@@ -85,8 +92,13 @@ class MatchCardWidget extends StatelessWidget {
                           radius: 14,
                           backgroundColor: Colors.blue.shade100,
                           child: Text(
-                            match.homeTeamName.isNotEmpty ? match.homeTeamName[0] : 'H',
-                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                            match.homeTeamName.isNotEmpty
+                                ? match.homeTeamName[0]
+                                : 'H',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ],
@@ -96,14 +108,19 @@ class MatchCardWidget extends StatelessWidget {
                   // Score Box
                   Container(
                     margin: const EdgeInsets.symmetric(horizontal: 14),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: match.isOfficialResult
                           ? const Color(0xFF0F9D58).withValues(alpha: 0.12)
                           : Colors.grey.shade100,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: match.isOfficialResult ? const Color(0xFF0F9D58) : Colors.grey.shade300,
+                        color: match.isOfficialResult
+                            ? const Color(0xFF0F9D58)
+                            : Colors.grey.shade300,
                       ),
                     ),
                     child: Text(
@@ -111,7 +128,9 @@ class MatchCardWidget extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: match.isOfficialResult ? const Color(0xFF0F9D58) : Colors.black87,
+                        color: match.isOfficialResult
+                            ? const Color(0xFF0F9D58)
+                            : Colors.black87,
                       ),
                     ),
                   ),
@@ -124,15 +143,23 @@ class MatchCardWidget extends StatelessWidget {
                           radius: 14,
                           backgroundColor: Colors.red.shade100,
                           child: Text(
-                            match.awayTeamName.isNotEmpty ? match.awayTeamName[0] : 'A',
-                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                            match.awayTeamName.isNotEmpty
+                                ? match.awayTeamName[0]
+                                : 'A',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 8),
                         Flexible(
                           child: Text(
                             match.awayTeamName,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
@@ -146,7 +173,11 @@ class MatchCardWidget extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.location_on_outlined, size: 14, color: Colors.grey.shade600),
+                  Icon(
+                    Icons.location_on_outlined,
+                    size: 14,
+                    color: Colors.grey.shade600,
+                  ),
                   const SizedBox(width: 4),
                   Text(
                     match.venue,

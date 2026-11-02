@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+
 import '../../core/theme/app_theme.dart';
 import '../../models/team.dart';
 import '../../services/province_service.dart';
 import '../../services/team_service.dart';
+import '../../utils/debouncer.dart';
 import 'team_detail_screen.dart';
 import 'team_form_screen.dart';
 import '../../widgets/province_picker_modal.dart';
@@ -18,7 +20,9 @@ class TeamListScreen extends StatefulWidget {
 
 class _TeamListScreenState extends State<TeamListScreen> {
   final _searchController = TextEditingController();
-  int _selectedFilter = 0; // 0 = Tất cả, 1 = Tỉnh/Thành, 2 = Quận/Huyện, 3 = Quy mô
+  final _searchDebouncer = Debouncer(delay: const Duration(milliseconds: 350));
+  int _selectedFilter =
+      0; // 0 = Tất cả, 1 = Tỉnh/Thành, 2 = Quận/Huyện, 3 = Quy mô
   String _selectedCity = 'TP. Hồ Chí Minh';
   String? _selectedDistrict;
   String _selectedDistrictLabel = 'Khu vực';
@@ -37,12 +41,29 @@ class _TeamListScreenState extends State<TeamListScreen> {
 
   @override
   void dispose() {
+    _searchDebouncer.dispose();
     TeamService.changed.removeListener(_loadTeams);
     _searchController.dispose();
     super.dispose();
   }
 
   Future<void> _loadTeams() async {
+    final cached = TeamService.localTeams;
+    if (cached.isNotEmpty &&
+        _selectedFilter == 0 &&
+        _searchController.text.isEmpty) {
+      _teams = [
+        ...cached,
+        ..._teams.where(
+          (t) => !cached.any(
+            (c) =>
+                c.teamId == t.teamId ||
+                c.teamName.toLowerCase() == t.teamName.toLowerCase(),
+          ),
+        ),
+      ];
+    }
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -61,14 +82,13 @@ class _TeamListScreenState extends State<TeamListScreen> {
       }
 
       String keyword = _searchController.text.trim();
-      if (_selectedPitchType != null && _selectedPitchType!.isNotEmpty && keyword.isEmpty) {
+      if (_selectedPitchType != null &&
+          _selectedPitchType!.isNotEmpty &&
+          keyword.isEmpty) {
         keyword = _selectedPitchType!;
       }
 
-      final list = await TeamService.search(
-        keyword: keyword,
-        area: area,
-      );
+      final list = await TeamService.search(keyword: keyword, area: area);
       if (!mounted) return;
       setState(() {
         _teams = list;
@@ -139,7 +159,9 @@ class _TeamListScreenState extends State<TeamListScreen> {
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(
-                      child: CircularProgressIndicator(color: AppTheme.primaryDarkGreen),
+                      child: CircularProgressIndicator(
+                        color: AppTheme.primaryDarkGreen,
+                      ),
                     );
                   }
                   if (snapshot.hasError) {
@@ -165,7 +187,9 @@ class _TeamListScreenState extends State<TeamListScreen> {
                     itemBuilder: (context, index) {
                       final item = candidates[index];
                       final team = item.team;
-                      final initial = team.teamName.isNotEmpty ? team.teamName.substring(0, 1).toUpperCase() : '?';
+                      final initial = team.teamName.isNotEmpty
+                          ? team.teamName.substring(0, 1).toUpperCase()
+                          : '?';
 
                       return Container(
                         margin: const EdgeInsets.only(bottom: 12),
@@ -202,16 +226,24 @@ class _TeamListScreenState extends State<TeamListScreen> {
                                   const SizedBox(height: 2),
                                   Text(
                                     '${team.area} • ${team.memberCount} thành viên',
-                                    style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: AppTheme.textSecondary,
+                                    ),
                                   ),
                                   const SizedBox(height: 4),
                                   Row(
                                     children: [
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                          vertical: 2,
+                                        ),
                                         decoration: BoxDecoration(
                                           color: Colors.green.shade50,
-                                          borderRadius: BorderRadius.circular(4),
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
                                         ),
                                         child: Text(
                                           '${item.matchScore}% Phù hợp',
@@ -226,7 +258,10 @@ class _TeamListScreenState extends State<TeamListScreen> {
                                       Expanded(
                                         child: Text(
                                           item.reason,
-                                          style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            color: AppTheme.textMuted,
+                                          ),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                         ),
@@ -237,20 +272,70 @@ class _TeamListScreenState extends State<TeamListScreen> {
                               ),
                             ),
                             const SizedBox(width: 8),
-                            ElevatedButton(
-                              onPressed: () {
-                                Navigator.pop(ctx);
-                                _openInviteSheet(team);
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.primaryDarkGreen,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                minimumSize: Size.zero,
+                            if (TeamService.hasPendingInvitation(team.teamId))
+                              OutlinedButton.icon(
+                                onPressed: () {
+                                  Navigator.pop(ctx);
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          TeamDetailScreen(teamId: team.teamId),
+                                    ),
+                                  ).then((_) {
+                                    if (mounted) _loadTeams();
+                                  });
+                                },
+                                style: OutlinedButton.styleFrom(
+                                  side: const BorderSide(
+                                    color: AppTheme.primaryDarkGreen,
+                                  ),
+                                  foregroundColor: AppTheme.primaryDarkGreen,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 8,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  minimumSize: Size.zero,
+                                ),
+                                icon: const Icon(
+                                  Icons.check,
+                                  size: 14,
+                                  color: AppTheme.primaryDarkGreen,
+                                ),
+                                label: const Text(
+                                  'Đã gửi',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              )
+                            else
+                              ElevatedButton(
+                                onPressed: () {
+                                  Navigator.pop(ctx);
+                                  _openInviteSheet(team);
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.primaryDarkGreen,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 8,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  minimumSize: Size.zero,
+                                ),
+                                child: const Text(
+                                  'Thách đấu',
+                                  style: TextStyle(fontSize: 12),
+                                ),
                               ),
-                              child: const Text('Thách đấu', style: TextStyle(fontSize: 12)),
-                            ),
                           ],
                         ),
                       );
@@ -265,82 +350,196 @@ class _TeamListScreenState extends State<TeamListScreen> {
     );
   }
 
-  void _openInviteSheet(Team targetTeam) {
+  void _openInviteSheet(Team targetTeam) async {
+    final myTeams = await TeamService.getMyTeams();
+    if (!mounted) return;
+
+    String? selectedFromTeamId = myTeams.isNotEmpty
+        ? myTeams.first.teamId
+        : null;
     final noteController = TextEditingController();
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.fromLTRB(
-          24,
-          24,
-          24,
-          MediaQuery.of(ctx).viewInsets.bottom + 24,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Thách đấu giao hữu với ${targetTeam.teamName}',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Đội trưởng: ${targetTeam.captainName} · Khu vực: ${targetTeam.area.isNotEmpty ? targetTeam.area : "Chưa rõ"}',
-              style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: noteController,
-              maxLines: 3,
-              decoration: InputDecoration(
-                hintText: 'Nhập lời nhắn cáp kèo (ví dụ: Tối Thứ 6 tuần này sân 7 người, chia 50/50 tiền sân)...',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) => Padding(
+          padding: EdgeInsets.fromLTRB(
+            24,
+            24,
+            24,
+            MediaQuery.of(ctx).viewInsets.bottom + 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Thách đấu giao hữu với ${targetTeam.teamName}',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textPrimary,
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () async {
-                final message = noteController.text.trim();
-                if (message.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Vui lòng nhập lời nhắn cáp kèo')),
-                  );
-                  return;
-                }
-                Navigator.pop(ctx);
-                try {
-                  await TeamService.sendFriendlyInvite(
-                    toTeamId: targetTeam.teamId,
-                    message: message,
-                  );
-                  if (!mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Đã gửi lời mời giao hữu thành công tới ${targetTeam.teamName}!'),
-                      backgroundColor: AppTheme.primaryDarkGreen,
+              const SizedBox(height: 8),
+              Text(
+                'Đội trưởng: ${targetTeam.captainName} · Khu vực: ${targetTeam.area.isNotEmpty ? targetTeam.area : "Chưa rõ"}',
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              if (myTeams.isNotEmpty) ...[
+                const Text(
+                  'Gửi lời mời từ đội bóng của bạn:',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                DropdownButtonFormField<String>(
+                  initialValue: selectedFromTeamId,
+                  decoration: InputDecoration(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
                     ),
-                  );
-                } catch (e) {
-                  if (!mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(e.toString().replaceFirst('Exception: ', '')),
-                      backgroundColor: AppTheme.errorRed,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                  );
-                }
-              },
-              child: const Text('Gửi lời mời ngay'),
-            ),
-          ],
+                    filled: true,
+                    fillColor: Colors.grey.shade50,
+                  ),
+                  items: myTeams
+                      .map(
+                        (t) => DropdownMenuItem(
+                          value: t.teamId,
+                          child: Text(
+                            t.teamName,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (val) {
+                    if (val != null) {
+                      setModalState(() => selectedFromTeamId = val);
+                    }
+                  },
+                ),
+                const SizedBox(height: 14),
+              ] else ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.amber.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline,
+                        color: Colors.amber.shade800,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      const Expanded(
+                        child: Text(
+                          'Bạn chưa có đội bóng riêng. Lời mời sẽ được gửi dưới danh nghĩa Đội cá nhân của bạn.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.textPrimary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+              ],
+              TextField(
+                controller: noteController,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  hintText: 'Nhập lời nhắn cáp kèo (ví dụ: Tối Thứ 6 tuần này sân 7 người, chia 50/50 tiền sân)...',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () async {
+                  final message = noteController.text.trim();
+                  if (message.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Vui lòng nhập lời nhắn cáp kèo'),
+                      ),
+                    );
+                    return;
+                  }
+                  final messenger = ScaffoldMessenger.of(context);
+                  Navigator.pop(ctx);
+                  try {
+                    await TeamService.sendFriendlyInvite(
+                      fromTeamId: selectedFromTeamId,
+                      toTeamId: targetTeam.teamId,
+                      message: message,
+                    );
+                    messenger.showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Đã gửi lời mời giao hữu thành công tới ${targetTeam.teamName}!',
+                        ),
+                        backgroundColor: AppTheme.primaryDarkGreen,
+                      ),
+                    );
+                  } catch (e) {
+                    messenger.showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          e.toString().replaceFirst('Exception: ', ''),
+                        ),
+                        backgroundColor: AppTheme.errorRed,
+                      ),
+                    );
+                  }
+                },
+                child: const Text('Gửi lời mời ngay'),
+              ),
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  Future<void> _openCreateTeam() async {
+    final created = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => const TeamFormScreen()),
+    );
+    if (created == true && mounted) {
+      setState(() {
+        _selectedFilter = 0;
+        _selectedDistrict = null;
+        _selectedDistrictLabel = 'Khu vực';
+        _selectedPitchType = null;
+        _selectedPitchTypeLabel = 'Quy mô';
+        _searchController.clear();
+        _isLoading = true;
+      });
+      await _loadTeams();
+    }
   }
 
   @override
@@ -349,6 +548,21 @@ class _TeamListScreenState extends State<TeamListScreen> {
       backgroundColor: AppTheme.surfaceColor,
       appBar: AppBar(
         title: const Text('Đội bóng'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add_rounded),
+            tooltip: 'Tạo đội bóng',
+            onPressed: _openCreateTeam,
+          ),
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded),
+            tooltip: 'Làm mới',
+            onPressed: () {
+              setState(() => _isLoading = true);
+              _loadTeams();
+            },
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -364,16 +578,20 @@ class _TeamListScreenState extends State<TeamListScreen> {
                     ? IconButton(
                         icon: const Icon(Icons.clear, size: 18),
                         onPressed: () {
+                          _searchDebouncer.cancel();
                           _searchController.clear();
                           _loadTeams();
                         },
                       )
                     : null,
                 isDense: true,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
               ),
               onChanged: (val) {
-                _loadTeams();
+                _searchDebouncer.run(() => _loadTeams());
               },
             ),
           ),
@@ -403,7 +621,10 @@ class _TeamListScreenState extends State<TeamListScreen> {
                   1,
                   '$_selectedCity ⌄',
                   onTap: () async {
-                    final chosen = await ProvincePickerModal.show(context, currentProvince: _selectedCity);
+                    final chosen = await ProvincePickerModal.show(
+                      context,
+                      currentProvince: _selectedCity,
+                    );
                     if (chosen != null) {
                       setState(() {
                         if (_selectedCity != chosen) {
@@ -426,7 +647,9 @@ class _TeamListScreenState extends State<TeamListScreen> {
                   '$_selectedDistrictLabel ⌄',
                   onTap: () async {
                     // Cung cấp danh sách quận/huyện chuẩn xác theo thành phố đã chọn
-                    final districts = ProvinceService.getDistricts(_selectedCity);
+                    final districts = ProvinceService.getDistricts(
+                      _selectedCity,
+                    );
                     final districtOptions = [
                       const FilterOption<String?>(
                         value: null,
@@ -468,10 +691,26 @@ class _TeamListScreenState extends State<TeamListScreen> {
                       title: 'Quy mô thi đấu ưa thích',
                       selectedValue: _selectedPitchType,
                       options: const [
-                        FilterOption(value: null, label: 'Tất cả quy mô', subtitle: 'Mọi hình thức thi đấu giao hữu'),
-                        FilterOption(value: 'sân 7', label: 'Sân 7 người', subtitle: '7 vs 7 · Kèo sân 7 phong trào'),
-                        FilterOption(value: 'sân 5', label: 'Sân 5 người', subtitle: '5 vs 5 · Kèo sân mini đá nhanh'),
-                        FilterOption(value: 'sân 11', label: 'Sân 11 người', subtitle: '11 vs 11 · Sân lớn 11 người'),
+                        FilterOption(
+                          value: null,
+                          label: 'Tất cả quy mô',
+                          subtitle: 'Mọi hình thức thi đấu giao hữu',
+                        ),
+                        FilterOption(
+                          value: 'sân 7',
+                          label: 'Sân 7 người',
+                          subtitle: '7 vs 7 · Kèo sân 7 phong trào',
+                        ),
+                        FilterOption(
+                          value: 'sân 5',
+                          label: 'Sân 5 người',
+                          subtitle: '5 vs 5 · Kèo sân mini đá nhanh',
+                        ),
+                        FilterOption(
+                          value: 'sân 11',
+                          label: 'Sân 11 người',
+                          subtitle: '11 vs 11 · Sân lớn 11 người',
+                        ),
                       ],
                     );
                     setState(() {
@@ -524,12 +763,21 @@ class _TeamListScreenState extends State<TeamListScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primaryDarkGreen,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
-                  icon: const Icon(Icons.sports_soccer, size: 14, color: Colors.white),
+                  icon: const Icon(
+                    Icons.sports_soccer,
+                    size: 14,
+                    color: Colors.white,
+                  ),
                   label: const Text(
                     'Tìm đối thủ',
                     style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
@@ -538,89 +786,123 @@ class _TeamListScreenState extends State<TeamListScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 12),
+          if (_isLoading && _teams.isNotEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: LinearProgressIndicator(
+                color: AppTheme.primaryDarkGreen,
+                backgroundColor: AppTheme.surfaceColor,
+                minHeight: 2,
+              ),
+            ),
+          const SizedBox(height: 8),
 
           // Danh sách đội bóng từ Firestore
           Expanded(
-            child: _isLoading
+            child: (_isLoading && _teams.isEmpty)
                 ? const Center(
-                    child: CircularProgressIndicator(color: AppTheme.primaryDarkGreen),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CircularProgressIndicator(
+                          color: AppTheme.primaryDarkGreen,
+                        ),
+                        SizedBox(height: 16),
+                        Text(
+                          'Đang tải danh sách đội bóng...',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: AppTheme.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
                   )
                 : _errorMessage != null
-                    ? Center(
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.error_outline,
+                          size: 48,
+                          color: AppTheme.errorRed,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          _errorMessage!,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: AppTheme.textSecondary),
+                        ),
+                        const SizedBox(height: 12),
+                        ElevatedButton(
+                          onPressed: _loadTeams,
+                          child: const Text('Thử lại'),
+                        ),
+                      ],
+                    ),
+                  )
+                : _teams.isEmpty
+                ? RefreshIndicator(
+                    color: AppTheme.primaryDarkGreen,
+                    onRefresh: _loadTeams,
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      child: Container(
+                        alignment: Alignment.center,
+                        padding: const EdgeInsets.all(24),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.error_outline, size: 48, color: AppTheme.errorRed),
-                            const SizedBox(height: 12),
-                            Text(
-                              _errorMessage!,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(color: AppTheme.textSecondary),
+                            const SizedBox(height: 60),
+                            Icon(
+                              Icons.group_outlined,
+                              size: 64,
+                              color: AppTheme.textMuted.withValues(alpha: 0.5),
                             ),
-                            const SizedBox(height: 12),
-                            ElevatedButton(
-                              onPressed: _loadTeams,
-                              child: const Text('Thử lại'),
-                            ),
-                          ],
-                        ),
-                      )
-                    : _teams.isEmpty
-                        ? Center(
-                            child: Padding(
-                              padding: const EdgeInsets.all(24),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.group_outlined,
-                                    size: 64,
-                                    color: AppTheme.textMuted.withValues(alpha: 0.5),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  const Text(
-                                    'Chưa có đội bóng nào',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppTheme.textPrimary,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  const Text(
-                                    'Hãy tạo đội bóng đầu tiên để bắt đầu cáp kèo và tham gia các giải đấu!',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
-                                  ),
-                                  const SizedBox(height: 20),
-                                  ElevatedButton.icon(
-                                    onPressed: () async {
-                                      await Navigator.push(
-                                        context,
-                                        MaterialPageRoute(builder: (_) => const TeamFormScreen()),
-                                      );
-                                      _loadTeams();
-                                    },
-                                    icon: const Icon(Icons.add),
-                                    label: const Text('Tạo đội bóng ngay'),
-                                  ),
-                                ],
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Chưa có đội bóng nào',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.textPrimary,
                               ),
                             ),
-                          )
-                        : RefreshIndicator(
-                            color: AppTheme.primaryDarkGreen,
-                            onRefresh: _loadTeams,
-                            child: ListView.builder(
-                              padding: const EdgeInsets.only(bottom: 24),
-                              itemCount: _teams.length,
-                              itemBuilder: (context, index) {
-                                final team = _teams[index];
-                                return _buildTeamCard(team);
-                              },
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Hãy tạo đội bóng đầu tiên để bắt đầu cáp kèo và tham gia các giải đấu!',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: AppTheme.textSecondary,
+                              ),
                             ),
-                          ),
+                            const SizedBox(height: 20),
+                            ElevatedButton.icon(
+                              onPressed: _openCreateTeam,
+                              icon: const Icon(Icons.add),
+                              label: const Text('Tạo đội bóng ngay'),
+                            ),
+                            const SizedBox(height: 60),
+                          ],
+                        ),
+                      ),
+                    ),
+                  )
+                : RefreshIndicator(
+                    color: AppTheme.primaryDarkGreen,
+                    onRefresh: _loadTeams,
+                    child: ListView.builder(
+                      padding: const EdgeInsets.only(bottom: 24),
+                      itemCount: _teams.length,
+                      itemBuilder: (context, index) {
+                        final team = _teams[index];
+                        return _buildTeamCard(team);
+                      },
+                    ),
+                  ),
           ),
         ],
       ),
@@ -656,8 +938,8 @@ class _TeamListScreenState extends State<TeamListScreen> {
   Widget _buildTeamCard(Team team) {
     final initial = team.teamName.trim().isNotEmpty
         ? (team.teamName.trim().length >= 2
-            ? team.teamName.trim().substring(0, 2).toUpperCase()
-            : team.teamName.trim().substring(0, 1).toUpperCase())
+              ? team.teamName.trim().substring(0, 2).toUpperCase()
+              : team.teamName.trim().substring(0, 1).toUpperCase())
         : 'ĐB';
 
     return Container(
@@ -681,7 +963,9 @@ class _TeamListScreenState extends State<TeamListScreen> {
             MaterialPageRoute(
               builder: (_) => TeamDetailScreen(teamId: team.teamId),
             ),
-          );
+          ).then((_) {
+            if (mounted) _loadTeams();
+          });
         },
         borderRadius: BorderRadius.circular(16),
         child: Padding(
@@ -732,14 +1016,21 @@ class _TeamListScreenState extends State<TeamListScreen> {
                       ],
                     ),
                   ),
-                  const Icon(Icons.chevron_right, size: 22, color: AppTheme.textMuted),
+                  const Icon(
+                    Icons.chevron_right,
+                    size: 22,
+                    color: AppTheme.textMuted,
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFEFF6FF),
                       borderRadius: BorderRadius.circular(6),
@@ -756,14 +1047,21 @@ class _TeamListScreenState extends State<TeamListScreen> {
                   const SizedBox(width: 8),
                   Text(
                     '${team.memberCount} thành viên',
-                    style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textMuted,
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 10),
               Row(
                 children: [
-                  const Icon(Icons.handshake_outlined, size: 16, color: AppTheme.primaryDarkGreen),
+                  const Icon(
+                    Icons.handshake_outlined,
+                    size: 16,
+                    color: AppTheme.primaryDarkGreen,
+                  ),
                   const SizedBox(width: 6),
                   Text(
                     'Sẵn sàng giao hữu & Cáp kèo',

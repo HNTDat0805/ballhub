@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../../core/theme/app_theme.dart';
 import '../../data/booking_repository.dart';
 import '../../domain/models/field_slot.dart';
@@ -57,7 +58,15 @@ class _SlotSelectionScreenState extends State<SlotSelectionScreen> {
 
   String _formatDate(DateTime dt) {
     final local = dt.toLocal();
-    const weekDays = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật'];
+    const weekDays = [
+      'Thứ 2',
+      'Thứ 3',
+      'Thứ 4',
+      'Thứ 5',
+      'Thứ 6',
+      'Thứ 7',
+      'Chủ nhật',
+    ];
     return '${weekDays[local.weekday - 1]}, ${local.day}/${local.month}/${local.year}';
   }
 
@@ -87,7 +96,10 @@ class _SlotSelectionScreenState extends State<SlotSelectionScreen> {
                 icon: Icons.sports_soccer_rounded,
                 label: 'Sân',
                 value: widget.field.name,
-                valueStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                valueStyle: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                ),
               ),
               _SummaryRow(
                 icon: Icons.location_on_outlined,
@@ -120,7 +132,8 @@ class _SlotSelectionScreenState extends State<SlotSelectionScreen> {
               _SummaryRow(
                 icon: Icons.hourglass_empty_rounded,
                 label: 'Thời lượng',
-                value: '${totalMinutes ~/ 60} giờ${totalMinutes % 60 > 0 ? ' ${totalMinutes % 60} phút' : ''}',
+                value:
+                    '${totalMinutes ~/ 60} giờ${totalMinutes % 60 > 0 ? ' ${totalMinutes % 60} phút' : ''}',
               ),
               _SummaryRow(
                 icon: Icons.layers_rounded,
@@ -183,11 +196,16 @@ class _SlotSelectionScreenState extends State<SlotSelectionScreen> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.info_outline_rounded, size: 16, color: Colors.amber.shade800),
+                Icon(
+                  Icons.info_outline_rounded,
+                  size: 16,
+                  color: Colors.amber.shade800,
+                ),
                 const SizedBox(width: 8),
                 const Expanded(
                   child: Text(
                     'Booking sẽ ở trạng thái "Chờ xác nhận" cho đến khi chủ sân phê duyệt. '
+                    'Bạn có thể dễ dàng hủy lịch đặt sân khi có việc đột xuất. '
                     'Không thanh toán trước, chỉ thanh toán khi xác nhận tại sân.',
                     style: TextStyle(fontSize: 12, height: 1.4),
                   ),
@@ -207,12 +225,19 @@ class _SlotSelectionScreenState extends State<SlotSelectionScreen> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.error_outline_rounded, color: AppTheme.dangerRed, size: 18),
+                  const Icon(
+                    Icons.error_outline_rounded,
+                    color: AppTheme.dangerRed,
+                    size: 18,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       _controller.errorMessage!,
-                      style: const TextStyle(color: AppTheme.dangerRed, fontSize: 13),
+                      style: const TextStyle(
+                        color: AppTheme.dangerRed,
+                        fontSize: 13,
+                      ),
                     ),
                   ),
                 ],
@@ -223,14 +248,22 @@ class _SlotSelectionScreenState extends State<SlotSelectionScreen> {
             width: double.infinity,
             child: ElevatedButton(
               onPressed: _controller.isSubmitting ? null : _submit,
-              style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
               child: _controller.isSubmitting
                   ? const SizedBox(
                       height: 20,
                       width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
-                  : const Text('Xác nhận đặt sân', style: TextStyle(fontSize: 16)),
+                  : const Text(
+                      'Xác nhận đặt sân',
+                      style: TextStyle(fontSize: 16),
+                    ),
             ),
           ),
           const SizedBox(height: 32),
@@ -337,12 +370,20 @@ class _SummaryRow extends StatelessWidget {
           const SizedBox(width: 8),
           SizedBox(
             width: 80,
-            child: Text(label, style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppTheme.textSecondary,
+              ),
+            ),
           ),
           Expanded(
             child: Text(
               value,
-              style: valueStyle ?? const TextStyle(fontSize: 13, color: AppTheme.textPrimary),
+              style:
+                  valueStyle ??
+                  const TextStyle(fontSize: 13, color: AppTheme.textPrimary),
               textAlign: TextAlign.right,
             ),
           ),

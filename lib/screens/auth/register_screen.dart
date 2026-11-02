@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../core/theme/app_theme.dart';
 import '../../services/auth_service.dart';
 import '../../utils/ui_helpers.dart';
@@ -49,7 +50,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
     if (!_agreeTerms) {
-      showMessage(context, 'Vui lòng đồng ý với Điều khoản sử dụng của Ballhub');
+      showMessage(
+        context,
+        'Vui lòng đồng ý với Điều khoản sử dụng của Ballhub',
+      );
       return;
     }
     if (_passCtrl.text != _confirmPassCtrl.text) {
@@ -114,30 +118,39 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 8),
                 const Text(
                   'Tìm đội, đặt sân và sẵn sàng cho trận tiếp theo.',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppTheme.textSecondary,
-                  ),
+                  style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
                 ),
                 const SizedBox(height: 28),
 
                 // Họ và tên
                 const Text(
                   'Họ và tên',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textPrimary,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _nameCtrl,
-                  decoration: const InputDecoration(hintText: 'Nhập họ và tên của bạn'),
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Vui lòng nhập họ và tên' : null,
+                  decoration: const InputDecoration(
+                    hintText: 'Nhập họ và tên của bạn',
+                  ),
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? 'Vui lòng nhập họ và tên'
+                      : null,
                 ),
                 const SizedBox(height: 18),
 
                 // Email
                 const Text(
                   'Email',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textPrimary,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 TextFormField(
@@ -161,7 +174,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 // Mật khẩu
                 const Text(
                   'Mật khẩu',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textPrimary,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 TextFormField(
@@ -170,18 +187,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   decoration: InputDecoration(
                     hintText: 'Ít nhất 8 ký tự',
                     suffixIcon: IconButton(
-                      icon: Icon(_obscurePass ? Icons.visibility_off_outlined : Icons.visibility_outlined),
-                      onPressed: () => setState(() => _obscurePass = !_obscurePass),
+                      icon: Icon(
+                        _obscurePass
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
+                      ),
+                      onPressed: () =>
+                          setState(() => _obscurePass = !_obscurePass),
                     ),
                   ),
-                  validator: (v) => (v != null && v.length < 6) ? 'Mật khẩu cần ít nhất 6-8 ký tự' : null,
+                  validator: (v) => (v != null && v.length < 6)
+                      ? 'Mật khẩu cần ít nhất 6-8 ký tự'
+                      : null,
                 ),
                 const SizedBox(height: 18),
 
                 // Xác nhận mật khẩu
                 const Text(
                   'Xác nhận mật khẩu',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textPrimary,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 TextFormField(
@@ -190,11 +218,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   decoration: InputDecoration(
                     hintText: 'Nhập lại mật khẩu',
                     suffixIcon: IconButton(
-                      icon: Icon(_obscureConfirm ? Icons.visibility_off_outlined : Icons.visibility_outlined),
-                      onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
+                      icon: Icon(
+                        _obscureConfirm
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
+                      ),
+                      onPressed: () =>
+                          setState(() => _obscureConfirm = !_obscureConfirm),
                     ),
                   ),
-                  validator: (v) => (v == null || v.isEmpty) ? 'Vui lòng xác nhận mật khẩu' : null,
+                  validator: (v) => (v == null || v.isEmpty)
+                      ? 'Vui lòng xác nhận mật khẩu'
+                      : null,
                 ),
                 const SizedBox(height: 20),
 
@@ -211,8 +246,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         child: Checkbox(
                           value: _agreeTerms,
                           activeColor: AppTheme.primaryDarkGreen,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                          onChanged: (v) => setState(() => _agreeTerms = v ?? false),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          onChanged: (v) =>
+                              setState(() => _agreeTerms = v ?? false),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -238,7 +276,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ? const SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
                         )
                       : const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -257,7 +298,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   children: [
                     const Text(
                       'Đã có tài khoản? ',
-                      style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+                      style: TextStyle(
+                        color: AppTheme.textSecondary,
+                        fontSize: 14,
+                      ),
                     ),
                     GestureDetector(
                       onTap: () => Navigator.pop(context),

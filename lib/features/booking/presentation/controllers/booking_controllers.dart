@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+
 import '../../../../core/api/api_client.dart';
 import '../../data/booking_repository.dart';
 import '../../domain/models/booking.dart';
@@ -21,7 +22,8 @@ import '../../domain/models/football_field.dart';
 class FieldListController extends ChangeNotifier {
   final BookingRepository _repo;
 
-  FieldListController({required BookingRepository repository}) : _repo = repository;
+  FieldListController({required BookingRepository repository})
+    : _repo = repository;
 
   bool _isLoading = false;
   String? _errorMessage;
@@ -94,7 +96,8 @@ class FieldListController extends ChangeNotifier {
 class FieldDetailController extends ChangeNotifier {
   final BookingRepository _repo;
 
-  FieldDetailController({required BookingRepository repository}) : _repo = repository;
+  FieldDetailController({required BookingRepository repository})
+    : _repo = repository;
 
   bool _isLoading = false;
   String? _errorMessage;
@@ -166,15 +169,19 @@ class SlotSelectionController extends ChangeNotifier {
   int get totalAmount => _selectedSlots.fold(0, (sum, s) => sum + s.basePrice);
 
   /// Tổng thời gian tính theo phút
-  int get totalMinutes => _selectedSlots.fold(0, (sum, s) => sum + s.durationMinutes);
+  int get totalMinutes =>
+      _selectedSlots.fold(0, (sum, s) => sum + s.durationMinutes);
 
   /// Thời gian bắt đầu (slot đầu tiên)
-  DateTime? get startsAt => _selectedSlots.isEmpty ? null : _selectedSlots.first.startsAt;
+  DateTime? get startsAt =>
+      _selectedSlots.isEmpty ? null : _selectedSlots.first.startsAt;
 
   /// Thời gian kết thúc (slot cuối cùng)
-  DateTime? get endsAt => _selectedSlots.isEmpty ? null : _selectedSlots.last.endsAt;
+  DateTime? get endsAt =>
+      _selectedSlots.isEmpty ? null : _selectedSlots.last.endsAt;
 
-  String get currency => _selectedSlots.isEmpty ? 'VND' : _selectedSlots.first.currency;
+  String get currency =>
+      _selectedSlots.isEmpty ? 'VND' : _selectedSlots.first.currency;
 
   /// Kiểm tra slot có đang được chọn không
   bool isSelected(String slotId) => _selectedSlots.any((s) => s.id == slotId);
@@ -188,7 +195,8 @@ class SlotSelectionController extends ChangeNotifier {
 
     if (isSelected(slot.id)) {
       // Bỏ chọn: chỉ cho phép bỏ chọn slot đầu hoặc cuối (để giữ tính liên tiếp)
-      if (_selectedSlots.first.id == slot.id || _selectedSlots.last.id == slot.id) {
+      if (_selectedSlots.first.id == slot.id ||
+          _selectedSlots.last.id == slot.id) {
         _selectedSlots.removeWhere((s) => s.id == slot.id);
         notifyListeners();
         return null;
@@ -237,7 +245,8 @@ class SlotSelectionController extends ChangeNotifier {
 class CreateBookingController extends ChangeNotifier {
   final BookingRepository _repo;
 
-  CreateBookingController({required BookingRepository repository}) : _repo = repository;
+  CreateBookingController({required BookingRepository repository})
+    : _repo = repository;
 
   bool _isSubmitting = false;
   String? _errorMessage;
@@ -283,7 +292,8 @@ class CreateBookingController extends ChangeNotifier {
 
   String _friendlyError(ApiException e) {
     return switch (e.code) {
-      'BOOKING_CONFLICT' => 'Khung giờ này vừa được người khác đặt. Vui lòng chọn khung giờ khác.',
+      'BOOKING_CONFLICT' =>
+        'Khung giờ này vừa được người khác đặt. Vui lòng chọn khung giờ khác.',
       'FIELD_UNAVAILABLE' => 'Sân hiện không nhận đặt chỗ.',
       'NOT_FOUND' => 'Sân hoặc khung giờ không còn tồn tại.',
       'UNAUTHENTICATED' => 'Vui lòng đăng nhập để đặt sân.',
@@ -299,7 +309,8 @@ class CreateBookingController extends ChangeNotifier {
 class BookingListController extends ChangeNotifier {
   final BookingRepository _repo;
 
-  BookingListController({required BookingRepository repository}) : _repo = repository;
+  BookingListController({required BookingRepository repository})
+    : _repo = repository;
 
   bool _isLoading = false;
   String? _errorMessage;
@@ -370,7 +381,8 @@ class BookingListController extends ChangeNotifier {
 class BookingDetailController extends ChangeNotifier {
   final BookingRepository _repo;
 
-  BookingDetailController({required BookingRepository repository}) : _repo = repository;
+  BookingDetailController({required BookingRepository repository})
+    : _repo = repository;
 
   bool _isLoading = false;
   bool _isCancelling = false;
@@ -431,7 +443,8 @@ class BookingDetailController extends ChangeNotifier {
 class OwnerBookingController extends ChangeNotifier {
   final BookingRepository _repo;
 
-  OwnerBookingController({required BookingRepository repository}) : _repo = repository;
+  OwnerBookingController({required BookingRepository repository})
+    : _repo = repository;
 
   bool _isLoading = false;
   String? _errorMessage;
@@ -447,8 +460,10 @@ class OwnerBookingController extends ChangeNotifier {
     return _bookings.where((b) => b.status == _statusFilter).toList();
   }
 
-  int get pendingCount => _bookings.where((b) => b.status == BookingStatus.pending).length;
-  int get confirmedCount => _bookings.where((b) => b.status == BookingStatus.confirmed).length;
+  int get pendingCount =>
+      _bookings.where((b) => b.status == BookingStatus.pending).length;
+  int get confirmedCount =>
+      _bookings.where((b) => b.status == BookingStatus.confirmed).length;
 
   void setStatusFilter(BookingStatus? status) {
     _statusFilter = status;
@@ -511,6 +526,23 @@ class OwnerBookingController extends ChangeNotifier {
     }
   }
 
+  Future<bool> cancelBooking(String bookingId, {required String reason}) async {
+    _errorMessage = null;
+    try {
+      final updated = await _repo.ownerCancelBooking(bookingId, reason: reason);
+      _updateBooking(updated);
+      return true;
+    } on ApiException catch (e) {
+      _errorMessage = e.message;
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _errorMessage = 'Không thể hủy đặt sân. Vui lòng thử lại.';
+      notifyListeners();
+      return false;
+    }
+  }
+
   void _updateBooking(Booking updated) {
     final index = _bookings.indexWhere((b) => b.id == updated.id);
     if (index != -1) {
@@ -527,7 +559,8 @@ class OwnerBookingController extends ChangeNotifier {
 class OwnerFieldController extends ChangeNotifier {
   final BookingRepository _repo;
 
-  OwnerFieldController({required BookingRepository repository}) : _repo = repository;
+  OwnerFieldController({required BookingRepository repository})
+    : _repo = repository;
 
   bool _isLoading = false;
   bool _isSubmitting = false;

@@ -47,7 +47,10 @@ abstract class TournamentRepository {
   Future<void> saveMatches(String tournamentId, List<TournamentMatch> matches);
 
   /// Yêu cầu Backend tự động sinh lịch thi đấu theo thể thức
-  Future<void> generateSchedule(String tournamentId, {String venue = 'Sân vận động chính'});
+  Future<void> generateSchedule(
+    String tournamentId, {
+    String venue = 'Sân vận động chính',
+  });
 
   /// Cập nhật kết quả trận đấu, ghi log audit và tự động tính lại bảng xếp hạng
   Future<void> updateMatchResult({

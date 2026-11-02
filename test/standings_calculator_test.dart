@@ -48,19 +48,22 @@ void main() {
       ];
     });
 
-    test('Initial table with no matches played has 0 points and 0 games for all', () {
-      final standings = StandingsCalculator.compute(
-        teams: teams,
-        matches: [],
-      );
+    test(
+      'Initial table with no matches played has 0 points and 0 games for all',
+      () {
+        final standings = StandingsCalculator.compute(
+          teams: teams,
+          matches: [],
+        );
 
-      expect(standings.length, equals(3));
-      for (final row in standings) {
-        expect(row.played, equals(0));
-        expect(row.points, equals(0));
-        expect(row.goalDifference, equals(0));
-      }
-    });
+        expect(standings.length, equals(3));
+        for (final row in standings) {
+          expect(row.played, equals(0));
+          expect(row.points, equals(0));
+          expect(row.goalDifference, equals(0));
+        }
+      },
+    );
 
     test('Winning team gets 3 points, losing team gets 0, goal difference calculated correctly', () {
       final match1 = TournamentMatch(

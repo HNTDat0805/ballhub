@@ -54,7 +54,9 @@ class MatchAudit {
       newHomeScore: (map['newHomeScore'] as num?)?.toInt(),
       newAwayScore: (map['newAwayScore'] as num?)?.toInt(),
       updatedBy: map['updatedBy'] as String? ?? 'Admin',
-      updatedAt: DateTime.tryParse(map['updatedAt'] as String? ?? '') ?? DateTime.now(),
+      updatedAt:
+          DateTime.tryParse(map['updatedAt'] as String? ?? '') ??
+          DateTime.now(),
       reason: map['reason'] as String?,
     );
   }

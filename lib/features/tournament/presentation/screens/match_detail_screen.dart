@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../../core/auth/auth_context.dart';
 import '../../domain/models/match.dart';
 import '../../domain/models/tournament.dart';
@@ -40,10 +41,14 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
   void initState() {
     super.initState();
     _homeScoreController = TextEditingController(
-      text: widget.match.homeScore != null ? widget.match.homeScore.toString() : '',
+      text: widget.match.homeScore != null
+          ? widget.match.homeScore.toString()
+          : '',
     );
     _awayScoreController = TextEditingController(
-      text: widget.match.awayScore != null ? widget.match.awayScore.toString() : '',
+      text: widget.match.awayScore != null
+          ? widget.match.awayScore.toString()
+          : '',
     );
     _notesController = TextEditingController(text: widget.match.notes ?? '');
     _status = widget.match.status;
@@ -66,7 +71,9 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
 
     if (homeScore == null || awayScore == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng nhập tỷ số hợp lệ cho cả hai đội')),
+        const SnackBar(
+          content: Text('Vui lòng nhập tỷ số hợp lệ cho cả hai đội'),
+        ),
       );
       return;
     }
@@ -115,15 +122,19 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
     if (ok) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(confirmResult
-              ? 'Đã xác nhận kết quả & cập nhật lại Bảng xếp hạng!'
-              : 'Đã lưu tỷ số nháp thành công!'),
+          content: Text(
+            confirmResult
+                ? 'Đã xác nhận kết quả & cập nhật lại Bảng xếp hạng!'
+                : 'Đã lưu tỷ số nháp thành công!',
+          ),
         ),
       );
       Navigator.of(context).pop();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(widget.controller.errorMessage ?? 'Có lỗi xảy ra')),
+        SnackBar(
+          content: Text(widget.controller.errorMessage ?? 'Có lỗi xảy ra'),
+        ),
       );
     }
   }
@@ -131,19 +142,20 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final match = widget.match;
-    final dateStr = '${match.scheduledTime.day}/${match.scheduledTime.month}/${match.scheduledTime.year} lúc ${match.scheduledTime.hour.toString().padLeft(2, '0')}:${match.scheduledTime.minute.toString().padLeft(2, '0')}';
+    final dateStr =
+        '${match.scheduledTime.day}/${match.scheduledTime.month}/${match.scheduledTime.year} lúc ${match.scheduledTime.hour.toString().padLeft(2, '0')}:${match.scheduledTime.minute.toString().padLeft(2, '0')}';
 
     return ListenableBuilder(
       listenable: AuthContext.instance,
       builder: (context, _) {
-        final canManage = AuthContext.instance.canManageMatch(widget.tournament.organizerId);
+        final canManage = AuthContext.instance.canManageMatch(
+          widget.tournament.organizerId,
+        );
 
         return Scaffold(
           appBar: AppBar(
             title: Text(match.roundName),
-            actions: const [
-              RoleSelectorWidget(),
-            ],
+            actions: const [RoleSelectorWidget()],
           ),
           body: SingleChildScrollView(
             padding: const EdgeInsets.all(16),
@@ -162,7 +174,10 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
                           children: [
                             Text(
                               match.roundName,
-                              style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1A237E)),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF1A237E),
+                              ),
                             ),
                             MatchStatusBadge(
                               status: _status,
@@ -183,24 +198,40 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
                                     radius: 28,
                                     backgroundColor: Colors.blue.shade100,
                                     child: Text(
-                                      match.homeTeamName.isNotEmpty ? match.homeTeamName[0] : 'H',
-                                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                                      match.homeTeamName.isNotEmpty
+                                          ? match.homeTeamName[0]
+                                          : 'H',
+                                      style: const TextStyle(
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
                                     match.homeTeamName,
                                     textAlign: TextAlign.center,
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
                                   ),
-                                  const Text('Đội nhà', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                                  const Text(
+                                    'Đội nhà',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
 
                             // VS / Score indicator
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                              ),
                               child: Column(
                                 children: [
                                   if (match.hasValidScore) ...[
@@ -209,18 +240,28 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
                                       style: TextStyle(
                                         fontSize: 28,
                                         fontWeight: FontWeight.bold,
-                                        color: match.isOfficialResult ? const Color(0xFF0F9D58) : Colors.black87,
+                                        color: match.isOfficialResult
+                                            ? const Color(0xFF0F9D58)
+                                            : Colors.black87,
                                       ),
                                     ),
                                     if (match.isOfficialResult)
                                       const Text(
                                         'CHÍNH THỨC',
-                                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF0F9D58)),
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF0F9D58),
+                                        ),
                                       ),
                                   ] else
                                     const Text(
                                       'VS',
-                                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.grey),
+                                      style: TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.grey,
+                                      ),
                                     ),
                                 ],
                               ),
@@ -234,17 +275,31 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
                                     radius: 28,
                                     backgroundColor: Colors.red.shade100,
                                     child: Text(
-                                      match.awayTeamName.isNotEmpty ? match.awayTeamName[0] : 'A',
-                                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                                      match.awayTeamName.isNotEmpty
+                                          ? match.awayTeamName[0]
+                                          : 'A',
+                                      style: const TextStyle(
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
                                     match.awayTeamName,
                                     textAlign: TextAlign.center,
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
                                   ),
-                                  const Text('Đội khách', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                                  const Text(
+                                    'Đội khách',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
@@ -257,13 +312,33 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.schedule, size: 14, color: Colors.grey),
+                            const Icon(
+                              Icons.schedule,
+                              size: 14,
+                              color: Colors.grey,
+                            ),
                             const SizedBox(width: 4),
-                            Text(dateStr, style: const TextStyle(fontSize: 12, color: Colors.black87)),
+                            Text(
+                              dateStr,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.black87,
+                              ),
+                            ),
                             const SizedBox(width: 16),
-                            const Icon(Icons.location_on_outlined, size: 14, color: Colors.grey),
+                            const Icon(
+                              Icons.location_on_outlined,
+                              size: 14,
+                              color: Colors.grey,
+                            ),
                             const SizedBox(width: 4),
-                            Text(match.venue, style: const TextStyle(fontSize: 12, color: Colors.black87)),
+                            Text(
+                              match.venue,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.black87,
+                              ),
+                            ),
                           ],
                         ),
                       ],
@@ -276,7 +351,11 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
                 if (canManage) ...[
                   const Text(
                     'CẬP NHẬT TỶ SỐ VÀ TRẠNG THÁI (BAN TỔ CHỨC)',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1A237E)),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: Color(0xFF1A237E),
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Card(
@@ -293,9 +372,13 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
                                   controller: _homeScoreController,
                                   keyboardType: TextInputType.number,
                                   textAlign: TextAlign.center,
-                                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                                  style: const TextStyle(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                   decoration: InputDecoration(
-                                    labelText: 'Bàn thắng (${match.homeTeamName})',
+                                    labelText:
+                                        'Bàn thắng (${match.homeTeamName})',
                                     alignLabelWithHint: true,
                                   ),
                                 ),
@@ -306,9 +389,13 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
                                   controller: _awayScoreController,
                                   keyboardType: TextInputType.number,
                                   textAlign: TextAlign.center,
-                                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                                  style: const TextStyle(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                   decoration: InputDecoration(
-                                    labelText: 'Bàn thắng (${match.awayTeamName})',
+                                    labelText:
+                                        'Bàn thắng (${match.awayTeamName})',
                                     alignLabelWithHint: true,
                                   ),
                                 ),
@@ -318,9 +405,14 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
                           const SizedBox(height: 14),
                           DropdownButtonFormField<MatchStatus>(
                             initialValue: _status,
-                            decoration: const InputDecoration(labelText: 'Trạng thái diễn biến trận đấu'),
+                            decoration: const InputDecoration(
+                              labelText: 'Trạng thái diễn biến trận đấu',
+                            ),
                             items: MatchStatus.values.map((s) {
-                              return DropdownMenuItem(value: s, child: Text(s.displayName));
+                              return DropdownMenuItem(
+                                value: s,
+                                child: Text(s.displayName),
+                              );
                             }).toList(),
                             onChanged: (val) {
                               if (val != null) setState(() => _status = val);
@@ -331,7 +423,8 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
                             controller: _notesController,
                             decoration: const InputDecoration(
                               labelText: 'Ghi chú trận đấu (Thẻ phạt, cầu thủ ghi bàn...)',
-                              hintText: 'Nhập thông tin chi tiết biên bản trận đấu',
+                              hintText:
+                                  'Nhập thông tin chi tiết biên bản trận đấu',
                             ),
                           ),
                           const SizedBox(height: 18),
@@ -348,7 +441,9 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
                               const SizedBox(width: 12),
                               Expanded(
                                 child: ElevatedButton(
-                                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0F9D58)),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF0F9D58),
+                                  ),
                                   onPressed: widget.controller.isLoading
                                       ? null
                                       : () => _saveScore(confirmResult: true),
@@ -370,13 +465,20 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
                       padding: const EdgeInsets.all(12),
                       child: Row(
                         children: [
-                          Icon(Icons.lock_outline, color: Colors.blue.shade800, size: 20),
+                          Icon(
+                            Icons.lock_outline,
+                            color: Colors.blue.shade800,
+                            size: 20,
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               'Bạn đang xem dưới vai trò ${AuthContext.instance.currentUser.role.displayName}. '
                               'Chỉ Ban Tổ Chức mới có quyền cập nhật và xác nhận tỷ số trận đấu.',
-                              style: TextStyle(color: Colors.blue.shade900, fontSize: 12),
+                              style: TextStyle(
+                                color: Colors.blue.shade900,
+                                fontSize: 12,
+                              ),
                             ),
                           ),
                         ],

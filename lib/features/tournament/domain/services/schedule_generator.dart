@@ -22,7 +22,9 @@ class ScheduleGenerator {
       return existingMatches;
     }
 
-    final confirmedMatches = existingMatches.where((m) => m.isOfficialResult).toList();
+    final confirmedMatches = existingMatches
+        .where((m) => m.isOfficialResult)
+        .toList();
     final hasExistingConfirmed = confirmedMatches.isNotEmpty;
 
     List<TournamentMatch> newMatches;
@@ -58,7 +60,8 @@ class ScheduleGenerator {
       for (final generated in newMatches) {
         final existing = existingMatches.firstWhere(
           (e) =>
-              (e.homeTeamId == generated.homeTeamId && e.awayTeamId == generated.awayTeamId) ||
+              (e.homeTeamId == generated.homeTeamId &&
+                  e.awayTeamId == generated.awayTeamId) ||
               (e.round == generated.round &&
                   e.homeTeamId == generated.homeTeamId &&
                   e.awayTeamId == generated.awayTeamId),
@@ -113,24 +116,29 @@ class ScheduleGenerator {
         final homeTeam = (round % 2 == 0) ? team1 : team2;
         final awayTeam = (round % 2 == 0) ? team2 : team1;
 
-        final matchId = '${tournament.id}_r${roundNumber}_m${matchIdx + 1}_${homeTeam.id}_${awayTeam.id}';
+        final matchId =
+            '${tournament.id}_r${roundNumber}_m${matchIdx + 1}_${homeTeam.id}_${awayTeam.id}';
 
         // Schedule time: stagger matches by 2 hours
-        final scheduledTime = matchDateTime.add(Duration(days: round, hours: matchIdx * 2));
+        final scheduledTime = matchDateTime.add(
+          Duration(days: round, hours: matchIdx * 2),
+        );
 
-        matches.add(TournamentMatch(
-          id: matchId,
-          tournamentId: tournament.id,
-          round: roundNumber,
-          roundName: roundName,
-          homeTeamId: homeTeam.teamId,
-          homeTeamName: homeTeam.teamName,
-          awayTeamId: awayTeam.teamId,
-          awayTeamName: awayTeam.teamName,
-          scheduledTime: scheduledTime,
-          venue: venue,
-          status: MatchStatus.scheduled,
-        ));
+        matches.add(
+          TournamentMatch(
+            id: matchId,
+            tournamentId: tournament.id,
+            round: roundNumber,
+            roundName: roundName,
+            homeTeamId: homeTeam.teamId,
+            homeTeamName: homeTeam.teamName,
+            awayTeamId: awayTeam.teamId,
+            awayTeamName: awayTeam.teamName,
+            scheduledTime: scheduledTime,
+            venue: venue,
+            status: MatchStatus.scheduled,
+          ),
+        );
       }
 
       // Rotate teams using Circle method: keep teamList[0] fixed, rotate remaining
@@ -147,22 +155,27 @@ class ScheduleGenerator {
         final original = matches[i];
         final returnRoundNumber = original.round + totalRounds;
         final returnRoundName = 'Vòng $returnRoundNumber (Lượt về)';
-        final returnScheduledTime = original.scheduledTime.add(Duration(days: returnStartDay));
-        final returnMatchId = '${tournament.id}_r${returnRoundNumber}_return_${original.awayTeamId}_${original.homeTeamId}';
+        final returnScheduledTime = original.scheduledTime.add(
+          Duration(days: returnStartDay),
+        );
+        final returnMatchId =
+            '${tournament.id}_r${returnRoundNumber}_return_${original.awayTeamId}_${original.homeTeamId}';
 
-        matches.add(TournamentMatch(
-          id: returnMatchId,
-          tournamentId: tournament.id,
-          round: returnRoundNumber,
-          roundName: returnRoundName,
-          homeTeamId: original.awayTeamId,
-          homeTeamName: original.awayTeamName,
-          awayTeamId: original.homeTeamId,
-          awayTeamName: original.homeTeamName,
-          scheduledTime: returnScheduledTime,
-          venue: venue,
-          status: MatchStatus.scheduled,
-        ));
+        matches.add(
+          TournamentMatch(
+            id: returnMatchId,
+            tournamentId: tournament.id,
+            round: returnRoundNumber,
+            roundName: returnRoundName,
+            homeTeamId: original.awayTeamId,
+            homeTeamName: original.awayTeamName,
+            awayTeamId: original.homeTeamId,
+            awayTeamName: original.homeTeamName,
+            scheduledTime: returnScheduledTime,
+            venue: venue,
+            status: MatchStatus.scheduled,
+          ),
+        );
       }
     }
 
@@ -200,22 +213,25 @@ class ScheduleGenerator {
     for (int i = 0; i < teamCount ~/ 2; i++) {
       final homeTeam = teams[i];
       final awayTeam = teams[teamCount - 1 - i];
-      final matchId = '${tournament.id}_ko1_m${i + 1}_${homeTeam.id}_${awayTeam.id}';
+      final matchId =
+          '${tournament.id}_ko1_m${i + 1}_${homeTeam.id}_${awayTeam.id}';
       final scheduledTime = matchDateTime.add(Duration(hours: i * 2));
 
-      matches.add(TournamentMatch(
-        id: matchId,
-        tournamentId: tournament.id,
-        round: 1,
-        roundName: roundName,
-        homeTeamId: homeTeam.teamId,
-        homeTeamName: homeTeam.teamName,
-        awayTeamId: awayTeam.teamId,
-        awayTeamName: awayTeam.teamName,
-        scheduledTime: scheduledTime,
-        venue: venue,
-        status: MatchStatus.scheduled,
-      ));
+      matches.add(
+        TournamentMatch(
+          id: matchId,
+          tournamentId: tournament.id,
+          round: 1,
+          roundName: roundName,
+          homeTeamId: homeTeam.teamId,
+          homeTeamName: homeTeam.teamName,
+          awayTeamId: awayTeam.teamId,
+          awayTeamName: awayTeam.teamName,
+          scheduledTime: scheduledTime,
+          venue: venue,
+          status: MatchStatus.scheduled,
+        ),
+      );
     }
 
     return matches;

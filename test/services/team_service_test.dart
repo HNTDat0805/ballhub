@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:ballhub/core/api/api_client.dart';
@@ -90,31 +91,52 @@ void main() {
         expect(req.url.path, '/api/v1/teams');
         expect(req.url.queryParameters['keyword'], 'Test');
         expect(req.url.queryParameters['area'], 'Bình Thạnh');
-        return jsonResponse({'success': true, 'data': [sampleTeamMap]});
+        return jsonResponse({
+          'success': true,
+          'data': [sampleTeamMap],
+        });
       });
-      TeamService.api = ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock);
+      TeamService.api = ApiClient(
+        baseUrl: 'http://localhost:5001/api/v1',
+        client: mock,
+      );
 
-      final list = await TeamService.search(keyword: 'Test', area: 'Bình Thạnh');
+      final list = await TeamService.search(
+        keyword: 'Test',
+        area: 'Bình Thạnh',
+      );
       expect(list.length, 1);
       expect(list.first.teamName, 'FC Test Một');
     });
 
     // 2. search teams fallback
-    test('2. search teams falls back to sample teams on network error', () async {
-      final mock = MockHttpClient((req) async => jsonResponse('Error', 500));
-      TeamService.api = ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock);
+    test(
+      '2. search teams falls back to sample teams on network error',
+      () async {
+        final mock = MockHttpClient((req) async => jsonResponse('Error', 500));
+        TeamService.api = ApiClient(
+          baseUrl: 'http://localhost:5001/api/v1',
+          client: mock,
+        );
 
-      final list = await TeamService.search();
-      expect(list.isNotEmpty, true);
-    });
+        final list = await TeamService.search();
+        expect(list.isNotEmpty, true);
+      },
+    );
 
     // 3. getMyTeams
     test('3. getMyTeams fetches /teams/mine and parses list', () async {
       final mock = MockHttpClient((req) async {
         expect(req.url.path, '/api/v1/teams/mine');
-        return jsonResponse({'success': true, 'data': [sampleTeamMap]});
+        return jsonResponse({
+          'success': true,
+          'data': [sampleTeamMap],
+        });
       });
-      TeamService.api = ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock);
+      TeamService.api = ApiClient(
+        baseUrl: 'http://localhost:5001/api/v1',
+        client: mock,
+      );
 
       final list = await TeamService.getMyTeams();
       expect(list.any((t) => t.teamId == 'team_test_1'), true);
@@ -122,8 +144,13 @@ void main() {
 
     // 4. getMyTeams empty
     test('4. getMyTeams returns empty list when API returns empty and no teams created', () async {
-      final mock = MockHttpClient((req) async => jsonResponse({'success': true, 'data': []}));
-      TeamService.api = ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock);
+      final mock = MockHttpClient(
+        (req) async => jsonResponse({'success': true, 'data': []}),
+      );
+      TeamService.api = ApiClient(
+        baseUrl: 'http://localhost:5001/api/v1',
+        client: mock,
+      );
 
       final list = await TeamService.getMyTeams();
       expect(list.isEmpty, true);
@@ -135,7 +162,10 @@ void main() {
         expect(req.url.path, '/api/v1/teams/team_test_1');
         return jsonResponse({'success': true, 'data': sampleTeamMap});
       });
-      TeamService.api = ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock);
+      TeamService.api = ApiClient(
+        baseUrl: 'http://localhost:5001/api/v1',
+        client: mock,
+      );
 
       final team = await TeamService.getTeam('team_test_1');
       expect(team, isNotNull);
@@ -144,8 +174,13 @@ void main() {
 
     // 6. getTeam returns null if deleted
     test('6. getTeam returns null if team was deleted', () async {
-      final mock = MockHttpClient((req) async => jsonResponse({'success': true}));
-      TeamService.api = ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock);
+      final mock = MockHttpClient(
+        (req) async => jsonResponse({'success': true}),
+      );
+      TeamService.api = ApiClient(
+        baseUrl: 'http://localhost:5001/api/v1',
+        client: mock,
+      );
 
       await TeamService.deleteTeam('team_test_1');
       final team = await TeamService.getTeam('team_test_1');
@@ -153,35 +188,50 @@ void main() {
     });
 
     // 7. createTeam
-    test('7. createTeam posts to /teams with body and increments changed notifier', () async {
-      late Map<String, dynamic> body;
-      final mock = MockHttpClient((req) async {
-        expect(req.method, 'POST');
-        expect(req.url.path, '/api/v1/teams');
-        body = jsonDecode((req as http.Request).body);
-        return jsonResponse({'success': true, 'data': sampleTeamMap}, 201);
-      });
-      TeamService.api = ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock);
+    test(
+      '7. createTeam posts to /teams with body and increments changed notifier',
+      () async {
+        late Map<String, dynamic> body;
+        final mock = MockHttpClient((req) async {
+          expect(req.method, 'POST');
+          expect(req.url.path, '/api/v1/teams');
+          body = jsonDecode((req as http.Request).body);
+          return jsonResponse({'success': true, 'data': sampleTeamMap}, 201);
+        });
+        TeamService.api = ApiClient(
+          baseUrl: 'http://localhost:5001/api/v1',
+          client: mock,
+        );
 
-      final initialVal = TeamService.changed.value;
-      await TeamService.createTeam('FC Mới', 'Quận 7', 'Mô tả');
-      expect(body['name'], 'FC Mới');
-      expect(body['area'], 'Quận 7');
-      expect(TeamService.changed.value, initialVal + 1);
-    });
+        final initialVal = TeamService.changed.value;
+        await TeamService.createTeam('FC Mới', 'Quận 7', 'Mô tả');
+        expect(body['name'], 'FC Mới');
+        expect(body['area'], 'Quận 7');
+        expect(TeamService.changed.value, initialVal + 1);
+      },
+    );
 
     // 8. createTeam throws AppException
-    test('8. createTeam throws AppException when API rejects creation', () async {
-      final mock = MockHttpClient((req) async => jsonResponse(
-          {'success': false, 'error': {'code': 'DUPLICATE', 'message': 'Tên đội đã tồn tại'}},
-          400));
-      TeamService.api = ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock);
+    test(
+      '8. createTeam throws AppException when API rejects creation',
+      () async {
+        final mock = MockHttpClient(
+          (req) async => jsonResponse({
+            'success': false,
+            'error': {'code': 'DUPLICATE', 'message': 'Tên đội đã tồn tại'},
+          }, 400),
+        );
+        TeamService.api = ApiClient(
+          baseUrl: 'http://localhost:5001/api/v1',
+          client: mock,
+        );
 
-      expect(
-        () => TeamService.createTeam('FC Trùng', 'Q1', 'Desc'),
-        throwsA(isA<AppException>()),
-      );
-    });
+        expect(
+          () => TeamService.createTeam('FC Trùng', 'Q1', 'Desc'),
+          throwsA(isA<AppException>()),
+        );
+      },
+    );
 
     // 9. updateTeam
     test('9. updateTeam patches /teams/:id and notifies listeners', () async {
@@ -192,7 +242,10 @@ void main() {
         body = jsonDecode((req as http.Request).body);
         return jsonResponse({'success': true, 'data': sampleTeamMap});
       });
-      TeamService.api = ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock);
+      TeamService.api = ApiClient(
+        baseUrl: 'http://localhost:5001/api/v1',
+        client: mock,
+      );
 
       final initialVal = TeamService.changed.value;
       await TeamService.updateTeam('team_test_1', 'FC Đổi Tên', 'Q1', 'Bio');
@@ -202,10 +255,16 @@ void main() {
 
     // 10. updateTeam throws AppException
     test('10. updateTeam throws AppException on unauthorized error', () async {
-      final mock = MockHttpClient((req) async => jsonResponse(
-          {'success': false, 'error': {'code': 'FORBIDDEN', 'message': 'Không có quyền'}},
-          403));
-      TeamService.api = ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock);
+      final mock = MockHttpClient(
+        (req) async => jsonResponse({
+          'success': false,
+          'error': {'code': 'FORBIDDEN', 'message': 'Không có quyền'},
+        }, 403),
+      );
+      TeamService.api = ApiClient(
+        baseUrl: 'http://localhost:5001/api/v1',
+        client: mock,
+      );
 
       expect(
         () => TeamService.updateTeam('team_test_1', 'Tên', 'Area', 'Desc'),
@@ -214,39 +273,158 @@ void main() {
     });
 
     // 11. deleteTeam
-    test('11. deleteTeam deletes /teams/:id and marks team as deleted', () async {
-      final mock = MockHttpClient((req) async {
-        expect(req.method, 'DELETE');
-        expect(req.url.path, '/api/v1/teams/team_del');
-        return jsonResponse({'success': true});
-      });
-      TeamService.api = ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock);
+    test(
+      '11. deleteTeam deletes /teams/:id and marks team as deleted',
+      () async {
+        final mock = MockHttpClient((req) async {
+          expect(req.method, 'DELETE');
+          expect(req.url.path, '/api/v1/teams/team_del');
+          return jsonResponse({'success': true});
+        });
+        TeamService.api = ApiClient(
+          baseUrl: 'http://localhost:5001/api/v1',
+          client: mock,
+        );
 
-      await TeamService.deleteTeam('team_del');
-      final team = await TeamService.getTeam('team_del');
-      expect(team, isNull);
+        await TeamService.deleteTeam('team_del');
+        final team = await TeamService.getTeam('team_del');
+        expect(team, isNull);
+      },
+    );
+
+    test('11b. deleteTeam falls back to local deletion when backend server is offline (503 / NETWORK_ERROR)', () async {
+      final mock = MockHttpClient(
+        (req) async => throw http.ClientException('Connection refused'),
+      );
+      TeamService.api = ApiClient(
+        baseUrl: 'http://localhost:5001/api/v1',
+        client: mock,
+      );
+
+      await TeamService.createTeam('FC Sắp Xóa', 'Quận 1', 'Mô tả');
+      final myTeamsBefore = await TeamService.getMyTeams();
+      final createdTeam = myTeamsBefore.firstWhere(
+        (t) => t.teamName == 'FC Sắp Xóa',
+      );
+
+      // Should complete without throwing Socket/ClientException
+      await TeamService.deleteTeam(createdTeam.teamId);
+
+      final myTeamsAfter = await TeamService.getMyTeams();
+      expect(myTeamsAfter.any((t) => t.teamId == createdTeam.teamId), isFalse);
+      expect(await TeamService.getTeam(createdTeam.teamId), isNull);
+    });
+
+    test('11c. deleteTeam rethrows AppException on 403 Forbidden and preserves team', () async {
+      final mock = MockHttpClient(
+        (req) async => jsonResponse({
+          'success': false,
+          'error': {
+            'code': 'FORBIDDEN',
+            'message': 'Chỉ đội trưởng mới có quyền rã đội',
+          },
+        }, 403),
+      );
+      TeamService.api = ApiClient(
+        baseUrl: 'http://localhost:5001/api/v1',
+        client: mock,
+      );
+
+      expect(
+        () => TeamService.deleteTeam('team_forbidden'),
+        throwsA(isA<AppException>()),
+      );
+    });
+
+    test('11d. deleteTeam removes team by teamName and prevents ghost teams in getMyTeams and search', () async {
+      final mock = MockHttpClient((req) async {
+        if (req.method == 'DELETE') {
+          return jsonResponse({'success': true});
+        }
+        if (req.url.path == '/api/v1/teams/mine') {
+          return jsonResponse({
+            'success': true,
+            'data': [
+              {
+                'teamId': 'team_server_different_id',
+                'teamName': 'guygu',
+                'area': 'Thu Duc',
+                'captainId': 'user_01',
+                'captainName': 'Nguyen Van Dat',
+                'memberCount': 1,
+              },
+            ],
+          });
+        }
+        return jsonResponse({'success': true, 'data': []});
+      });
+      TeamService.api = ApiClient(
+        baseUrl: 'http://localhost:5001/api/v1',
+        client: mock,
+      );
+
+      await TeamService.deleteTeam('team_local_id', teamName: 'guygu');
+
+      final myTeams = await TeamService.getMyTeams();
+      expect(myTeams.any((t) => t.teamName.toLowerCase() == 'guygu'), isFalse);
+
+      final searchTeams = await TeamService.search(keyword: 'guygu');
+      expect(
+        searchTeams.any((t) => t.teamName.toLowerCase() == 'guygu'),
+        isFalse,
+      );
     });
 
     // 12. leaveTeam
-    test('12. leaveTeam deletes /teams/:id/members/:uid and notifies', () async {
-      final mock = MockHttpClient((req) async {
-        expect(req.method, 'DELETE');
-        return jsonResponse({'success': true});
-      });
-      TeamService.api = ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock);
+    test(
+      '12. leaveTeam deletes /teams/:id/members/:uid and notifies',
+      () async {
+        final mock = MockHttpClient((req) async {
+          expect(req.method, 'DELETE');
+          return jsonResponse({'success': true});
+        });
+        TeamService.api = ApiClient(
+          baseUrl: 'http://localhost:5001/api/v1',
+          client: mock,
+        );
 
-      await TeamService.leaveTeam('team_leave');
-      final myTeams = await TeamService.getMyTeams();
-      expect(myTeams.any((t) => t.teamId == 'team_leave'), false);
-    });
+        await TeamService.leaveTeam('team_leave');
+        final myTeams = await TeamService.getMyTeams();
+        expect(myTeams.any((t) => t.teamId == 'team_leave'), false);
+      },
+    );
+
+    test(
+      '12b. leaveTeam falls back to local leave when backend server is offline',
+      () async {
+        final mock = MockHttpClient(
+          (req) async => throw http.ClientException('Connection refused'),
+        );
+        TeamService.api = ApiClient(
+          baseUrl: 'http://localhost:5001/api/v1',
+          client: mock,
+        );
+
+        // Should not throw even when offline
+        await TeamService.leaveTeam('team_offline_leave');
+        final myTeams = await TeamService.getMyTeams();
+        expect(myTeams.any((t) => t.teamId == 'team_offline_leave'), isFalse);
+      },
+    );
 
     // 13. getMembers
     test('13. getMembers fetches /teams/:id/members', () async {
       final mock = MockHttpClient((req) async {
         expect(req.url.path, '/api/v1/teams/team_test_1/members');
-        return jsonResponse({'success': true, 'data': [sampleMemberMap]});
+        return jsonResponse({
+          'success': true,
+          'data': [sampleMemberMap],
+        });
       });
-      TeamService.api = ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock);
+      TeamService.api = ApiClient(
+        baseUrl: 'http://localhost:5001/api/v1',
+        client: mock,
+      );
 
       final members = await TeamService.getMembers('team_test_1');
       expect(members.length, 1);
@@ -256,7 +434,10 @@ void main() {
     // 14. getMembers fallback
     test('14. getMembers returns fallback members on network error', () async {
       final mock = MockHttpClient((req) async => jsonResponse('Error', 500));
-      TeamService.api = ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock);
+      TeamService.api = ApiClient(
+        baseUrl: 'http://localhost:5001/api/v1',
+        client: mock,
+      );
 
       final members = await TeamService.getMembers('team_sao_vang');
       expect(members.isNotEmpty, true);
@@ -269,24 +450,39 @@ void main() {
         expect(req.url.path, '/api/v1/teams/team_1/members/mem_1');
         return jsonResponse({'success': true});
       });
-      TeamService.api = ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock);
+      TeamService.api = ApiClient(
+        baseUrl: 'http://localhost:5001/api/v1',
+        client: mock,
+      );
 
       await TeamService.removeMember('team_1', 'mem_1');
       expect(true, true);
     });
 
     // 16. removeMember throws AppException
-    test('16. removeMember throws AppException when captain leaving with others', () async {
-      final mock = MockHttpClient((req) async => jsonResponse(
-          {'success': false, 'error': {'code': 'FAILED', 'message': 'Đội trưởng không thể rời đội'}},
-          400));
-      TeamService.api = ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock);
+    test(
+      '16. removeMember throws AppException when captain leaving with others',
+      () async {
+        final mock = MockHttpClient(
+          (req) async => jsonResponse({
+            'success': false,
+            'error': {
+              'code': 'FAILED',
+              'message': 'Đội trưởng không thể rời đội',
+            },
+          }, 400),
+        );
+        TeamService.api = ApiClient(
+          baseUrl: 'http://localhost:5001/api/v1',
+          client: mock,
+        );
 
-      expect(
-        () => TeamService.removeMember('team_1', 'cap_1'),
-        throwsA(isA<AppException>()),
-      );
-    });
+        expect(
+          () => TeamService.removeMember('team_1', 'cap_1'),
+          throwsA(isA<AppException>()),
+        );
+      },
+    );
 
     // 17. sendJoinRequest
     test('17. sendJoinRequest posts to /teams/:id/join-requests', () async {
@@ -297,7 +493,10 @@ void main() {
         body = jsonDecode((req as http.Request).body);
         return jsonResponse({'success': true, 'data': sampleRequestMap}, 201);
       });
-      TeamService.api = ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock);
+      TeamService.api = ApiClient(
+        baseUrl: 'http://localhost:5001/api/v1',
+        client: mock,
+      );
 
       await TeamService.sendJoinRequest('team_1', 'Tôi muốn gia nhập');
       expect(body['message'], 'Tôi muốn gia nhập');
@@ -307,9 +506,15 @@ void main() {
     test('18. getPendingRequests gets /teams/:id/join-requests', () async {
       final mock = MockHttpClient((req) async {
         expect(req.url.path, '/api/v1/teams/team_1/join-requests');
-        return jsonResponse({'success': true, 'data': [sampleRequestMap]});
+        return jsonResponse({
+          'success': true,
+          'data': [sampleRequestMap],
+        });
       });
-      TeamService.api = ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock);
+      TeamService.api = ApiClient(
+        baseUrl: 'http://localhost:5001/api/v1',
+        client: mock,
+      );
 
       final reqs = await TeamService.getPendingRequests('team_1');
       expect(reqs.length, 1);
@@ -325,7 +530,10 @@ void main() {
         body = jsonDecode((req as http.Request).body);
         return jsonResponse({'success': true});
       });
-      TeamService.api = ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock);
+      TeamService.api = ApiClient(
+        baseUrl: 'http://localhost:5001/api/v1',
+        client: mock,
+      );
 
       final reqObj = JoinRequest.fromMap(sampleRequestMap);
       await TeamService.approve(reqObj);
@@ -341,7 +549,10 @@ void main() {
         body = jsonDecode((req as http.Request).body);
         return jsonResponse({'success': true});
       });
-      TeamService.api = ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock);
+      TeamService.api = ApiClient(
+        baseUrl: 'http://localhost:5001/api/v1',
+        client: mock,
+      );
 
       final reqObj = JoinRequest.fromMap(sampleRequestMap);
       await TeamService.reject(reqObj);
@@ -349,72 +560,217 @@ void main() {
     });
 
     // 21. findOpponents
-    test('21. findOpponents passes area and myTeamId to /matchmaking/opponents', () async {
-      final mock = MockHttpClient((req) async {
-        expect(req.url.path, '/api/v1/matchmaking/opponents');
-        expect(req.url.queryParameters['area'], 'Bình Thạnh');
-        expect(req.url.queryParameters['myTeamId'], 'team_test_1');
-        return jsonResponse({'success': true, 'data': [sampleCandidateMap]});
-      });
-      TeamService.api = ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock);
+    test(
+      '21. findOpponents passes area and myTeamId to /matchmaking/opponents',
+      () async {
+        final mock = MockHttpClient((req) async {
+          expect(req.url.path, '/api/v1/matchmaking/opponents');
+          expect(req.url.queryParameters['area'], 'Bình Thạnh');
+          expect(req.url.queryParameters['myTeamId'], 'team_test_1');
+          return jsonResponse({
+            'success': true,
+            'data': [sampleCandidateMap],
+          });
+        });
+        TeamService.api = ApiClient(
+          baseUrl: 'http://localhost:5001/api/v1',
+          client: mock,
+        );
 
-      final candidates =
-          await TeamService.findOpponents(area: 'Bình Thạnh', myTeamId: 'team_test_1');
-      expect(candidates.length, 1);
-      expect(candidates.first.matchScore, 95);
-    });
+        final candidates = await TeamService.findOpponents(
+          area: 'Bình Thạnh',
+          myTeamId: 'team_test_1',
+        );
+        expect(candidates.length, 1);
+        expect(candidates.first.matchScore, 95);
+      },
+    );
 
     // 22. sendFriendlyInvite
-    test('22. sendFriendlyInvite posts invitation payload to /invitations', () async {
-      late Map<String, dynamic> body;
-      final mock = MockHttpClient((req) async {
-        expect(req.method, 'POST');
-        expect(req.url.path, '/api/v1/invitations');
-        body = jsonDecode((req as http.Request).body);
-        return jsonResponse({'success': true, 'data': sampleInvitationMap}, 201);
-      });
-      TeamService.api = ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock);
+    test(
+      '22. sendFriendlyInvite posts invitation payload to /invitations',
+      () async {
+        late Map<String, dynamic> body;
+        final mock = MockHttpClient((req) async {
+          expect(req.method, 'POST');
+          expect(req.url.path, '/api/v1/invitations');
+          body = jsonDecode((req as http.Request).body);
+          return jsonResponse({
+            'success': true,
+            'data': sampleInvitationMap,
+          }, 201);
+        });
+        TeamService.api = ApiClient(
+          baseUrl: 'http://localhost:5001/api/v1',
+          client: mock,
+        );
+
+        final inv = await TeamService.sendFriendlyInvite(
+          fromTeamId: 'team_test_1',
+          toTeamId: 'team_opponent_2',
+          message: 'Giao lưu bóng đá sân 7',
+          proposedDate: '2026-07-05',
+          venue: 'Sân Gia Định',
+        );
+        expect(body['toTeamId'], 'team_opponent_2');
+        expect(body['message'], 'Giao lưu bóng đá sân 7');
+        expect(inv.id, 'inv_1');
+        expect(inv.status, 'Pending');
+      },
+    );
+
+    // 23. getInvitations
+    test(
+      '23. getInvitations fetches /invitations with teamId parameter',
+      () async {
+        final mock = MockHttpClient((req) async {
+          expect(req.url.path, '/api/v1/invitations');
+          expect(req.url.queryParameters['teamId'], 'team_test_1');
+          return jsonResponse({
+            'success': true,
+            'data': [sampleInvitationMap],
+          });
+        });
+        TeamService.api = ApiClient(
+          baseUrl: 'http://localhost:5001/api/v1',
+          client: mock,
+        );
+
+        final invs = await TeamService.getInvitations('team_test_1');
+        expect(invs.length, 1);
+        expect(invs.first.fromTeamName, 'FC Test Một');
+      },
+    );
+
+    // 24. respondInvitation
+    test(
+      '24. respondInvitation patches /invitations/:id with status Accepted',
+      () async {
+        late Map<String, dynamic> body;
+        final mock = MockHttpClient((req) async {
+          expect(req.method, 'PATCH');
+          expect(req.url.path, '/api/v1/invitations/inv_1');
+          body = jsonDecode((req as http.Request).body);
+          return jsonResponse({'success': true});
+        });
+        TeamService.api = ApiClient(
+          baseUrl: 'http://localhost:5001/api/v1',
+          client: mock,
+        );
+
+        await TeamService.respondInvitation('inv_1', 'Accepted');
+        expect(body['status'], 'Accepted');
+      },
+    );
+
+    test('22b. sendFriendlyInvite falls back to local in-memory invitation when backend server is offline', () async {
+      final mock = MockHttpClient(
+        (req) async => throw http.ClientException('Connection refused'),
+      );
+      TeamService.api = ApiClient(
+        baseUrl: 'http://localhost:5001/api/v1',
+        client: mock,
+      );
 
       final inv = await TeamService.sendFriendlyInvite(
         fromTeamId: 'team_test_1',
-        toTeamId: 'team_opponent_2',
-        message: 'Giao lưu bóng đá sân 7',
-        proposedDate: '2026-07-05',
-        venue: 'Sân Gia Định',
+        toTeamId: 'team_sao_vang',
+        message: 'Giao hữu cuối tuần',
       );
-      expect(body['toTeamId'], 'team_opponent_2');
-      expect(body['message'], 'Giao lưu bóng đá sân 7');
-      expect(inv.id, 'inv_1');
+
+      expect(inv.toTeamId, 'team_sao_vang');
+      expect(inv.message, 'Giao hữu cuối tuần');
       expect(inv.status, 'Pending');
+
+      // Should be retrievable via getInvitations
+      final receivedInvs = await TeamService.getInvitations('team_sao_vang');
+      expect(receivedInvs.any((i) => i.id == inv.id), isTrue);
+
+      // Should be updatable via respondInvitation
+      await TeamService.respondInvitation(inv.id, 'Accepted');
+      final updatedInvs = await TeamService.getInvitations('team_sao_vang');
+      final updatedInv = updatedInvs.firstWhere((i) => i.id == inv.id);
+      expect(updatedInv.status, 'Accepted');
     });
 
-    // 23. getInvitations
-    test('23. getInvitations fetches /invitations with teamId parameter', () async {
-      final mock = MockHttpClient((req) async {
-        expect(req.url.path, '/api/v1/invitations');
-        expect(req.url.queryParameters['teamId'], 'team_test_1');
-        return jsonResponse({'success': true, 'data': [sampleInvitationMap]});
-      });
-      TeamService.api = ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock);
+    test('22c. hasPendingInvitation and getInvitationForTeam detect active challenges immediately', () async {
+      final mock = MockHttpClient(
+        (req) async => throw http.ClientException('Connection refused'),
+      );
+      TeamService.api = ApiClient(
+        baseUrl: 'http://localhost:5001/api/v1',
+        client: mock,
+      );
 
-      final invs = await TeamService.getInvitations('team_test_1');
-      expect(invs.length, 1);
-      expect(invs.first.fromTeamName, 'FC Test Một');
+      // Initially no pending challenge
+      expect(TeamService.hasPendingInvitation('team_target_xyz'), isFalse);
+      expect(TeamService.getInvitationForTeam('team_target_xyz'), isNull);
+
+      // Send challenge
+      final inv = await TeamService.sendFriendlyInvite(
+        fromTeamId: 'my_captain_team',
+        toTeamId: 'team_target_xyz',
+        message: 'Thách đấu sân 7',
+      );
+
+      // Now pending status should be detected immediately
+      expect(TeamService.hasPendingInvitation('team_target_xyz'), isTrue);
+      final found = TeamService.getInvitationForTeam('team_target_xyz');
+      expect(found, isNotNull);
+      expect(found!.id, inv.id);
+      expect(found.message, 'Thách đấu sân 7');
+
+      // Cancel invitation
+      await TeamService.respondInvitation(inv.id, 'Cancelled');
+      expect(TeamService.hasPendingInvitation('team_target_xyz'), isFalse);
+      expect(TeamService.getInvitationForTeam('team_target_xyz'), isNull);
     });
 
-    // 24. respondInvitation
-    test('24. respondInvitation patches /invitations/:id with status Accepted', () async {
-      late Map<String, dynamic> body;
+    test('23. localTeams provides immediate in-memory teams and getMyTeams includes newly created team', () async {
       final mock = MockHttpClient((req) async {
-        expect(req.method, 'PATCH');
-        expect(req.url.path, '/api/v1/invitations/inv_1');
-        body = jsonDecode((req as http.Request).body);
-        return jsonResponse({'success': true});
+        if (req.method == 'POST' && req.url.path.contains('/teams')) {
+          return jsonResponse({
+            'success': true,
+            'data': {
+              'teamId': 'team_server_id_123',
+              'teamName': 'FC Sài Gòn Chiến',
+              'area': 'Quận 1, TP. Hồ Chí Minh',
+              'description': 'Đội bóng phong trào',
+              'captainId': 'user_test_captain',
+              'captainName': 'Leonardo Ro',
+              'memberCount': 1,
+              'createdAt': '2026-11-02T00:00:00.000Z',
+            },
+          });
+        }
+        if (req.method == 'GET' && req.url.path.contains('/teams/mine')) {
+          return jsonResponse({'success': true, 'data': []});
+        }
+        return jsonResponse({'success': true, 'data': []});
       });
-      TeamService.api = ApiClient(baseUrl: 'http://localhost:5001/api/v1', client: mock);
+      TeamService.api = ApiClient(
+        baseUrl: 'http://localhost:5001/api/v1',
+        client: mock,
+      );
 
-      await TeamService.respondInvitation('inv_1', 'Accepted');
-      expect(body['status'], 'Accepted');
+      // Initially empty
+      expect(TeamService.localTeams.isEmpty, isTrue);
+
+      // Create team
+      await TeamService.createTeam(
+        'FC Sài Gòn Chiến',
+        'Quận 1, TP. Hồ Chí Minh',
+        'Đội bóng phong trào',
+      );
+
+      // localTeams must have it immediately
+      expect(TeamService.localTeams.length, 1);
+      expect(TeamService.localTeams.first.teamName, 'FC Sài Gòn Chiến');
+
+      // getMyTeams must return it
+      final myTeams = await TeamService.getMyTeams();
+      expect(myTeams.length, 1);
+      expect(myTeams.first.teamName, 'FC Sài Gòn Chiến');
     });
   });
 }

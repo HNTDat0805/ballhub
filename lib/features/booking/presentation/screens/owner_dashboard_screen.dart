@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../../core/auth/auth_context.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../data/booking_repository.dart';
@@ -58,19 +59,37 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
 
   // ─── Derived stats ───
   int get _totalFields => _fieldCtrl.fields.length;
-  int get _activeFields => _fieldCtrl.fields.where((f) => f.status == FieldStatus.active).length;
-  int get _pendingCount => _bookingCtrl.bookings.where((b) => b.status == BookingStatus.pending).length;
-  int get _confirmedCount => _bookingCtrl.bookings.where((b) => b.status == BookingStatus.confirmed).length;
+  int get _activeFields =>
+      _fieldCtrl.fields.where((f) => f.status == FieldStatus.active).length;
+  int get _pendingCount => _bookingCtrl.bookings
+      .where((b) => b.status == BookingStatus.pending)
+      .length;
+  int get _confirmedCount => _bookingCtrl.bookings
+      .where((b) => b.status == BookingStatus.confirmed)
+      .length;
   int get _todayCount {
     final today = DateTime.now();
-    final todayKey = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
-    return _bookingCtrl.bookings.where((b) => b.dateKey == todayKey && (b.status == BookingStatus.confirmed || b.status == BookingStatus.pending)).length;
+    final todayKey =
+        '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+    return _bookingCtrl.bookings
+        .where(
+          (b) =>
+              b.dateKey == todayKey &&
+              (b.status == BookingStatus.confirmed ||
+                  b.status == BookingStatus.pending),
+        )
+        .length;
   }
 
   List<Booking> get _upcomingBookings {
     final now = DateTime.now();
     return _bookingCtrl.bookings
-        .where((b) => b.startsAt.isAfter(now) && (b.status == BookingStatus.confirmed || b.status == BookingStatus.pending))
+        .where(
+          (b) =>
+              b.startsAt.isAfter(now) &&
+              (b.status == BookingStatus.confirmed ||
+                  b.status == BookingStatus.pending),
+        )
         .toList()
       ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
   }
@@ -98,15 +117,17 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
         child: CustomScrollView(
           slivers: [
             // Header chào mừng
-            SliverToBoxAdapter(
-              child: _WelcomeBanner(ownerName: owner.name),
-            ),
+            SliverToBoxAdapter(child: _WelcomeBanner(ownerName: owner.name)),
             // Stat cards
             SliverToBoxAdapter(
               child: isLoading
                   ? const Padding(
                       padding: EdgeInsets.all(32),
-                      child: Center(child: CircularProgressIndicator(color: AppTheme.primaryGreen)),
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          color: AppTheme.primaryGreen,
+                        ),
+                      ),
                     )
                   : _StatsGrid(
                       totalFields: _totalFields,
@@ -119,9 +140,12 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
             // Quick actions
             SliverToBoxAdapter(
               child: _QuickActions(
-                onGoToFields: () => _push(OwnerFieldsScreen(repository: widget.repository)),
-                onGoToBookings: () => _push(OwnerBookingsScreen(repository: widget.repository)),
-                onCreateField: () => _push(OwnerFieldFormScreen(repository: widget.repository)),
+                onGoToFields: () =>
+                    _push(OwnerFieldsScreen(repository: widget.repository)),
+                onGoToBookings: () =>
+                    _push(OwnerBookingsScreen(repository: widget.repository)),
+                onCreateField: () =>
+                    _push(OwnerFieldFormScreen(repository: widget.repository)),
               ),
             ),
             // Pending bookings cần xử lý
@@ -130,24 +154,23 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                 child: _SectionHeader(
                   title: 'Chờ xác nhận ($_pendingCount)',
                   actionLabel: 'Xem tất cả',
-                  onAction: () => _push(OwnerBookingsScreen(repository: widget.repository)),
+                  onAction: () =>
+                      _push(OwnerBookingsScreen(repository: widget.repository)),
                 ),
               ),
               SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (ctx, index) {
-                    final pending = _bookingCtrl.bookings
-                        .where((b) => b.status == BookingStatus.pending)
-                        .toList()
-                      ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
-                    if (index >= pending.length.clamp(0, 3)) return null;
-                    return BookingCard(
-                      booking: pending[index],
-                      onTap: () => _openBooking(pending[index].id),
-                    );
-                  },
-                  childCount: _pendingCount.clamp(0, 3),
-                ),
+                delegate: SliverChildBuilderDelegate((ctx, index) {
+                  final pending =
+                      _bookingCtrl.bookings
+                          .where((b) => b.status == BookingStatus.pending)
+                          .toList()
+                        ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
+                  if (index >= pending.length.clamp(0, 3)) return null;
+                  return BookingCard(
+                    booking: pending[index],
+                    onTap: () => _openBooking(pending[index].id),
+                  );
+                }, childCount: _pendingCount.clamp(0, 3)),
               ),
             ],
             // Lịch sắp tới
@@ -156,33 +179,38 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                 child: _SectionHeader(
                   title: 'Lịch sắp tới',
                   actionLabel: 'Xem tất cả',
-                  onAction: () => _push(OwnerBookingsScreen(repository: widget.repository)),
+                  onAction: () =>
+                      _push(OwnerBookingsScreen(repository: widget.repository)),
                 ),
               ),
               SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (ctx, index) {
-                    if (index >= _upcomingBookings.length.clamp(0, 5)) return null;
-                    return _UpcomingBookingTile(
-                      booking: _upcomingBookings[index],
-                      onTap: () => _openBooking(_upcomingBookings[index].id),
-                    );
-                  },
-                  childCount: _upcomingBookings.length.clamp(0, 5),
-                ),
+                delegate: SliverChildBuilderDelegate((ctx, index) {
+                  if (index >= _upcomingBookings.length.clamp(0, 5)) {
+                    return null;
+                  }
+                  return _UpcomingBookingTile(
+                    booking: _upcomingBookings[index],
+                    onTap: () => _openBooking(_upcomingBookings[index].id),
+                  );
+                }, childCount: _upcomingBookings.length.clamp(0, 5)),
               ),
             ],
             // Empty state
-            if (!isLoading && _bookingCtrl.bookings.isEmpty && _fieldCtrl.fields.isEmpty)
+            if (!isLoading &&
+                _bookingCtrl.bookings.isEmpty &&
+                _fieldCtrl.fields.isEmpty)
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.all(32),
                   child: BookingEmptyState(
                     title: 'Chưa có dữ liệu nào',
-                    subtitle: 'Bắt đầu bằng cách tạo sân bóng đầu tiên của bạn.',
+                    subtitle:
+                        'Bắt đầu bằng cách tạo sân bóng đầu tiên của bạn.',
                     icon: Icons.add_business_rounded,
                     actionLabel: 'Tạo sân mới',
-                    onAction: () => _push(OwnerFieldFormScreen(repository: widget.repository)),
+                    onAction: () => _push(
+                      OwnerFieldFormScreen(repository: widget.repository),
+                    ),
                   ),
                 ),
               ),
@@ -201,10 +229,8 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => BookingDetailScreen(
-          bookingId: id,
-          repository: widget.repository,
-        ),
+        builder: (_) =>
+            BookingDetailScreen(bookingId: id, repository: widget.repository),
       ),
     );
   }
@@ -222,14 +248,21 @@ class _WelcomeBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hour = DateTime.now().hour;
-    final greeting = hour < 12 ? 'Chào buổi sáng' : hour < 18 ? 'Chào buổi chiều' : 'Chào buổi tối';
+    final greeting = hour < 12
+        ? 'Chào buổi sáng'
+        : hour < 18
+        ? 'Chào buổi chiều'
+        : 'Chào buổi tối';
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [AppTheme.primaryGreen, AppTheme.primaryGreen.withValues(alpha: 0.8)],
+          colors: [
+            AppTheme.primaryGreen,
+            AppTheme.primaryGreen.withValues(alpha: 0.8),
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -243,10 +276,7 @@ class _WelcomeBanner extends StatelessWidget {
               children: [
                 Text(
                   '$greeting!',
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 14,
-                  ),
+                  style: const TextStyle(color: Colors.white70, fontSize: 14),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -272,7 +302,11 @@ class _WelcomeBanner extends StatelessWidget {
               color: Colors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: const Icon(Icons.sports_soccer_rounded, color: Colors.white, size: 32),
+            child: const Icon(
+              Icons.sports_soccer_rounded,
+              color: Colors.white,
+              size: 32,
+            ),
           ),
         ],
       ),
@@ -374,7 +408,9 @@ class _StatCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: highlight ? Border.all(color: Colors.orange.shade400, width: 2) : null,
+        border: highlight
+            ? Border.all(color: Colors.orange.shade400, width: 2)
+            : null,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -495,7 +531,11 @@ class _ActionButton extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
 
-  const _ActionButton({required this.icon, required this.label, required this.onTap});
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -516,7 +556,11 @@ class _ActionButton extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               label,
-              style: const TextStyle(fontSize: 11, color: AppTheme.textPrimary, fontWeight: FontWeight.w500),
+              style: const TextStyle(
+                fontSize: 11,
+                color: AppTheme.textPrimary,
+                fontWeight: FontWeight.w500,
+              ),
               textAlign: TextAlign.center,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
@@ -554,7 +598,9 @@ class _SectionHeader extends StatelessWidget {
           if (actionLabel != null && onAction != null)
             TextButton(
               onPressed: onAction,
-              style: TextButton.styleFrom(foregroundColor: AppTheme.primaryGreen),
+              style: TextButton.styleFrom(
+                foregroundColor: AppTheme.primaryGreen,
+              ),
               child: Text(actionLabel!, style: const TextStyle(fontSize: 13)),
             ),
         ],
@@ -572,7 +618,8 @@ class _UpcomingBookingTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final local = booking.startsAt.toLocal();
-    final timeStr = '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')} – '
+    final timeStr =
+        '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')} – '
         '${booking.endsAt.toLocal().hour.toString().padLeft(2, '0')}:${booking.endsAt.toLocal().minute.toString().padLeft(2, '0')}';
 
     return Card(
@@ -604,7 +651,10 @@ class _UpcomingBookingTile extends StatelessWidget {
                     ),
                     Text(
                       '/${local.month}',
-                      style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppTheme.textSecondary,
+                      ),
                     ),
                   ],
                 ),
@@ -628,15 +678,28 @@ class _UpcomingBookingTile extends StatelessWidget {
                     const SizedBox(height: 3),
                     Row(
                       children: [
-                        const Icon(Icons.access_time_rounded, size: 13, color: AppTheme.textSecondary),
+                        const Icon(
+                          Icons.access_time_rounded,
+                          size: 13,
+                          color: AppTheme.textSecondary,
+                        ),
                         const SizedBox(width: 4),
-                        Text(timeStr, style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                        Text(
+                          timeStr,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.textSecondary,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 2),
                     Text(
                       booking.bookerNameSnapshot,
-                      style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.textSecondary,
+                      ),
                     ),
                   ],
                 ),

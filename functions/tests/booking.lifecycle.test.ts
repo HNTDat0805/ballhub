@@ -358,4 +358,59 @@ describe('Booking Lifecycle — Full End-to-End', () => {
       .send({ name: 'Illegal Field', address: '1 Test', city: 'HCM', fieldType: '5-a-side', capacity: 5, basePrice: 100000, status: 'active' });
     assert.strictEqual(res.status, 403);
   });
+
+  // ── CANCEL CONFIRMED BOOKINGS (USER & OWNER) ─────────────────────────────────
+
+  it('Player01 co the huy booking da confirmed -> cancelledByUser va slot ve available', async () => {
+    // bookingId da duoc owner01 confirm truoc do tren slotId
+    const res = await request(app)
+      .post(`/api/v1/bookings/${bookingId}/cancel`)
+      .set(player01)
+      .send({ reason: 'Doi toi ban lich thi dau dot xuat' });
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.body.data.status, BookingStatus.cancelledByUser);
+    assert.ok(res.body.data.cancelledAt);
+
+    // Kiem tra slot da tro ve available
+    const slotRes = await request(app).get(`/api/v1/fields/${fieldId}/slots`);
+    const targetSlot = slotRes.body.data.find((s: { id: string }) => s.id === slotId);
+    assert.strictEqual(targetSlot.status, FieldSlotStatus.available);
+  });
+
+  it('Owner01 co the huy booking da confirmed -> cancelledByOwner va slot ve available', async () => {
+    // Player02 dat slotId lai sau khi slot da available
+    const bookRes = await request(app)
+      .post('/api/v1/bookings')
+      .set(player02)
+      .send({ fieldId, slotIds: [slotId] });
+    assert.strictEqual(bookRes.status, 201);
+    const newBookingId = bookRes.body.data.id;
+
+    // Owner confirm
+    await request(app)
+      .post(`/api/v1/owner/bookings/${newBookingId}/confirm`)
+      .set(owner01);
+
+    // Owner huy do san su co
+    const cancelRes = await request(app)
+      .post(`/api/v1/owner/bookings/${newBookingId}/cancel`)
+      .set(owner01)
+      .send({ reason: 'He thong chieu sang san gap su co ky thuat' });
+    assert.strictEqual(cancelRes.status, 200);
+    assert.strictEqual(cancelRes.body.data.status, BookingStatus.cancelledByOwner);
+
+    // Slot phai ve available lai
+    const slotRes = await request(app).get(`/api/v1/fields/${fieldId}/slots`);
+    const targetSlot = slotRes.body.data.find((s: { id: string }) => s.id === slotId);
+    assert.strictEqual(targetSlot.status, FieldSlotStatus.available);
+  });
+
+  it('Booking da bi huy khong the tiep tuc huy -> 409 INVALID_BOOKING_STATE', async () => {
+    const res = await request(app)
+      .post(`/api/v1/bookings/${bookingId}/cancel`)
+      .set(player01)
+      .send({ reason: 'Thu huy lai' });
+    assert.strictEqual(res.status, 409);
+    assert.strictEqual(res.body.error.code, 'INVALID_BOOKING_STATE');
+  });
 });

@@ -1,6 +1,8 @@
 import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+
 import '../core/api/api_client.dart';
 import '../core/auth/auth_context.dart' hide AppUser;
 import '../models/app_user.dart';
@@ -12,13 +14,16 @@ class UserService {
   static set api(ApiClient client) => _api = client;
 
   static AppUser? currentUser;
-  static final ValueNotifier<AppUser?> currentUserNotifier = ValueNotifier<AppUser?>(null);
+  static final ValueNotifier<AppUser?> currentUserNotifier =
+      ValueNotifier<AppUser?>(null);
 
   /// Lấy thông tin hồ sơ của người dùng hiện tại
   static Future<AppUser?> getProfile() async {
     // 1. Gọi backend REST API (giới hạn timeout 1.5 giây để tránh treo khi offline)
     try {
-      final res = await _api.get('/users/me').timeout(const Duration(milliseconds: 1500));
+      final res = await _api
+          .get('/users/me')
+          .timeout(const Duration(milliseconds: 1500));
       if (res is Map) {
         final user = AppUser.fromMap(Map<String, dynamic>.from(res));
         currentUser = user;
@@ -31,7 +36,10 @@ class UserService {
     final uid = AuthService.uid;
     if (uid != null) {
       try {
-        final doc = await AuthService.users.doc(uid).get().timeout(const Duration(milliseconds: 1500));
+        final doc = await AuthService.users
+            .doc(uid)
+            .get()
+            .timeout(const Duration(milliseconds: 1500));
         if (doc.exists && doc.data() != null) {
           final user = AppUser.fromMap(doc.data()!);
           currentUser = user;
@@ -81,12 +89,17 @@ class UserService {
     // 2. Gửi request PATCH lên Backend REST API
     tasks.add(() async {
       try {
-        final res = await _api.patch('/users/me', body: {
-          'fullName': fullName,
-          'phone': phone,
-          'position': position,
-          'area': area,
-        }).timeout(const Duration(seconds: 2));
+        final res = await _api
+            .patch(
+              '/users/me',
+              body: {
+                'fullName': fullName,
+                'phone': phone,
+                'position': position,
+                'area': area,
+              },
+            )
+            .timeout(const Duration(seconds: 2));
         if (res is Map) {
           updated = AppUser.fromMap(Map<String, dynamic>.from(res));
         }
@@ -97,24 +110,25 @@ class UserService {
     if (AuthService.uid != null) {
       tasks.add(() async {
         try {
-          await AuthService.users.doc(AuthService.uid).set({
-            'userId': uid,
-            'fullName': fullName,
-            'email': email,
-            'phone': phone,
-            'position': position,
-            'area': area,
-            'updatedAt': FieldValue.serverTimestamp(),
-          }, SetOptions(merge: true)).timeout(const Duration(seconds: 2));
+          await AuthService.users
+              .doc(AuthService.uid)
+              .set({
+                'userId': uid,
+                'fullName': fullName,
+                'email': email,
+                'phone': phone,
+                'position': position,
+                'area': area,
+                'updatedAt': FieldValue.serverTimestamp(),
+              }, SetOptions(merge: true))
+              .timeout(const Duration(seconds: 2));
         } catch (_) {}
       }());
     }
 
     // Chạy đồng thời với timeout tối đa 2.5 giây để UI hoàn tất tức thì không bị treo
-    await Future.wait(tasks).timeout(
-      const Duration(milliseconds: 2500),
-      onTimeout: () => [],
-    );
+    await Future.wait(tasks)
+        .timeout(const Duration(milliseconds: 2500), onTimeout: () => []);
 
     // 4. Đồng bộ AuthContext persona nếu đang chạy chế độ context
     try {
@@ -137,9 +151,9 @@ class UserService {
     final tasks = <Future<void>>[];
     tasks.add(() async {
       try {
-        await _api.post('/users/me/avatar', body: {
-          'avatarBase64': base64Str,
-        }).timeout(const Duration(seconds: 2));
+        await _api
+            .post('/users/me/avatar', body: {'avatarBase64': base64Str})
+            .timeout(const Duration(seconds: 2));
       } catch (_) {}
     }());
 
@@ -147,17 +161,16 @@ class UserService {
     if (uid != null) {
       tasks.add(() async {
         try {
-          await AuthService.users.doc(uid).set({
-            'avatarBase64': base64Str,
-          }, SetOptions(merge: true)).timeout(const Duration(seconds: 2));
+          await AuthService.users
+              .doc(uid)
+              .set({'avatarBase64': base64Str}, SetOptions(merge: true))
+              .timeout(const Duration(seconds: 2));
         } catch (_) {}
       }());
     }
 
-    await Future.wait(tasks).timeout(
-      const Duration(milliseconds: 2500),
-      onTimeout: () => [],
-    );
+    await Future.wait(tasks)
+        .timeout(const Duration(milliseconds: 2500), onTimeout: () => []);
 
     if (currentUser != null) {
       currentUser = currentUser!.copyWith(avatarBase64: base64Str);

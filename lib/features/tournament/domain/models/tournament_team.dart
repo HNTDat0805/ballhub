@@ -13,11 +13,11 @@ enum RegistrationStatus {
   cancelled;
 
   String get displayName => switch (this) {
-        RegistrationStatus.pending => 'Chờ duyệt',
-        RegistrationStatus.approved => 'Đã duyệt',
-        RegistrationStatus.rejected => 'Từ chối',
-        RegistrationStatus.cancelled => 'Đã hủy',
-      };
+    RegistrationStatus.pending => 'Chờ duyệt',
+    RegistrationStatus.approved => 'Đã duyệt',
+    RegistrationStatus.rejected => 'Từ chối',
+    RegistrationStatus.cancelled => 'Đã hủy',
+  };
 }
 
 /// Đại diện cho một đội bóng đã đăng ký hoặc tham gia vào giải đấu
@@ -134,8 +134,12 @@ class TournamentTeam {
         (s) => s.name == map['status'],
         orElse: () => RegistrationStatus.pending,
       ),
-      registeredAt: DateTime.tryParse(map['registeredAt'] as String? ?? '') ?? DateTime.now(),
-      reviewedAt: map['reviewedAt'] != null ? DateTime.tryParse(map['reviewedAt'] as String) : null,
+      registeredAt:
+          DateTime.tryParse(map['registeredAt'] as String? ?? '') ??
+          DateTime.now(),
+      reviewedAt: map['reviewedAt'] != null
+          ? DateTime.tryParse(map['reviewedAt'] as String)
+          : null,
       reviewedBy: map['reviewedBy'] as String?,
       reviewNote: map['reviewNote'] as String?,
     );

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../core/theme/app_theme.dart';
 import '../../models/app_user.dart';
 import '../../services/user_service.dart';
@@ -74,7 +75,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               TextFormField(
                 controller: _nameCtrl,
                 decoration: const InputDecoration(labelText: 'Họ tên'),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Không được để trống' : null,
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? 'Không được để trống'
+                    : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -85,7 +88,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _areaCtrl,
-                decoration: const InputDecoration(labelText: 'Khu vực hay đá (VD: Quận 7, Thủ Đức)'),
+                decoration: const InputDecoration(
+                  labelText: 'Khu vực hay đá (VD: Quận 7, Thủ Đức)',
+                ),
               ),
               const SizedBox(height: 16),
               const Text('Vị trí sở trường'),
@@ -93,11 +98,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               Wrap(
                 spacing: 8,
                 children: _positions
-                    .map((p) => ChoiceChip(
-                          label: Text(p),
-                          selected: _position == p,
-                          onSelected: (s) => setState(() => _position = s ? p : null),
-                        ))
+                    .map(
+                      (p) => ChoiceChip(
+                        label: Text(p),
+                        selected: _position == p,
+                        onSelected: (s) =>
+                            setState(() => _position = s ? p : null),
+                      ),
+                    )
                     .toList(),
               ),
               const SizedBox(height: 24),
@@ -106,17 +114,25 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 style: FilledButton.styleFrom(
                   backgroundColor: AppTheme.primaryDarkGreen,
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 child: _saving
                     ? const SizedBox(
                         width: 20,
                         height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
                       )
                     : const Text(
                         'Lưu thay đổi',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
                       ),
               ),
             ],

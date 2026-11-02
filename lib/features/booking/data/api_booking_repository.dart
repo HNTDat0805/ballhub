@@ -1,8 +1,11 @@
+import 'package:flutter/foundation.dart';
+
 import '../../../core/api/api_client.dart';
 import '../domain/models/booking.dart';
 import '../domain/models/field_slot.dart';
 import '../domain/models/football_field.dart';
 import 'booking_repository.dart';
+import 'seeds/booking_seed_data.dart';
 
 /// Implementsation của [BookingRepository] sử dụng REST API thông qua [ApiClient].
 ///
@@ -11,6 +14,8 @@ class ApiBookingRepository implements BookingRepository {
   final ApiClient _client;
 
   ApiBookingRepository({ApiClient? client}) : _client = client ?? ApiClient();
+
+  static final List<FootballField> _userCreatedFields = [];
 
   // ───────── Field ─────────
 
@@ -31,89 +36,258 @@ class ApiBookingRepository implements BookingRepository {
       if (ownerId != null) 'ownerId': ownerId,
       if (search != null) 'search': search,
     };
+    List<FootballField> list = [];
     try {
       final data = await _client.get('/fields', queryParams: params);
-      final list = _parseList(data, FootballField.fromJson);
-      if (list.isNotEmpty) return list;
-      return _getFallbackSampleFields(
-        city: city,
-        district: district,
-        fieldType: fieldType,
-        search: search,
-      );
+      list = _parseList(data, FootballField.fromJson);
+      if (list.isEmpty) {
+        list = BookingSeedData.getSampleFields(
+          city: city,
+          district: district,
+          fieldType: fieldType,
+          search: search,
+        );
+      }
     } catch (_) {
       // Tự động dự phòng dữ liệu sân bóng mẫu khi backend chưa khởi động hoặc offline
-      return _getFallbackSampleFields(
+      list = BookingSeedData.getSampleFields(
         city: city,
         district: district,
         fieldType: fieldType,
         search: search,
       );
     }
+
+    final matchingCreated = _userCreatedFields.where((f) {
+      if (status != null && f.status.name != status) {
+        return false;
+      }
+      if (ownerId != null && f.ownerId.isNotEmpty && f.ownerId != ownerId) {
+        return false;
+      }
+      if (city != null &&
+          city.isNotEmpty &&
+          !f.city.toLowerCase().contains(city.toLowerCase())) {
+        return false;
+      }
+      if (district != null &&
+          district.isNotEmpty &&
+          !f.district.toLowerCase().contains(district.toLowerCase())) {
+        return false;
+      }
+      if (fieldType != null &&
+          fieldType.isNotEmpty &&
+          f.fieldType != fieldType) {
+        return false;
+      }
+      if (search != null && search.isNotEmpty) {
+        final q = search.toLowerCase();
+        final match =
+            f.name.toLowerCase().contains(q) ||
+            f.address.toLowerCase().contains(q) ||
+            f.district.toLowerCase().contains(q) ||
+            f.city.toLowerCase().contains(q);
+        if (!match) return false;
+      }
+      return true;
+    }).toList();
+
+    return [
+      ...matchingCreated,
+      ...list.where(
+        (f) => !matchingCreated.any(
+          (m) => m.id == f.id || m.name.toLowerCase() == f.name.toLowerCase(),
+        ),
+      ),
+    ];
   }
 
   @override
   Future<FootballField> getFieldById(String fieldId) async {
+    final created = _userCreatedFields
+        .where((f) => f.id == fieldId)
+        .firstOrNull;
+    if (created != null) return created;
+
     try {
       final data = await _client.get('/fields/$fieldId');
       return FootballField.fromJson(_toMap(data));
     } catch (_) {
-      return _getFallbackSampleFields().firstWhere(
+      return BookingSeedData.getSampleFields().firstWhere(
         (f) => f.id == fieldId,
-        orElse: () => _getFallbackSampleFields().first,
+        orElse: () => BookingSeedData.getSampleFields().first,
       );
     }
   }
 
   @override
   Future<FootballField> createField(Map<String, dynamic> data) async {
-    final result = await _client.post('/fields', body: data);
-    return FootballField.fromJson(_toMap(result));
+    try {
+      final result = await _client.post('/fields', body: data);
+      final field = FootballField.fromJson(_toMap(result));
+      _userCreatedFields.removeWhere((f) => f.id == field.id);
+      _userCreatedFields.insert(0, field);
+      notifyBookingChanged();
+      return field;
+    } catch (e) {
+      if (e is ApiException &&
+          (e.code == 'NETWORK_ERROR' ||
+              e.code == 'TIMEOUT' ||
+              e.statusCode == 503)) {
+        final localId = 'field_${DateTime.now().millisecondsSinceEpoch}';
+        final localField = FootballField.fromJson({
+          ...data,
+          'id': localId,
+          'rating': 5.0,
+          'reviewCount': 0,
+          'createdAt': DateTime.now().toIso8601String(),
+          'updatedAt': DateTime.now().toIso8601String(),
+        });
+        _userCreatedFields.removeWhere(
+          (f) => f.name.toLowerCase() == localField.name.toLowerCase(),
+        );
+        _userCreatedFields.insert(0, localField);
+        notifyBookingChanged();
+        return localField;
+      }
+      rethrow;
+    }
   }
 
   @override
-  Future<FootballField> updateField(String fieldId, Map<String, dynamic> data) async {
-    final result = await _client.patch('/fields/$fieldId', body: data);
-    return FootballField.fromJson(_toMap(result));
+  Future<FootballField> updateField(
+    String fieldId,
+    Map<String, dynamic> data,
+  ) async {
+    try {
+      final result = await _client.patch('/fields/$fieldId', body: data);
+      final field = FootballField.fromJson(_toMap(result));
+      final idx = _userCreatedFields.indexWhere((f) => f.id == fieldId);
+      if (idx != -1) {
+        _userCreatedFields[idx] = field;
+      }
+      notifyBookingChanged();
+      return field;
+    } catch (e) {
+      if (e is ApiException &&
+          (e.code == 'NETWORK_ERROR' ||
+              e.code == 'TIMEOUT' ||
+              e.statusCode == 503)) {
+        final idx = _userCreatedFields.indexWhere((f) => f.id == fieldId);
+        if (idx != -1) {
+          final updated = _userCreatedFields[idx].copyWith(
+            name: data['name'] as String?,
+            description: data['description'] as String?,
+            address: data['address'] as String?,
+            district: data['district'] as String?,
+            city: data['city'] as String?,
+            basePrice: data['basePrice'] as int?,
+            capacity: data['capacity'] as int?,
+          );
+          _userCreatedFields[idx] = updated;
+          notifyBookingChanged();
+          return updated;
+        }
+      }
+      rethrow;
+    }
   }
 
   @override
   Future<FootballField> updateFieldStatus(String fieldId, String status) async {
-    final result = await _client.patch('/fields/$fieldId/status', body: {'status': status});
-    return FootballField.fromJson(_toMap(result));
+    try {
+      final result = await _client.patch(
+        '/fields/$fieldId/status',
+        body: {'status': status},
+      );
+      final field = FootballField.fromJson(_toMap(result));
+      final idx = _userCreatedFields.indexWhere((f) => f.id == fieldId);
+      if (idx != -1) {
+        _userCreatedFields[idx] = field;
+      }
+      notifyBookingChanged();
+      return field;
+    } catch (_) {
+      final idx = _userCreatedFields.indexWhere((f) => f.id == fieldId);
+      if (idx != -1) {
+        final parsedStatus = FieldStatus.values.firstWhere(
+          (s) => s.name == status,
+          orElse: () => FieldStatus.active,
+        );
+        final updated = _userCreatedFields[idx].copyWith(status: parsedStatus);
+        _userCreatedFields[idx] = updated;
+        notifyBookingChanged();
+        return updated;
+      }
+      rethrow;
+    }
   }
 
   // ───────── Slot ─────────
 
   @override
-  Future<List<FieldSlot>> getFieldSlots(String fieldId, {String? dateKey}) async {
-    final params = <String, dynamic>{
-      if (dateKey != null) 'dateKey': dateKey,
-    };
+  Future<List<FieldSlot>> getFieldSlots(
+    String fieldId, {
+    String? dateKey,
+  }) async {
+    final params = <String, dynamic>{if (dateKey != null) 'dateKey': dateKey};
     try {
-      final data = await _client.get('/fields/$fieldId/slots', queryParams: params);
+      final data = await _client.get(
+        '/fields/$fieldId/slots',
+        queryParams: params,
+      );
       final list = _parseList(data, FieldSlot.fromJson);
-      if (list.isNotEmpty) return list;
-      return _getFallbackSampleSlots(fieldId, dateKey: dateKey);
+      if (list.isNotEmpty) {
+        return list.map((s) {
+          if (_bookedSlotIds.contains(s.id) &&
+              s.status == FieldSlotStatus.available) {
+            return s.copyWith(status: FieldSlotStatus.booked);
+          }
+          return s;
+        }).toList();
+      }
+      return BookingSeedData.getSampleSlots(
+        fieldId,
+        dateKey: dateKey,
+        bookedSlotIds: _bookedSlotIds,
+      );
     } catch (_) {
-      return _getFallbackSampleSlots(fieldId, dateKey: dateKey);
+      return BookingSeedData.getSampleSlots(
+        fieldId,
+        dateKey: dateKey,
+        bookedSlotIds: _bookedSlotIds,
+      );
     }
   }
 
   @override
-  Future<FieldSlot> createSlot(String fieldId, Map<String, dynamic> data) async {
+  Future<FieldSlot> createSlot(
+    String fieldId,
+    Map<String, dynamic> data,
+  ) async {
     final result = await _client.post('/fields/$fieldId/slots', body: data);
     return FieldSlot.fromJson(_toMap(result));
   }
 
   @override
-  Future<FieldSlot> updateSlot(String fieldId, String slotId, Map<String, dynamic> data) async {
-    final result = await _client.patch('/fields/$fieldId/slots/$slotId', body: data);
+  Future<FieldSlot> updateSlot(
+    String fieldId,
+    String slotId,
+    Map<String, dynamic> data,
+  ) async {
+    final result = await _client.patch(
+      '/fields/$fieldId/slots/$slotId',
+      body: data,
+    );
     return FieldSlot.fromJson(_toMap(result));
   }
 
   @override
-  Future<FieldSlot> blockSlot(String fieldId, String slotId, {String? reason}) async {
+  Future<FieldSlot> blockSlot(
+    String fieldId,
+    String slotId, {
+    String? reason,
+  }) async {
     final result = await _client.post(
       '/fields/$fieldId/slots/$slotId/block',
       body: {'reason': reason ?? 'Chủ sân khóa khung giờ.'},
@@ -130,6 +304,21 @@ class ApiBookingRepository implements BookingRepository {
   static final List<Booking> _fallbackBookings = [];
   static final Set<String> _bookedSlotIds = {};
 
+  /// ValueNotifier thông báo cho toàn bộ ứng dụng khi danh sách hoặc trạng thái đặt sân thay đổi
+  static final ValueNotifier<int> bookingChanged = ValueNotifier<int>(0);
+
+  /// Kích hoạt thông báo thay đổi đặt sân
+  static void notifyBookingChanged() => bookingChanged.value++;
+
+  /// Dọn dẹp trạng thái cục bộ cho testing hoặc khi đăng xuất
+  @visibleForTesting
+  static void clearLocalState() {
+    _userCreatedFields.clear();
+    _fallbackBookings.clear();
+    _bookedSlotIds.clear();
+    notifyBookingChanged();
+  }
+
   // ───────── Booking ─────────
 
   @override
@@ -141,12 +330,15 @@ class ApiBookingRepository implements BookingRepository {
     final body = <String, dynamic>{
       'fieldId': fieldId,
       'slotIds': slotIds,
-      if (customerNote != null && customerNote.isNotEmpty) 'customerNote': customerNote,
+      if (customerNote != null && customerNote.isNotEmpty)
+        'customerNote': customerNote,
     };
     try {
       final result = await _client.post('/bookings', body: body);
       final booking = Booking.fromJson(_toMap(result));
       _fallbackBookings.insert(0, booking);
+      _bookedSlotIds.addAll(slotIds);
+      notifyBookingChanged();
       return booking;
     } catch (_) {
       // Tự động dự phòng tạo đơn đặt sân khi backend offline hoặc chạy dữ liệu mẫu
@@ -171,12 +363,18 @@ class ApiBookingRepository implements BookingRepository {
         ownerId: field.ownerId,
         bookerId: 'current_user',
         dateKey: dateKey,
-        startsAt: bookedSlots.isNotEmpty ? bookedSlots.first.startsAt : now.add(const Duration(hours: 2)),
-        endsAt: bookedSlots.isNotEmpty ? bookedSlots.last.endsAt : now.add(const Duration(hours: 3)),
+        startsAt: bookedSlots.isNotEmpty
+            ? bookedSlots.first.startsAt
+            : now.add(const Duration(hours: 2)),
+        endsAt: bookedSlots.isNotEmpty
+            ? bookedSlots.last.endsAt
+            : now.add(const Duration(hours: 3)),
         slotIds: slotIds,
         fieldNameSnapshot: field.name,
         fieldAddressSnapshot: field.address,
-        priceSnapshot: bookedSlots.isNotEmpty ? bookedSlots.first.basePrice : 250000,
+        priceSnapshot: bookedSlots.isNotEmpty
+            ? bookedSlots.first.basePrice
+            : 250000,
         currency: 'VND',
         bookerNameSnapshot: 'Người đặt sân',
         bookerPhoneSnapshot: '0901234567',
@@ -190,6 +388,7 @@ class ApiBookingRepository implements BookingRepository {
       );
 
       _fallbackBookings.insert(0, fallbackBooking);
+      notifyBookingChanged();
       return fallbackBooking;
     }
   }
@@ -224,7 +423,14 @@ class ApiBookingRepository implements BookingRepository {
         '/bookings/$bookingId/cancel',
         body: {'reason': reason ?? ''},
       );
-      return Booking.fromJson(_toMap(result));
+      final booking = Booking.fromJson(_toMap(result));
+      _bookedSlotIds.removeAll(booking.slotIds);
+      final idx = _fallbackBookings.indexWhere((b) => b.id == bookingId);
+      if (idx != -1) {
+        _fallbackBookings[idx] = booking;
+      }
+      notifyBookingChanged();
+      return booking;
     } catch (_) {
       final idx = _fallbackBookings.indexWhere((b) => b.id == bookingId);
       if (idx != -1) {
@@ -257,6 +463,7 @@ class ApiBookingRepository implements BookingRepository {
         for (final sId in b.slotIds) {
           _bookedSlotIds.remove(sId);
         }
+        notifyBookingChanged();
         return cancelled;
       }
       rethrow;
@@ -282,9 +489,24 @@ class ApiBookingRepository implements BookingRepository {
   }
 
   @override
-  Future<Booking> rejectBooking(String bookingId, {required String reason}) async {
+  Future<Booking> rejectBooking(
+    String bookingId, {
+    required String reason,
+  }) async {
     final result = await _client.post(
       '/owner/bookings/$bookingId/reject',
+      body: {'reason': reason},
+    );
+    return Booking.fromJson(_toMap(result));
+  }
+
+  @override
+  Future<Booking> ownerCancelBooking(
+    String bookingId, {
+    required String reason,
+  }) async {
+    final result = await _client.post(
+      '/owner/bookings/$bookingId/cancel',
       body: {'reason': reason},
     );
     return Booking.fromJson(_toMap(result));
@@ -298,324 +520,14 @@ class ApiBookingRepository implements BookingRepository {
     return <String, dynamic>{};
   }
 
-  List<T> _parseList<T>(dynamic data, T Function(Map<String, dynamic>) fromJson) {
+  List<T> _parseList<T>(
+    dynamic data,
+    T Function(Map<String, dynamic>) fromJson,
+  ) {
     if (data is! List) return const [];
     return data
         .whereType<Map>()
         .map((item) => fromJson(Map<String, dynamic>.from(item)))
         .toList();
-  }
-
-  static List<FootballField> _getFallbackSampleFields({
-    String? city,
-    String? district,
-    String? fieldType,
-    String? search,
-  }) {
-    final now = DateTime.now();
-    final fields = [
-      FootballField(
-        id: 'field_gia_dinh',
-        ownerId: 'owner_01',
-        name: 'Sân bóng Gia Định',
-        description: 'Sân cỏ nhân tạo chất lượng cao, thoáng mát, đạt chuẩn thi đấu.',
-        coverImageUrl: 'https://images.unsplash.com/photo-1529900245534-47fbfb57835a?auto=format&fit=crop&w=800&q=80',
-        imageUrls: const [
-          'https://images.unsplash.com/photo-1529900245534-47fbfb57835a?auto=format&fit=crop&w=800&q=80',
-        ],
-        address: '2A Phan Chu Trinh, Phường 12',
-        district: 'Bình Thạnh',
-        city: 'TP. Hồ Chí Minh',
-        latitude: 10.8012,
-        longitude: 106.6987,
-        fieldType: '7-a-side',
-        capacity: 14,
-        amenities: const ['Wifi', 'Gửi xe', 'Nước uống', 'Đèn chiếu sáng', 'Phòng thay đồ'],
-        basePrice: 300000,
-        currency: 'VND',
-        slotDurationMinutes: 60,
-        status: FieldStatus.active,
-        openingHours: const {
-          'mon': ['06:00', '23:00'],
-          'tue': ['06:00', '23:00'],
-          'wed': ['06:00', '23:00'],
-          'thu': ['06:00', '23:00'],
-          'fri': ['06:00', '23:00'],
-          'sat': ['06:00', '23:00'],
-          'sun': ['06:00', '23:00'],
-        },
-        timezone: 'Asia/Ho_Chi_Minh',
-        createdAt: now.subtract(const Duration(days: 30)),
-        updatedAt: now,
-        createdBy: 'owner_01',
-        updatedBy: 'owner_01',
-      ),
-      FootballField(
-        id: 'field_binh_quoi',
-        ownerId: 'owner_01',
-        name: 'Sân bóng Bình Quới',
-        description: 'Cụm sân 5 và sân 7 ven sông, không khí mát mẻ, bãi giữ xe ô tô rộng rãi.',
-        coverImageUrl: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=800&q=80',
-        imageUrls: const [
-          'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=800&q=80',
-        ],
-        address: '1143 Bình Quới, Cư xá Thanh Đa',
-        district: 'Bình Thạnh',
-        city: 'TP. Hồ Chí Minh',
-        latitude: 10.8256,
-        longitude: 106.7312,
-        fieldType: '7-a-side',
-        capacity: 14,
-        amenities: const ['Căn tin', 'Gửi xe ô tô', 'Nước uống', 'Trọng tài'],
-        basePrice: 350000,
-        currency: 'VND',
-        slotDurationMinutes: 60,
-        status: FieldStatus.active,
-        openingHours: const {
-          'mon': ['06:00', '23:00'],
-          'tue': ['06:00', '23:00'],
-          'wed': ['06:00', '23:00'],
-          'thu': ['06:00', '23:00'],
-          'fri': ['06:00', '23:00'],
-          'sat': ['06:00', '23:00'],
-          'sun': ['06:00', '23:00'],
-        },
-        timezone: 'Asia/Ho_Chi_Minh',
-        createdAt: now.subtract(const Duration(days: 20)),
-        updatedAt: now,
-        createdBy: 'owner_01',
-        updatedBy: 'owner_01',
-      ),
-      FootballField(
-        id: 'field_thanh_da',
-        ownerId: 'owner_01',
-        name: 'Sân bóng Thanh Đa',
-        description: 'Sân cỏ nhân tạo mới nâng cấp mặt cỏ đạt chuẩn FIFA 2 sao.',
-        coverImageUrl: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=800&q=80',
-        imageUrls: const [
-          'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=800&q=80',
-        ],
-        address: 'Lô IV Cư xá Thanh Đa',
-        district: 'Bình Thạnh',
-        city: 'TP. Hồ Chí Minh',
-        latitude: 10.8142,
-        longitude: 106.7210,
-        fieldType: '5-a-side',
-        capacity: 10,
-        amenities: const ['Wifi', 'Gửi xe máy', 'Áo bib thi đấu'],
-        basePrice: 280000,
-        currency: 'VND',
-        slotDurationMinutes: 60,
-        status: FieldStatus.active,
-        openingHours: const {
-          'mon': ['06:00', '23:00'],
-          'tue': ['06:00', '23:00'],
-          'wed': ['06:00', '23:00'],
-          'thu': ['06:00', '23:00'],
-          'fri': ['06:00', '23:00'],
-          'sat': ['06:00', '23:00'],
-          'sun': ['06:00', '23:00'],
-        },
-        timezone: 'Asia/Ho_Chi_Minh',
-        createdAt: now.subtract(const Duration(days: 15)),
-        updatedAt: now,
-        createdBy: 'owner_01',
-        updatedBy: 'owner_01',
-      ),
-      FootballField(
-        id: 'field_chao_lua',
-        ownerId: 'owner_01',
-        name: 'Sân vận động Chảo Lửa',
-        description: 'Cụm sân 11 người mặt cỏ tự nhiên tiêu chuẩn thi đấu chuyên nghiệp.',
-        coverImageUrl: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=800&q=80',
-        imageUrls: const [
-          'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=800&q=80',
-        ],
-        address: '30 Phan Thúc Duyện, Phường 4',
-        district: 'Tân Bình',
-        city: 'TP. Hồ Chí Minh',
-        latitude: 10.8032,
-        longitude: 106.6621,
-        fieldType: '11-a-side',
-        capacity: 22,
-        amenities: const ['Khán đài', 'Đèn cao áp', 'Phòng tắm nóng lạnh', 'Bãi xe ô tô'],
-        basePrice: 650000,
-        currency: 'VND',
-        slotDurationMinutes: 90,
-        status: FieldStatus.active,
-        openingHours: const {
-          'mon': ['06:00', '23:00'],
-          'tue': ['06:00', '23:00'],
-          'wed': ['06:00', '23:00'],
-          'thu': ['06:00', '23:00'],
-          'fri': ['06:00', '23:00'],
-          'sat': ['06:00', '23:00'],
-          'sun': ['06:00', '23:00'],
-        },
-        timezone: 'Asia/Ho_Chi_Minh',
-        createdAt: now.subtract(const Duration(days: 10)),
-        updatedAt: now,
-        createdBy: 'owner_01',
-        updatedBy: 'owner_01',
-      ),
-      FootballField(
-        id: 'field_futsal_tan_binh',
-        ownerId: 'owner_01',
-        name: 'Sân Futsal Hoàng Gia',
-        description: 'Sân bóng đá trong nhà mặt sàn thảm vinyl cao cấp, máy lạnh thoáng khí.',
-        coverImageUrl: 'https://images.unsplash.com/photo-1529900245534-47fbfb57835a?auto=format&fit=crop&w=800&q=80',
-        imageUrls: const [
-          'https://images.unsplash.com/photo-1529900245534-47fbfb57835a?auto=format&fit=crop&w=800&q=80',
-        ],
-        address: '18 Cộng Hòa, Phường 13',
-        district: 'Tân Bình',
-        city: 'TP. Hồ Chí Minh',
-        latitude: 10.8010,
-        longitude: 106.6450,
-        fieldType: 'futsal',
-        capacity: 10,
-        amenities: const ['Máy lạnh', 'Sàn thảm Futsal', 'Tủ đồ thông minh', 'Nước uống'],
-        basePrice: 320000,
-        currency: 'VND',
-        slotDurationMinutes: 60,
-        status: FieldStatus.active,
-        openingHours: const {
-          'mon': ['06:00', '23:00'],
-          'tue': ['06:00', '23:00'],
-          'wed': ['06:00', '23:00'],
-          'thu': ['06:00', '23:00'],
-          'fri': ['06:00', '23:00'],
-          'sat': ['06:00', '23:00'],
-          'sun': ['06:00', '23:00'],
-        },
-        timezone: 'Asia/Ho_Chi_Minh',
-        createdAt: now.subtract(const Duration(days: 8)),
-        updatedAt: now,
-        createdBy: 'owner_01',
-        updatedBy: 'owner_01',
-      ),
-      FootballField(
-        id: 'field_my_dinh',
-        ownerId: 'owner_01',
-        name: 'Sân bóng Cỏ Nhân Tạo Mỹ Đình',
-        description: 'Cụm sân 7 người chất lượng cao ngay gần SVĐ Quốc Gia Mỹ Đình.',
-        coverImageUrl: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=800&q=80',
-        imageUrls: const [
-          'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=800&q=80',
-        ],
-        address: 'Đường Lê Đức Thọ, Mỹ Đình',
-        district: 'Nam Từ Liêm',
-        city: 'Hà Nội',
-        latitude: 21.0200,
-        longitude: 105.7650,
-        fieldType: '7-a-side',
-        capacity: 14,
-        amenities: const ['Bãi đỗ ô tô', 'Căng tin', 'Đèn chiếu sáng', 'Trọng tài'],
-        basePrice: 350000,
-        currency: 'VND',
-        slotDurationMinutes: 60,
-        status: FieldStatus.active,
-        openingHours: const {
-          'mon': ['06:00', '23:00'],
-          'tue': ['06:00', '23:00'],
-          'wed': ['06:00', '23:00'],
-          'thu': ['06:00', '23:00'],
-          'fri': ['06:00', '23:00'],
-          'sat': ['06:00', '23:00'],
-          'sun': ['06:00', '23:00'],
-        },
-        timezone: 'Asia/Ho_Chi_Minh',
-        createdAt: now.subtract(const Duration(days: 5)),
-        updatedAt: now,
-        createdBy: 'owner_01',
-        updatedBy: 'owner_01',
-      ),
-      FootballField(
-        id: 'field_tuyen_son',
-        ownerId: 'owner_01',
-        name: 'Làng Thể Thao Tuyên Sơn',
-        description: 'Tổ hợp thể thao giải trí hàng đầu miền Trung, sân 7 đạt chuẩn FIFA.',
-        coverImageUrl: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=800&q=80',
-        imageUrls: const [
-          'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=800&q=80',
-        ],
-        address: 'Đường 2 Tháng 9, Hòa Cường Nam',
-        district: 'Hải Châu',
-        city: 'Đà Nẵng',
-        latitude: 16.0350,
-        longitude: 108.2250,
-        fieldType: '7-a-side',
-        capacity: 14,
-        amenities: const ['Bãi đỗ ô tô', 'Căng tin', 'Wifi', 'Trọng tài'],
-        basePrice: 300000,
-        currency: 'VND',
-        slotDurationMinutes: 60,
-        status: FieldStatus.active,
-        openingHours: const {
-          'mon': ['06:00', '23:00'],
-          'tue': ['06:00', '23:00'],
-          'wed': ['06:00', '23:00'],
-          'thu': ['06:00', '23:00'],
-          'fri': ['06:00', '23:00'],
-          'sat': ['06:00', '23:00'],
-          'sun': ['06:00', '23:00'],
-        },
-        timezone: 'Asia/Ho_Chi_Minh',
-        createdAt: now.subtract(const Duration(days: 5)),
-        updatedAt: now,
-        createdBy: 'owner_01',
-        updatedBy: 'owner_01',
-      ),
-    ];
-
-    return fields.where((f) {
-      if (city != null && f.city.toLowerCase() != city.toLowerCase()) return false;
-      if (district != null && f.district.toLowerCase() != district.toLowerCase()) return false;
-      if (fieldType != null && f.fieldType != fieldType) return false;
-      if (search != null && search.trim().isNotEmpty) {
-        final query = search.trim().toLowerCase();
-        final match = f.name.toLowerCase().contains(query) ||
-            f.address.toLowerCase().contains(query) ||
-            f.district.toLowerCase().contains(query);
-        if (!match) return false;
-      }
-      return true;
-    }).toList();
-  }
-
-  static List<FieldSlot> _getFallbackSampleSlots(String fieldId, {String? dateKey}) {
-    final now = DateTime.now();
-    final dKey = dateKey ??
-        '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-    final parts = dKey.split('-');
-    final targetDate = parts.length == 3
-        ? DateTime(int.parse(parts[0]), int.parse(parts[1]), int.parse(parts[2]))
-        : now;
-
-    final hours = [7, 8, 9, 15, 16, 17, 18, 19, 20, 21];
-    return hours.map((h) {
-      final start = DateTime(targetDate.year, targetDate.month, targetDate.day, h, 0);
-      final end = start.add(const Duration(hours: 1));
-      final slotKey = 'slot_${fieldId}_${dKey}_$h';
-      final isHeld = h == 18;
-      final isBooked = h == 19 || _bookedSlotIds.contains(slotKey);
-      return FieldSlot(
-        id: slotKey,
-        fieldId: fieldId,
-        dateKey: dKey,
-        startsAt: start,
-        endsAt: end,
-        durationMinutes: 60,
-        basePrice: (h >= 17 && h <= 20) ? 350000 : 250000,
-        currency: 'VND',
-        status: isBooked
-            ? FieldSlotStatus.booked
-            : isHeld
-                ? FieldSlotStatus.held
-                : FieldSlotStatus.available,
-        createdAt: now.subtract(const Duration(days: 1)),
-        updatedAt: now,
-      );
-    }).toList();
   }
 }

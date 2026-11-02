@@ -1,13 +1,7 @@
 import 'dart:collection';
 
 /// Trạng thái vận hành của một sân bóng có thể được đặt.
-enum FieldStatus {
-  draft,
-  active,
-  inactive,
-  maintenance,
-  archived,
-}
+enum FieldStatus { draft, active, inactive, maintenance, archived }
 
 /// Một sân bóng thuộc sở hữu của một chủ sân.
 class FootballField {
@@ -22,6 +16,8 @@ class FootballField {
   final String city;
   final double latitude;
   final double longitude;
+  final String? placeId;
+  final String? ward;
   final String fieldType;
   final int capacity;
   final List<String> amenities;
@@ -48,6 +44,8 @@ class FootballField {
     required this.city,
     required this.latitude,
     required this.longitude,
+    this.placeId,
+    this.ward,
     required this.fieldType,
     required this.capacity,
     required List<String> amenities,
@@ -61,12 +59,12 @@ class FootballField {
     required this.updatedAt,
     required this.createdBy,
     required this.updatedBy,
-  })  : imageUrls = List.unmodifiable(imageUrls),
-        amenities = List.unmodifiable(amenities),
-        openingHours = UnmodifiableMapView({
-          for (final entry in openingHours.entries)
-            entry.key: List.unmodifiable(entry.value),
-        });
+  }) : imageUrls = List.unmodifiable(imageUrls),
+       amenities = List.unmodifiable(amenities),
+       openingHours = UnmodifiableMapView({
+         for (final entry in openingHours.entries)
+           entry.key: List.unmodifiable(entry.value),
+       });
 
   factory FootballField.fromJson(Map<String, dynamic> json) {
     return FootballField(
@@ -81,6 +79,8 @@ class FootballField {
       city: json['city'] as String? ?? '',
       latitude: (json['latitude'] as num?)?.toDouble() ?? 0,
       longitude: (json['longitude'] as num?)?.toDouble() ?? 0,
+      placeId: json['placeId'] as String?,
+      ward: json['ward'] as String?,
       fieldType: json['fieldType'] as String? ?? '',
       capacity: (json['capacity'] as num?)?.toInt() ?? 0,
       amenities: _stringList(json['amenities']),
@@ -100,6 +100,64 @@ class FootballField {
     );
   }
 
+  FootballField copyWith({
+    String? id,
+    String? ownerId,
+    String? name,
+    String? description,
+    String? coverImageUrl,
+    List<String>? imageUrls,
+    String? address,
+    String? district,
+    String? city,
+    double? latitude,
+    double? longitude,
+    String? placeId,
+    String? ward,
+    String? fieldType,
+    int? capacity,
+    List<String>? amenities,
+    int? basePrice,
+    String? currency,
+    int? slotDurationMinutes,
+    FieldStatus? status,
+    Map<String, List<String>>? openingHours,
+    String? timezone,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    String? createdBy,
+    String? updatedBy,
+  }) {
+    return FootballField(
+      id: id ?? this.id,
+      ownerId: ownerId ?? this.ownerId,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      coverImageUrl: coverImageUrl ?? this.coverImageUrl,
+      imageUrls: imageUrls ?? this.imageUrls,
+      address: address ?? this.address,
+      district: district ?? this.district,
+      city: city ?? this.city,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      placeId: placeId ?? this.placeId,
+      ward: ward ?? this.ward,
+      fieldType: fieldType ?? this.fieldType,
+      capacity: capacity ?? this.capacity,
+      amenities: amenities ?? this.amenities,
+      basePrice: basePrice ?? this.basePrice,
+      currency: currency ?? this.currency,
+      slotDurationMinutes: slotDurationMinutes ?? this.slotDurationMinutes,
+      status: status ?? this.status,
+      openingHours: openingHours ?? this.openingHours,
+      timezone: timezone ?? this.timezone,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      createdBy: createdBy ?? this.createdBy,
+      updatedBy: updatedBy ?? this.updatedBy,
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -113,6 +171,8 @@ class FootballField {
       'city': city,
       'latitude': latitude,
       'longitude': longitude,
+      if (placeId != null && placeId!.isNotEmpty) 'placeId': placeId,
+      if (ward != null && ward!.isNotEmpty) 'ward': ward,
       'fieldType': fieldType,
       'capacity': capacity,
       'amenities': amenities,

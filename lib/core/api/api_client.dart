@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show Platform;
+
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+
 import '../auth/auth_context.dart';
 
 /// Đại diện cho lỗi trả về từ hệ thống REST API Backend của Ballhub.
@@ -46,11 +48,9 @@ class ApiClient {
   /// Instance http.Client để thực hiện các cuộc gọi mạng HTTP
   final http.Client _client;
 
-  ApiClient({
-    String? baseUrl,
-    http.Client? client,
-  })  : baseUrl = baseUrl ?? _resolveDefaultBaseUrl(),
-        _client = client ?? http.Client();
+  ApiClient({String? baseUrl, http.Client? client})
+    : baseUrl = baseUrl ?? _resolveDefaultBaseUrl(),
+      _client = client ?? http.Client();
 
   /// Tự động phân giải Base URL phù hợp với nền tảng đang chạy
   static String _resolveDefaultBaseUrl() {
@@ -214,14 +214,25 @@ class ApiClient {
     if (error is TimeoutException) {
       throw ApiException(
         code: 'TIMEOUT',
-        message: 'Yêu cầu tới máy chủ quá thời gian chờ (10s). Vui lòng thử lại.',
+        message:
+            'Yêu cầu tới máy chủ quá thời gian chờ (10s). Vui lòng thử lại.',
         statusCode: 408,
       );
     }
+    final errorStr = error.toString();
+    final isConnectionRefused =
+        errorStr.contains('Connection refused') ||
+        errorStr.contains('SocketException') ||
+        errorStr.contains('Failed host lookup');
+    final friendlyMessage = isConnectionRefused
+        ? 'Không thể kết nối tới máy chủ API Ballhub. Vui lòng kiểm tra mạng hoặc đảm bảo backend đang chạy.'
+        : 'Lỗi mạng khi kết nối máy chủ ($operation). Vui lòng thử lại.';
+
     throw ApiException(
       code: 'NETWORK_ERROR',
-      message: 'Không thể kết nối tới API Backend Ballhub ($operation): $error',
+      message: friendlyMessage,
       statusCode: 503,
+      details: errorStr,
     );
   }
 }

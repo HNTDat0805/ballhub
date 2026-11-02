@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../core/theme/app_theme.dart';
 import '../../services/auth_service.dart';
 import '../../utils/ui_helpers.dart';
@@ -98,9 +99,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       Positioned.fill(
                         child: Opacity(
                           opacity: 0.15,
-                          child: CustomPaint(
-                            painter: _PitchFieldPainter(),
-                          ),
+                          child: CustomPaint(painter: _PitchFieldPainter()),
                         ),
                       ),
                       // Lớp phủ bóng mờ
@@ -125,7 +124,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 // Nội dung trên Banner: Logo + Khẩu hiệu
                 SafeArea(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 16,
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -267,13 +269,17 @@ class _LoginScreenState extends State<LoginScreen> {
                         prefixIcon: const Icon(Icons.lock_outline, size: 20),
                         suffixIcon: IconButton(
                           icon: Icon(
-                            _obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                            _obscure
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
                             color: AppTheme.textSecondary,
                           ),
                           onPressed: () => setState(() => _obscure = !_obscure),
                         ),
                       ),
-                      validator: (v) => (v == null || v.isEmpty) ? 'Vui lòng nhập mật khẩu' : null,
+                      validator: (v) => (v == null || v.isEmpty)
+                          ? 'Vui lòng nhập mật khẩu'
+                          : null,
                     ),
                     const SizedBox(height: 12),
 
@@ -283,7 +289,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: TextButton(
                         onPressed: () => Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
+                          MaterialPageRoute(
+                            builder: (_) => const ForgotPasswordScreen(),
+                          ),
                         ),
                         style: TextButton.styleFrom(
                           padding: EdgeInsets.zero,
@@ -309,7 +317,10 @@ class _LoginScreenState extends State<LoginScreen> {
                           ? const SizedBox(
                               width: 20,
                               height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
                             )
                           : const Row(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -328,12 +339,17 @@ class _LoginScreenState extends State<LoginScreen> {
                       children: [
                         const Text(
                           'Chưa có tài khoản? ',
-                          style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+                          style: TextStyle(
+                            color: AppTheme.textSecondary,
+                            fontSize: 14,
+                          ),
                         ),
                         GestureDetector(
                           onTap: () => Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                            MaterialPageRoute(
+                              builder: (_) => const RegisterScreen(),
+                            ),
                           ),
                           child: const Text(
                             'Đăng ký ngay',
@@ -352,10 +368,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     const Text(
                       'Một tài khoản. Cả cộng đồng bóng đá.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppTheme.textMuted,
-                      ),
+                      style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
                     ),
                     const SizedBox(height: 16),
                   ],
@@ -381,7 +394,11 @@ class _PitchFieldPainter extends CustomPainter {
     // Vòng tròn trung tâm
     final center = Offset(size.width / 2, size.height / 2);
     canvas.drawCircle(center, 60, paint);
-    canvas.drawLine(Offset(0, size.height / 2), Offset(size.width, size.height / 2), paint);
+    canvas.drawLine(
+      Offset(0, size.height / 2),
+      Offset(size.width, size.height / 2),
+      paint,
+    );
   }
 
   @override

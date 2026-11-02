@@ -82,7 +82,10 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 15,
+        ),
         hintStyle: const TextStyle(color: textMuted, fontSize: 14),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -126,10 +129,7 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          textStyle: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 15,
-          ),
+          textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -140,18 +140,13 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          textStyle: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
-          ),
+          textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
         ),
       ),
       chipTheme: ChipThemeData(
         backgroundColor: Colors.white,
         side: const BorderSide(color: borderColor, width: 1),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         labelStyle: const TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w500,
@@ -162,10 +157,28 @@ class AppTheme {
         backgroundColor: Colors.white,
         selectedItemColor: primaryDarkGreen,
         unselectedItemColor: textMuted,
-        selectedLabelStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-        unselectedLabelStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+        selectedLabelStyle: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+        ),
+        unselectedLabelStyle: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w500,
+        ),
         type: BottomNavigationBarType.fixed,
         elevation: 8,
+      ),
+      tabBarTheme: const TabBarThemeData(
+        labelColor: primaryDarkGreen,
+        unselectedLabelColor: textSecondary,
+        indicatorColor: primaryDarkGreen,
+        indicatorSize: TabBarIndicatorSize.label,
+        labelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+        unselectedLabelStyle: TextStyle(
+          fontWeight: FontWeight.w500,
+          fontSize: 13,
+        ),
+        dividerColor: Colors.transparent,
       ),
     );
   }

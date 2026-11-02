@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+
 import '../../core/theme/app_theme.dart';
 import '../../utils/ui_helpers.dart';
 
@@ -40,7 +41,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     }
 
     if (!text.contains('@') || !text.contains('.')) {
-      showMessage(context, 'Vui lòng nhập địa chỉ email hợp lệ để nhận liên kết khôi phục');
+      showMessage(
+        context,
+        'Vui lòng nhập địa chỉ email hợp lệ để nhận liên kết khôi phục',
+      );
       return;
     }
 
@@ -53,7 +57,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           _loading = false;
           _sent = true;
         });
-        showMessage(context, 'Đã gửi liên kết đặt lại mật khẩu tới $text. Vui lòng kiểm tra hộp thư!');
+        showMessage(
+          context,
+          'Đã gửi liên kết đặt lại mật khẩu tới $text. Vui lòng kiểm tra hộp thư!',
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -154,14 +161,19 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     ? const SizedBox(
                         width: 20,
                         height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
                       )
                     : Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           const Icon(Icons.arrow_forward, size: 18),
                           const SizedBox(width: 8),
-                          Text(_sent ? 'Gửi lại yêu cầu' : 'Gửi yêu cầu khôi phục'),
+                          Text(
+                            _sent ? 'Gửi lại yêu cầu' : 'Gửi yêu cầu khôi phục',
+                          ),
                         ],
                       ),
               ),
@@ -178,7 +190,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 child: const Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.verified_user_outlined, color: AppTheme.primaryDarkGreen, size: 24),
+                    Icon(
+                      Icons.verified_user_outlined,
+                      color: AppTheme.primaryDarkGreen,
+                      size: 24,
+                    ),
                     SizedBox(width: 12),
                     Expanded(
                       child: Column(
@@ -213,7 +229,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               Center(
                 child: TextButton.icon(
                   onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.arrow_back, size: 18, color: AppTheme.primaryDarkGreen),
+                  icon: const Icon(
+                    Icons.arrow_back,
+                    size: 18,
+                    color: AppTheme.primaryDarkGreen,
+                  ),
                   label: const Text(
                     'Quay lại đăng nhập',
                     style: TextStyle(

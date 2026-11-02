@@ -1,6 +1,8 @@
 import 'dart:async';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
+
 import '../domain/models/match.dart';
 import '../domain/models/match_audit.dart';
 import '../domain/models/standings_row.dart';
@@ -28,15 +30,19 @@ class FirebaseTournamentRepository implements TournamentRepository {
   final Map<String, List<StandingsRow>> _cacheStandings = {};
   final Map<String, List<MatchAudit>> _cacheAudits = {};
 
-  final _tournamentStreamController = StreamController<List<Tournament>>.broadcast();
-  final Map<String, StreamController<List<TournamentTeam>>> _teamsControllers = {};
-  final Map<String, StreamController<List<TournamentMatch>>> _matchesControllers = {};
-  final Map<String, StreamController<List<StandingsRow>>> _standingsControllers = {};
+  final _tournamentStreamController =
+      StreamController<List<Tournament>>.broadcast();
+  final Map<String, StreamController<List<TournamentTeam>>> _teamsControllers =
+      {};
+  final Map<String, StreamController<List<TournamentMatch>>>
+  _matchesControllers = {};
+  final Map<String, StreamController<List<StandingsRow>>>
+  _standingsControllers = {};
   final Map<String, StreamController<List<MatchAudit>>> _auditsControllers = {};
 
   FirebaseTournamentRepository({FirebaseDatabase? database})
-      : _db = database ?? _tryGetDatabase(),
-        _isFirebaseReady = Firebase.apps.isNotEmpty {
+    : _db = database ?? _tryGetDatabase(),
+      _isFirebaseReady = Firebase.apps.isNotEmpty {
     _initSampleDataIfEmpty();
   }
 
@@ -57,7 +63,8 @@ class FirebaseTournamentRepository implements TournamentRepository {
       final sampleTournament = Tournament(
         id: sampleId,
         name: 'Ballhub Super Cup 2026',
-        description: 'Giải bóng đá phong trào thường niên Ballhub tranh cúp vô địch.',
+        description:
+            'Giải bóng đá phong trào thường niên Ballhub tranh cúp vô địch.',
         location: 'Sân bóng Thể thao Quốc gia, TP. Hồ Chí Minh',
         startDate: DateTime.now().add(const Duration(days: 3)),
         endDate: DateTime.now().add(const Duration(days: 14)),
@@ -150,7 +157,9 @@ class FirebaseTournamentRepository implements TournamentRepository {
     }
 
     // Local stream fallback
-    Timer.run(() => _tournamentStreamController.add(_cacheTournaments.values.toList()));
+    Timer.run(
+      () => _tournamentStreamController.add(_cacheTournaments.values.toList()),
+    );
     return _tournamentStreamController.stream;
   }
 
@@ -207,7 +216,9 @@ class FirebaseTournamentRepository implements TournamentRepository {
   // TEAMS & REGISTRATION
   // ----------------------------------------------------
 
-  StreamController<List<TournamentTeam>> _getTeamsController(String tournamentId) {
+  StreamController<List<TournamentTeam>> _getTeamsController(
+    String tournamentId,
+  ) {
     return _teamsControllers.putIfAbsent(
       tournamentId,
       () => StreamController<List<TournamentTeam>>.broadcast(),
@@ -251,14 +262,21 @@ class FirebaseTournamentRepository implements TournamentRepository {
           .get();
 
       if (existingSnap.exists && existingSnap.value != null) {
-        throw Exception('Đội bóng "${team.teamName}" đã đăng ký tham gia giải đấu này rồi.');
+        throw Exception(
+          'Đội bóng "${team.teamName}" đã đăng ký tham gia giải đấu này rồi.',
+        );
       }
 
-      await db.ref('tournament_teams/${team.tournamentId}/${team.id}').set(team.toMap());
+      await db
+          .ref('tournament_teams/${team.tournamentId}/${team.id}')
+          .set(team.toMap());
     }
 
     final list = _cacheTeams.putIfAbsent(team.tournamentId, () => []);
-    if (list.any((t) => t.teamId == team.teamId && t.status != RegistrationStatus.cancelled)) {
+    if (list.any(
+      (t) =>
+          t.teamId == team.teamId && t.status != RegistrationStatus.cancelled,
+    )) {
       throw Exception('Đội bóng "${team.teamName}" đã đăng ký giải này rồi.');
     }
     list.add(team);
@@ -282,7 +300,9 @@ class FirebaseTournamentRepository implements TournamentRepository {
     };
 
     if (isConnectedToFirebase) {
-      await _db!.ref('tournament_teams/$tournamentId/$teamRegistrationId').update(updates);
+      await _db!
+          .ref('tournament_teams/$tournamentId/$teamRegistrationId')
+          .update(updates);
     }
 
     final list = _cacheTeams[tournamentId];
@@ -304,7 +324,9 @@ class FirebaseTournamentRepository implements TournamentRepository {
   // MATCHES & RESULTS
   // ----------------------------------------------------
 
-  StreamController<List<TournamentMatch>> _getMatchesController(String tournamentId) {
+  StreamController<List<TournamentMatch>> _getMatchesController(
+    String tournamentId,
+  ) {
     return _matchesControllers.putIfAbsent(
       tournamentId,
       () => StreamController<List<TournamentMatch>>.broadcast(),
@@ -341,7 +363,10 @@ class FirebaseTournamentRepository implements TournamentRepository {
   }
 
   @override
-  Future<void> saveMatches(String tournamentId, List<TournamentMatch> matches) async {
+  Future<void> saveMatches(
+    String tournamentId,
+    List<TournamentMatch> matches,
+  ) async {
     if (isConnectedToFirebase) {
       final map = <String, dynamic>{};
       for (final m in matches) {
@@ -355,7 +380,10 @@ class FirebaseTournamentRepository implements TournamentRepository {
   }
 
   @override
-  Future<void> generateSchedule(String tournamentId, {String venue = 'Sân vận động chính'}) async {
+  Future<void> generateSchedule(
+    String tournamentId, {
+    String venue = 'Sân vận động chính',
+  }) async {
     final tournament = await getTournament(tournamentId);
     if (tournament == null) return;
     final teams = _cacheTeams[tournamentId] ?? [];
@@ -397,7 +425,10 @@ class FirebaseTournamentRepository implements TournamentRepository {
       }
     } else {
       final list = _cacheMatches[tournamentId] ?? [];
-      currentMatch = list.firstWhere((m) => m.id == matchId, orElse: () => throw Exception('Không tìm thấy trận đấu'));
+      currentMatch = list.firstWhere(
+        (m) => m.id == matchId,
+        orElse: () => throw Exception('Không tìm thấy trận đấu'),
+      );
     }
 
     final matchUpdateData = {
@@ -421,7 +452,9 @@ class FirebaseTournamentRepository implements TournamentRepository {
       tournamentId: tournamentId,
       matchId: matchId,
       action: isConfirmed
-          ? (currentMatch?.isConfirmed == true ? 'result_modified' : 'result_confirmed')
+          ? (currentMatch?.isConfirmed == true
+                ? 'result_modified'
+                : 'result_confirmed')
           : 'score_draft_updated',
       oldHomeScore: currentMatch?.homeScore,
       oldAwayScore: currentMatch?.awayScore,
@@ -465,7 +498,9 @@ class FirebaseTournamentRepository implements TournamentRepository {
   // STANDINGS (BẢNG XẾP HẠNG TỰ ĐỘNG)
   // ----------------------------------------------------
 
-  StreamController<List<StandingsRow>> _getStandingsController(String tournamentId) {
+  StreamController<List<StandingsRow>> _getStandingsController(
+    String tournamentId,
+  ) {
     return _standingsControllers.putIfAbsent(
       tournamentId,
       () => StreamController<List<StandingsRow>>.broadcast(),
@@ -523,7 +558,9 @@ class FirebaseTournamentRepository implements TournamentRepository {
         });
       }
     } else {
-      approvedTeams = (_cacheTeams[tournamentId] ?? []).where((t) => t.isApproved).toList();
+      approvedTeams = (_cacheTeams[tournamentId] ?? [])
+          .where((t) => t.isApproved)
+          .toList();
       allMatches = _cacheMatches[tournamentId] ?? [];
     }
 

@@ -10,10 +10,10 @@ enum TournamentFormat {
   knockout;
 
   String get displayName => switch (this) {
-        TournamentFormat.roundRobinSingle => 'Vòng tròn 1 lượt',
-        TournamentFormat.roundRobinDouble => 'Vòng tròn 2 lượt (Lượt đi - về)',
-        TournamentFormat.knockout => 'Loại trực tiếp (Knockout)',
-      };
+    TournamentFormat.roundRobinSingle => 'Vòng tròn 1 lượt',
+    TournamentFormat.roundRobinDouble => 'Vòng tròn 2 lượt (Lượt đi - về)',
+    TournamentFormat.knockout => 'Loại trực tiếp (Knockout)',
+  };
 }
 
 /// Trạng thái vòng đời của giải đấu
@@ -34,12 +34,12 @@ enum TournamentStatus {
   cancelled;
 
   String get displayName => switch (this) {
-        TournamentStatus.preparing => 'Chuẩn bị',
-        TournamentStatus.registrationOpen => 'Mở đăng ký',
-        TournamentStatus.inProgress => 'Đang diễn ra',
-        TournamentStatus.completed => 'Đã kết thúc',
-        TournamentStatus.cancelled => 'Đã hủy',
-      };
+    TournamentStatus.preparing => 'Chuẩn bị',
+    TournamentStatus.registrationOpen => 'Mở đăng ký',
+    TournamentStatus.inProgress => 'Đang diễn ra',
+    TournamentStatus.completed => 'Đã kết thúc',
+    TournamentStatus.cancelled => 'Đã hủy',
+  };
 }
 
 /// Mô hình thực thể giải đấu (Tournament Domain Model)
@@ -60,12 +60,25 @@ class Tournament {
   final DateTime createdAt;
   final DateTime updatedAt;
 
+  final String? placeId;
+  final double? latitude;
+  final double? longitude;
+  final String? province;
+  final String? district;
+  final String? ward;
+
   const Tournament({
     required this.id,
     required this.name,
     required this.description,
     this.bannerUrl = '',
     required this.location,
+    this.placeId,
+    this.latitude,
+    this.longitude,
+    this.province,
+    this.district,
+    this.ward,
     required this.startDate,
     required this.endDate,
     required this.registrationDeadline,
@@ -82,7 +95,10 @@ class Tournament {
   /// 1. Giải phải đang ở trạng thái [TournamentStatus.registrationOpen].
   /// 2. Thời điểm hiện tại phải trước hạn chót đăng ký [registrationDeadline].
   /// 3. Số đội đã được duyệt chưa vượt quá giới hạn tối đa [maxTeams].
-  bool canRegister({required DateTime now, required int currentApprovedTeamsCount}) {
+  bool canRegister({
+    required DateTime now,
+    required int currentApprovedTeamsCount,
+  }) {
     if (status != TournamentStatus.registrationOpen) return false;
     if (now.isAfter(registrationDeadline)) return false;
     if (currentApprovedTeamsCount >= maxTeams) return false;
@@ -93,7 +109,8 @@ class Tournament {
   /// 1. Giải đang ở giai đoạn chuẩn bị hoặc mở đăng ký.
   /// 2. Cần có tối thiểu 2 đội bóng đã được duyệt tham gia.
   bool canGenerateSchedule({required int approvedTeamsCount}) {
-    if (status != TournamentStatus.registrationOpen && status != TournamentStatus.preparing) {
+    if (status != TournamentStatus.registrationOpen &&
+        status != TournamentStatus.preparing) {
       return false;
     }
     return approvedTeamsCount >= 2;
@@ -105,6 +122,12 @@ class Tournament {
     String? description,
     String? bannerUrl,
     String? location,
+    String? placeId,
+    double? latitude,
+    double? longitude,
+    String? province,
+    String? district,
+    String? ward,
     DateTime? startDate,
     DateTime? endDate,
     DateTime? registrationDeadline,
@@ -122,6 +145,12 @@ class Tournament {
       description: description ?? this.description,
       bannerUrl: bannerUrl ?? this.bannerUrl,
       location: location ?? this.location,
+      placeId: placeId ?? this.placeId,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      province: province ?? this.province,
+      district: district ?? this.district,
+      ward: ward ?? this.ward,
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
       registrationDeadline: registrationDeadline ?? this.registrationDeadline,
@@ -142,6 +171,12 @@ class Tournament {
       'description': description,
       'bannerUrl': bannerUrl,
       'location': location,
+      if (placeId != null && placeId!.isNotEmpty) 'placeId': placeId,
+      if (latitude != null) 'latitude': latitude,
+      if (longitude != null) 'longitude': longitude,
+      if (province != null && province!.isNotEmpty) 'province': province,
+      if (district != null && district!.isNotEmpty) 'district': district,
+      if (ward != null && ward!.isNotEmpty) 'ward': ward,
       'startDate': startDate.toIso8601String(),
       'endDate': endDate.toIso8601String(),
       'registrationDeadline': registrationDeadline.toIso8601String(),
@@ -162,9 +197,21 @@ class Tournament {
       description: map['description'] as String? ?? '',
       bannerUrl: map['bannerUrl'] as String? ?? '',
       location: map['location'] as String? ?? '',
-      startDate: DateTime.tryParse(map['startDate'] as String? ?? '') ?? DateTime.now(),
-      endDate: DateTime.tryParse(map['endDate'] as String? ?? '') ?? DateTime.now().add(const Duration(days: 7)),
-      registrationDeadline: DateTime.tryParse(map['registrationDeadline'] as String? ?? '') ?? DateTime.now(),
+      placeId: map['placeId'] as String?,
+      latitude: (map['latitude'] as num?)?.toDouble(),
+      longitude: (map['longitude'] as num?)?.toDouble(),
+      province: map['province'] as String?,
+      district: map['district'] as String?,
+      ward: map['ward'] as String?,
+      startDate:
+          DateTime.tryParse(map['startDate'] as String? ?? '') ??
+          DateTime.now(),
+      endDate:
+          DateTime.tryParse(map['endDate'] as String? ?? '') ??
+          DateTime.now().add(const Duration(days: 7)),
+      registrationDeadline:
+          DateTime.tryParse(map['registrationDeadline'] as String? ?? '') ??
+          DateTime.now(),
       maxTeams: (map['maxTeams'] as num?)?.toInt() ?? 8,
       format: TournamentFormat.values.firstWhere(
         (f) => f.name == map['format'],
@@ -176,8 +223,12 @@ class Tournament {
       ),
       organizerId: map['organizerId'] as String? ?? '',
       organizerName: map['organizerName'] as String? ?? '',
-      createdAt: DateTime.tryParse(map['createdAt'] as String? ?? '') ?? DateTime.now(),
-      updatedAt: DateTime.tryParse(map['updatedAt'] as String? ?? '') ?? DateTime.now(),
+      createdAt:
+          DateTime.tryParse(map['createdAt'] as String? ?? '') ??
+          DateTime.now(),
+      updatedAt:
+          DateTime.tryParse(map['updatedAt'] as String? ?? '') ??
+          DateTime.now(),
     );
   }
 }

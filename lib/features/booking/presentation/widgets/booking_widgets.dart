@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../../core/theme/app_theme.dart';
 import '../../domain/models/booking.dart';
 import '../../domain/models/field_slot.dart';
@@ -17,41 +18,41 @@ class BookingStatusBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final (bg, fg, label, icon) = switch (status) {
       BookingStatus.pending => (
-          Colors.amber.shade50,
-          Colors.amber.shade900,
-          'Chờ xác nhận',
-          Icons.schedule_rounded,
-        ),
+        Colors.amber.shade50,
+        Colors.amber.shade900,
+        'Chờ xác nhận',
+        Icons.schedule_rounded,
+      ),
       BookingStatus.confirmed => (
-          Colors.green.shade50,
-          Colors.green.shade800,
-          'Đã xác nhận',
-          Icons.check_circle_rounded,
-        ),
+        Colors.green.shade50,
+        Colors.green.shade800,
+        'Đã xác nhận',
+        Icons.check_circle_rounded,
+      ),
       BookingStatus.rejected => (
-          Colors.red.shade50,
-          Colors.red.shade800,
-          'Bị từ chối',
-          Icons.cancel_rounded,
-        ),
+        Colors.red.shade50,
+        Colors.red.shade800,
+        'Bị từ chối',
+        Icons.cancel_rounded,
+      ),
       BookingStatus.cancelledByUser => (
-          Colors.grey.shade100,
-          Colors.grey.shade700,
-          'Đã hủy',
-          Icons.remove_circle_rounded,
-        ),
+        Colors.grey.shade100,
+        Colors.grey.shade700,
+        'Đã hủy',
+        Icons.remove_circle_rounded,
+      ),
       BookingStatus.cancelledByOwner => (
-          Colors.orange.shade50,
-          Colors.orange.shade900,
-          'Chủ sân hủy',
-          Icons.block_rounded,
-        ),
+        Colors.orange.shade50,
+        Colors.orange.shade900,
+        'Chủ sân hủy',
+        Icons.block_rounded,
+      ),
       BookingStatus.completed => (
-          Colors.blue.shade50,
-          Colors.blue.shade800,
-          'Hoàn thành',
-          Icons.sports_soccer_rounded,
-        ),
+        Colors.blue.shade50,
+        Colors.blue.shade800,
+        'Hoàn thành',
+        Icons.sports_soccer_rounded,
+      ),
     };
 
     return Container(
@@ -92,11 +93,27 @@ class FieldStatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (bg, fg, label) = switch (status) {
-      FieldStatus.active => (Colors.green.shade50, Colors.green.shade800, 'Đang hoạt động'),
-      FieldStatus.inactive => (Colors.grey.shade100, Colors.grey.shade700, 'Tạm ngừng'),
+      FieldStatus.active => (
+        Colors.green.shade50,
+        Colors.green.shade800,
+        'Đang hoạt động',
+      ),
+      FieldStatus.inactive => (
+        Colors.grey.shade100,
+        Colors.grey.shade700,
+        'Tạm ngừng',
+      ),
       FieldStatus.draft => (Colors.blue.shade50, Colors.blue.shade800, 'Nháp'),
-      FieldStatus.maintenance => (Colors.orange.shade50, Colors.orange.shade900, 'Bảo trì'),
-      FieldStatus.archived => (Colors.red.shade50, Colors.red.shade800, 'Đã ẩn'),
+      FieldStatus.maintenance => (
+        Colors.orange.shade50,
+        Colors.orange.shade900,
+        'Bảo trì',
+      ),
+      FieldStatus.archived => (
+        Colors.red.shade50,
+        Colors.red.shade800,
+        'Đã ẩn',
+      ),
     };
 
     return Container(
@@ -134,7 +151,10 @@ class FieldCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Cover image
-            _FieldCoverImage(imageUrl: field.coverImageUrl, fieldType: field.fieldType),
+            _FieldCoverImage(
+              imageUrl: field.coverImageUrl,
+              fieldType: field.fieldType,
+            ),
             Padding(
               padding: const EdgeInsets.all(14),
               child: Column(
@@ -164,12 +184,19 @@ class FieldCard extends StatelessWidget {
                   // Address
                   Row(
                     children: [
-                      const Icon(Icons.location_on_outlined, size: 14, color: AppTheme.textSecondary),
+                      const Icon(
+                        Icons.location_on_outlined,
+                        size: 14,
+                        color: AppTheme.textSecondary,
+                      ),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
                           '${field.district.isNotEmpty ? '${field.district}, ' : ''}${field.city}',
-                          style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: AppTheme.textSecondary,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -181,7 +208,10 @@ class FieldCard extends StatelessWidget {
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: AppTheme.primaryGreen.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
@@ -250,7 +280,11 @@ class _FieldCoverImage extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.sports_soccer, size: 48, color: AppTheme.primaryGreen.withValues(alpha: 0.4)),
+          Icon(
+            Icons.sports_soccer,
+            size: 48,
+            color: AppTheme.primaryGreen.withValues(alpha: 0.4),
+          ),
           const SizedBox(height: 4),
           Text(
             fieldType,
@@ -312,13 +346,21 @@ class _AmenitiesRow extends StatelessWidget {
       spacing: 6,
       runSpacing: 4,
       children: displayAmenities.map((a) {
-        final icon = _amenityIcons[a.toLowerCase()] ?? Icons.check_circle_outline_rounded;
+        final icon =
+            _amenityIcons[a.toLowerCase()] ??
+            Icons.check_circle_outline_rounded;
         return Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, size: 13, color: AppTheme.textSecondary),
             const SizedBox(width: 3),
-            Text(a, style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
+            Text(
+              a,
+              style: const TextStyle(
+                fontSize: 11,
+                color: AppTheme.textSecondary,
+              ),
+            ),
           ],
         );
       }).toList(),
@@ -358,7 +400,9 @@ class TimeSlotTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = _uiState;
-    final (bg, border, textColor, label, labelColor, canTap) = _stateVisuals(state);
+    final (bg, border, textColor, label, labelColor, canTap) = _stateVisuals(
+      state,
+    );
 
     return GestureDetector(
       onTap: canTap ? onTap : null,
@@ -403,7 +447,9 @@ class TimeSlotTile extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
-                  color: state == SlotUiState.selected ? AppTheme.primaryGreen : AppTheme.textPrimary,
+                  color: state == SlotUiState.selected
+                      ? AppTheme.primaryGreen
+                      : AppTheme.textPrimary,
                 ),
               ),
             const SizedBox(width: 10),
@@ -432,53 +478,53 @@ class TimeSlotTile extends StatelessWidget {
   (Color, Color, Color, String, Color, bool) _stateVisuals(SlotUiState state) {
     return switch (state) {
       SlotUiState.available => (
-          Colors.white,
-          const Color(0xFFE0E0E0),
-          AppTheme.textPrimary,
-          'Trống',
-          AppTheme.primaryGreen,
-          true,
-        ),
+        Colors.white,
+        const Color(0xFFE0E0E0),
+        AppTheme.textPrimary,
+        'Trống',
+        AppTheme.primaryGreen,
+        true,
+      ),
       SlotUiState.selected => (
-          AppTheme.primaryGreen.withValues(alpha: 0.08),
-          AppTheme.primaryGreen,
-          AppTheme.primaryGreen,
-          'Đã chọn',
-          AppTheme.primaryGreen,
-          true,
-        ),
+        AppTheme.primaryGreen.withValues(alpha: 0.08),
+        AppTheme.primaryGreen,
+        AppTheme.primaryGreen,
+        'Đã chọn',
+        AppTheme.primaryGreen,
+        true,
+      ),
       SlotUiState.held => (
-          Colors.amber.shade50,
-          Colors.amber.shade200,
-          Colors.amber.shade900,
-          'Đang giữ',
-          Colors.amber.shade900,
-          false,
-        ),
+        Colors.amber.shade50,
+        Colors.amber.shade200,
+        Colors.amber.shade900,
+        'Đang giữ',
+        Colors.amber.shade900,
+        false,
+      ),
       SlotUiState.booked => (
-          Colors.red.shade50,
-          Colors.red.shade200,
-          Colors.red.shade900,
-          'Đã đặt',
-          Colors.red.shade800,
-          false,
-        ),
+        Colors.red.shade50,
+        Colors.red.shade200,
+        Colors.red.shade900,
+        'Đã đặt',
+        Colors.red.shade800,
+        false,
+      ),
       SlotUiState.blocked => (
-          Colors.grey.shade100,
-          Colors.grey.shade300,
-          Colors.grey.shade600,
-          'Không khả dụng',
-          Colors.grey.shade600,
-          false,
-        ),
+        Colors.grey.shade100,
+        Colors.grey.shade300,
+        Colors.grey.shade600,
+        'Không khả dụng',
+        Colors.grey.shade600,
+        false,
+      ),
       SlotUiState.disabled => (
-          Colors.grey.shade50,
-          Colors.grey.shade200,
-          Colors.grey.shade400,
-          'Vô hiệu',
-          Colors.grey.shade400,
-          false,
-        ),
+        Colors.grey.shade50,
+        Colors.grey.shade200,
+        Colors.grey.shade400,
+        'Vô hiệu',
+        Colors.grey.shade400,
+        false,
+      ),
     };
   }
 
@@ -501,8 +547,14 @@ class TimeSlotTile extends StatelessWidget {
 class BookingCard extends StatelessWidget {
   final Booking booking;
   final VoidCallback? onTap;
+  final VoidCallback? onCancel;
 
-  const BookingCard({super.key, required this.booking, this.onTap});
+  const BookingCard({
+    super.key,
+    required this.booking,
+    this.onTap,
+    this.onCancel,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -539,12 +591,19 @@ class BookingCard extends StatelessWidget {
               // Address
               Row(
                 children: [
-                  const Icon(Icons.location_on_outlined, size: 14, color: AppTheme.textSecondary),
+                  const Icon(
+                    Icons.location_on_outlined,
+                    size: 14,
+                    color: AppTheme.textSecondary,
+                  ),
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
                       booking.fieldAddressSnapshot,
-                      style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.textSecondary,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -557,18 +616,32 @@ class BookingCard extends StatelessWidget {
               // Date + time
               Row(
                 children: [
-                  const Icon(Icons.calendar_today_outlined, size: 14, color: AppTheme.textSecondary),
+                  const Icon(
+                    Icons.calendar_today_outlined,
+                    size: 14,
+                    color: AppTheme.textSecondary,
+                  ),
                   const SizedBox(width: 6),
                   Text(
                     _formatDate(booking.startsAt),
-                    style: const TextStyle(fontSize: 13, color: AppTheme.textPrimary),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppTheme.textPrimary,
+                    ),
                   ),
                   const SizedBox(width: 12),
-                  const Icon(Icons.access_time_rounded, size: 14, color: AppTheme.textSecondary),
+                  const Icon(
+                    Icons.access_time_rounded,
+                    size: 14,
+                    color: AppTheme.textSecondary,
+                  ),
                   const SizedBox(width: 6),
                   Text(
                     '${_fmt(booking.startsAt)} – ${_fmt(booking.endsAt)}',
-                    style: const TextStyle(fontSize: 13, color: AppTheme.textPrimary),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppTheme.textPrimary,
+                    ),
                   ),
                 ],
               ),
@@ -576,7 +649,11 @@ class BookingCard extends StatelessWidget {
               // Price
               Row(
                 children: [
-                  const Icon(Icons.payments_outlined, size: 14, color: AppTheme.textSecondary),
+                  const Icon(
+                    Icons.payments_outlined,
+                    size: 14,
+                    color: AppTheme.textSecondary,
+                  ),
                   const SizedBox(width: 6),
                   Text(
                     '${_formatPrice(booking.totalAmount)} ${booking.currency}',
@@ -587,9 +664,50 @@ class BookingCard extends StatelessWidget {
                     ),
                   ),
                   const Spacer(),
-                  const Icon(Icons.chevron_right_rounded, color: AppTheme.textSecondary, size: 20),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: AppTheme.textSecondary,
+                    size: 20,
+                  ),
                 ],
               ),
+              if (onCancel != null) ...[
+                const SizedBox(height: 8),
+                const Divider(height: 1),
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: onCancel,
+                      icon: const Icon(
+                        Icons.cancel_outlined,
+                        size: 15,
+                        color: AppTheme.dangerRed,
+                      ),
+                      label: const Text(
+                        'Hủy đặt sân',
+                        style: TextStyle(
+                          color: AppTheme.dangerRed,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: AppTheme.dangerRed),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 8,
+                        ),
+                        visualDensity: VisualDensity.compact,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),
@@ -632,7 +750,10 @@ class BookingLoadingState extends StatelessWidget {
           const CircularProgressIndicator(color: AppTheme.primaryGreen),
           if (message != null) ...[
             const SizedBox(height: 16),
-            Text(message!, style: const TextStyle(color: AppTheme.textSecondary)),
+            Text(
+              message!,
+              style: const TextStyle(color: AppTheme.textSecondary),
+            ),
           ],
         ],
       ),
@@ -664,7 +785,11 @@ class BookingEmptyState extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 64, color: AppTheme.primaryGreen.withValues(alpha: 0.3)),
+            Icon(
+              icon,
+              size: 64,
+              color: AppTheme.primaryGreen.withValues(alpha: 0.3),
+            ),
             const SizedBox(height: 16),
             Text(
               title,
@@ -679,7 +804,10 @@ class BookingEmptyState extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 subtitle!,
-                style: const TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: AppTheme.textSecondary,
+                ),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -708,7 +836,11 @@ class BookingErrorState extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.wifi_off_rounded, size: 56, color: AppTheme.dangerRed),
+            const Icon(
+              Icons.wifi_off_rounded,
+              size: 56,
+              color: AppTheme.dangerRed,
+            ),
             const SizedBox(height: 16),
             Text(
               message,
@@ -777,7 +909,10 @@ class PriceSelectionBar extends StatelessWidget {
                 children: [
                   Text(
                     '$slotCount khung giờ • ${totalMinutes ~/ 60}h${totalMinutes % 60 > 0 ? '${totalMinutes % 60}p' : ''}',
-                    style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textSecondary,
+                    ),
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -795,7 +930,10 @@ class PriceSelectionBar extends StatelessWidget {
             ElevatedButton(
               onPressed: isEnabled ? onContinue : null,
               style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 14,
+                ),
               ),
               child: const Text('Tiếp tục đặt sân'),
             ),

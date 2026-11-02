@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+
 import '../../../../core/theme/app_theme.dart';
+import '../../data/api_booking_repository.dart';
 import '../../data/booking_repository.dart';
 import '../../domain/models/booking.dart';
 import '../controllers/booking_controllers.dart';
@@ -36,7 +38,14 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     _tabController = TabController(length: _tabs.length, vsync: this);
     _controller.addListener(_onUpdate);
     _tabController.addListener(_onTabChanged);
+    ApiBookingRepository.bookingChanged.addListener(_onBookingChanged);
     _controller.loadMyBookings();
+  }
+
+  void _onBookingChanged() {
+    if (mounted) {
+      _controller.loadMyBookings();
+    }
   }
 
   void _onUpdate() {
@@ -50,6 +59,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
 
   @override
   void dispose() {
+    ApiBookingRepository.bookingChanged.removeListener(_onBookingChanged);
     _controller.removeListener(_onUpdate);
     _tabController.removeListener(_onTabChanged);
     _controller.dispose();
@@ -66,9 +76,17 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
           controller: _tabController,
           isScrollable: true,
           tabAlignment: TabAlignment.start,
-          indicatorColor: Colors.white,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
+          indicatorColor: AppTheme.primaryDarkGreen,
+          labelColor: AppTheme.primaryDarkGreen,
+          unselectedLabelColor: AppTheme.textSecondary,
+          labelStyle: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 13,
+          ),
+          unselectedLabelStyle: const TextStyle(
+            fontWeight: FontWeight.w500,
+            fontSize: 13,
+          ),
           tabs: _tabs.map((t) => Tab(text: t.$2)).toList(),
         ),
       ),
@@ -78,7 +96,9 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
 
   Widget _buildBody() {
     if (_controller.isLoading) {
-      return const BookingLoadingState(message: 'Đang tải danh sách đặt sân...');
+      return const BookingLoadingState(
+        message: 'Đang tải danh sách đặt sân...',
+      );
     }
 
     if (_controller.errorMessage != null) {
@@ -98,7 +118,9 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
             : 'Không có đặt sân ở trạng thái này.',
         icon: Icons.sports_soccer_rounded,
         actionLabel: _controller.statusFilter == null ? 'Tìm sân ngay' : null,
-        onAction: _controller.statusFilter == null ? () => Navigator.pop(context) : null,
+        onAction: _controller.statusFilter == null
+            ? () => Navigator.pop(context)
+            : null,
       );
     }
 
@@ -110,11 +132,85 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
         itemCount: bookings.length,
         itemBuilder: (ctx, index) {
           final booking = bookings[index];
+          final canCancel =
+              booking.status == BookingStatus.pending ||
+              booking.status == BookingStatus.confirmed;
           return BookingCard(
             booking: booking,
             onTap: () => _openDetail(booking),
+            onCancel: canCancel ? () => _showCancelDialog(booking) : null,
           );
         },
+      ),
+    );
+  }
+
+  void _showCancelDialog(Booking booking) {
+    final reasonController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Xác nhận hủy đặt sân'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Bạn có chắc muốn hủy lịch đặt sân tại "${booking.fieldNameSnapshot}"?',
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Trạng thái hiện tại: ${booking.status == BookingStatus.pending ? "Chờ xác nhận" : "Đã xác nhận"}',
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppTheme.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: reasonController,
+              decoration: const InputDecoration(
+                labelText: 'Lý do hủy (không bắt buộc)',
+                hintText: 'Nhập lý do...',
+              ),
+              maxLines: 2,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Không'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final success = await _controller.cancelBooking(
+                booking.id,
+                reason: reasonController.text.trim(),
+              );
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      success
+                          ? 'Đã hủy đặt sân thành công.'
+                          : (_controller.errorMessage ??
+                                'Không thể hủy đặt sân.'),
+                    ),
+                    backgroundColor: success
+                        ? AppTheme.primaryGreen
+                        : AppTheme.dangerRed,
+                  ),
+                );
+              }
+            },
+            child: const Text(
+              'Hủy đặt sân',
+              style: TextStyle(color: AppTheme.dangerRed),
+            ),
+          ),
+        ],
       ),
     );
   }

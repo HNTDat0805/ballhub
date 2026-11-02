@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+
 import '../../../../core/auth/auth_context.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../data/api_booking_repository.dart';
 import '../../data/booking_repository.dart';
 import '../../domain/models/football_field.dart';
 import '../controllers/booking_controllers.dart';
@@ -25,7 +27,12 @@ class _OwnerFieldsScreenState extends State<OwnerFieldsScreen> {
     super.initState();
     _controller = OwnerFieldController(repository: widget.repository);
     _controller.addListener(_onUpdate);
+    ApiBookingRepository.bookingChanged.addListener(_onBookingChanged);
     _loadMyFields();
+  }
+
+  void _onBookingChanged() {
+    if (mounted) _loadMyFields();
   }
 
   void _loadMyFields() {
@@ -39,6 +46,7 @@ class _OwnerFieldsScreenState extends State<OwnerFieldsScreen> {
 
   @override
   void dispose() {
+    ApiBookingRepository.bookingChanged.removeListener(_onBookingChanged);
     _controller.removeListener(_onUpdate);
     _controller.dispose();
     super.dispose();
@@ -107,8 +115,8 @@ class _OwnerFieldsScreenState extends State<OwnerFieldsScreen> {
     );
   }
 
-  void _createNewField() {
-    Navigator.push(
+  void _createNewField() async {
+    final result = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
         builder: (_) => OwnerFieldFormScreen(
@@ -119,10 +127,13 @@ class _OwnerFieldsScreenState extends State<OwnerFieldsScreen> {
         ),
       ),
     );
+    if (result == true) {
+      _loadMyFields();
+    }
   }
 
-  void _editField(FootballField field) {
-    Navigator.push(
+  void _editField(FootballField field) async {
+    final result = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
         builder: (_) => OwnerFieldFormScreen(
@@ -134,6 +145,9 @@ class _OwnerFieldsScreenState extends State<OwnerFieldsScreen> {
         ),
       ),
     );
+    if (result == true) {
+      _loadMyFields();
+    }
   }
 
   Future<void> _changeStatus(FootballField field, String newStatus) async {
@@ -141,7 +155,11 @@ class _OwnerFieldsScreenState extends State<OwnerFieldsScreen> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(success ? 'Cập nhật trạng thái sân thành công.' : (_controller.errorMessage ?? 'Lỗi.')),
+          content: Text(
+            success
+                ? 'Cập nhật trạng thái sân thành công.'
+                : (_controller.errorMessage ?? 'Lỗi.'),
+          ),
           backgroundColor: success ? AppTheme.primaryGreen : AppTheme.dangerRed,
         ),
       );
@@ -165,9 +183,24 @@ class _OwnerFieldCard extends StatelessWidget {
   });
 
   static const _statusOptions = [
-    ('active', 'Đang hoạt động', Icons.check_circle_rounded, AppTheme.primaryGreen),
-    ('inactive', 'Tạm ngừng', Icons.pause_circle_rounded, AppTheme.textSecondary),
-    ('maintenance', 'Bảo trì', Icons.construction_rounded, AppTheme.warningOrange),
+    (
+      'active',
+      'Đang hoạt động',
+      Icons.check_circle_rounded,
+      AppTheme.primaryGreen,
+    ),
+    (
+      'inactive',
+      'Tạm ngừng',
+      Icons.pause_circle_rounded,
+      AppTheme.textSecondary,
+    ),
+    (
+      'maintenance',
+      'Bảo trì',
+      Icons.construction_rounded,
+      AppTheme.warningOrange,
+    ),
     ('archived', 'Ẩn sân', Icons.archive_rounded, AppTheme.dangerRed),
   ];
 
@@ -200,12 +233,19 @@ class _OwnerFieldCard extends StatelessWidget {
             // Address
             Row(
               children: [
-                const Icon(Icons.location_on_outlined, size: 14, color: AppTheme.textSecondary),
+                const Icon(
+                  Icons.location_on_outlined,
+                  size: 14,
+                  color: AppTheme.textSecondary,
+                ),
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
                     field.address,
-                    style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppTheme.textSecondary,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -216,16 +256,34 @@ class _OwnerFieldCard extends StatelessWidget {
             // Price + type
             Row(
               children: [
-                const Icon(Icons.payments_outlined, size: 14, color: AppTheme.textSecondary),
+                const Icon(
+                  Icons.payments_outlined,
+                  size: 14,
+                  color: AppTheme.textSecondary,
+                ),
                 const SizedBox(width: 4),
                 Text(
                   '${_fmtPrice(field.basePrice)} ${field.currency}/giờ',
-                  style: const TextStyle(fontSize: 13, color: AppTheme.primaryGreen, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppTheme.primaryGreen,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(width: 12),
-                const Icon(Icons.people_rounded, size: 14, color: AppTheme.textSecondary),
+                const Icon(
+                  Icons.people_rounded,
+                  size: 14,
+                  color: AppTheme.textSecondary,
+                ),
                 const SizedBox(width: 4),
-                Text(field.fieldType, style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
+                Text(
+                  field.fieldType,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 10),
@@ -238,8 +296,13 @@ class _OwnerFieldCard extends StatelessWidget {
                   child: OutlinedButton.icon(
                     onPressed: onEdit,
                     icon: const Icon(Icons.edit_rounded, size: 15),
-                    label: const Text('Chỉnh sửa', style: TextStyle(fontSize: 13)),
-                    style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 6)),
+                    label: const Text(
+                      'Chỉnh sửa',
+                      style: TextStyle(fontSize: 13),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -247,8 +310,13 @@ class _OwnerFieldCard extends StatelessWidget {
                   child: OutlinedButton.icon(
                     onPressed: () => _showStatusMenu(context),
                     icon: const Icon(Icons.toggle_on_rounded, size: 15),
-                    label: const Text('Trạng thái', style: TextStyle(fontSize: 13)),
-                    style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 6)),
+                    label: const Text(
+                      'Trạng thái',
+                      style: TextStyle(fontSize: 13),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                    ),
                   ),
                 ),
               ],
@@ -269,7 +337,10 @@ class _OwnerFieldCard extends StatelessWidget {
           children: [
             const Padding(
               padding: EdgeInsets.fromLTRB(16, 14, 16, 4),
-              child: Text('Đổi trạng thái sân', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+              child: Text(
+                'Đổi trạng thái sân',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+              ),
             ),
             const Divider(),
             ..._statusOptions.map((opt) {
@@ -277,8 +348,18 @@ class _OwnerFieldCard extends StatelessWidget {
               final isCurrent = field.status.name == status;
               return ListTile(
                 leading: Icon(icon, color: color),
-                title: Text(label, style: TextStyle(color: isCurrent ? AppTheme.primaryGreen : null)),
-                trailing: isCurrent ? const Icon(Icons.check_rounded, color: AppTheme.primaryGreen) : null,
+                title: Text(
+                  label,
+                  style: TextStyle(
+                    color: isCurrent ? AppTheme.primaryGreen : null,
+                  ),
+                ),
+                trailing: isCurrent
+                    ? const Icon(
+                        Icons.check_rounded,
+                        color: AppTheme.primaryGreen,
+                      )
+                    : null,
                 onTap: () {
                   Navigator.pop(ctx);
                   if (!isCurrent) onStatusChange?.call(status);

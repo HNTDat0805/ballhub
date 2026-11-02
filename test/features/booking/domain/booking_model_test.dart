@@ -7,7 +7,10 @@ import 'package:ballhub/features/booking/domain/models/football_field.dart';
 // Test helpers — tạo dữ liệu mẫu nhất quán
 // ─────────────────────────────────────────────────────────────────────────────
 
-Booking _makeBooking({BookingStatus status = BookingStatus.pending, Map<String, dynamic>? overrides}) {
+Booking _makeBooking({
+  BookingStatus status = BookingStatus.pending,
+  Map<String, dynamic>? overrides,
+}) {
   final json = <String, dynamic>{
     'id': 'booking_001',
     'fieldId': 'field_001',
@@ -34,7 +37,10 @@ Booking _makeBooking({BookingStatus status = BookingStatus.pending, Map<String, 
   return Booking.fromJson(json);
 }
 
-FieldSlot _makeSlot({FieldSlotStatus status = FieldSlotStatus.available, Map<String, dynamic>? overrides}) {
+FieldSlot _makeSlot({
+  FieldSlotStatus status = FieldSlotStatus.available,
+  Map<String, dynamic>? overrides,
+}) {
   final json = <String, dynamic>{
     'id': 'slot_001',
     'fieldId': 'field_001',
@@ -52,7 +58,10 @@ FieldSlot _makeSlot({FieldSlotStatus status = FieldSlotStatus.available, Map<Str
   return FieldSlot.fromJson(json);
 }
 
-FootballField _makeField({FieldStatus status = FieldStatus.active, Map<String, dynamic>? overrides}) {
+FootballField _makeField({
+  FieldStatus status = FieldStatus.active,
+  Map<String, dynamic>? overrides,
+}) {
   final json = <String, dynamic>{
     'id': 'field_001',
     'ownerId': 'owner_001',
@@ -113,12 +122,30 @@ void main() {
     });
 
     test('status parse đúng theo enum name', () {
-      expect(_makeBooking(status: BookingStatus.pending).status, BookingStatus.pending);
-      expect(_makeBooking(status: BookingStatus.confirmed).status, BookingStatus.confirmed);
-      expect(_makeBooking(status: BookingStatus.rejected).status, BookingStatus.rejected);
-      expect(_makeBooking(status: BookingStatus.cancelledByUser).status, BookingStatus.cancelledByUser);
-      expect(_makeBooking(status: BookingStatus.cancelledByOwner).status, BookingStatus.cancelledByOwner);
-      expect(_makeBooking(status: BookingStatus.completed).status, BookingStatus.completed);
+      expect(
+        _makeBooking(status: BookingStatus.pending).status,
+        BookingStatus.pending,
+      );
+      expect(
+        _makeBooking(status: BookingStatus.confirmed).status,
+        BookingStatus.confirmed,
+      );
+      expect(
+        _makeBooking(status: BookingStatus.rejected).status,
+        BookingStatus.rejected,
+      );
+      expect(
+        _makeBooking(status: BookingStatus.cancelledByUser).status,
+        BookingStatus.cancelledByUser,
+      );
+      expect(
+        _makeBooking(status: BookingStatus.cancelledByOwner).status,
+        BookingStatus.cancelledByOwner,
+      );
+      expect(
+        _makeBooking(status: BookingStatus.completed).status,
+        BookingStatus.completed,
+      );
     });
 
     test('status không hợp lệ fallback về pending', () {
@@ -137,30 +164,39 @@ void main() {
     });
 
     test('parse confirmedAt khi có trong JSON', () {
-      final booking = _makeBooking(overrides: {
-        'status': 'confirmed',
-        'confirmedAt': '2026-10-30T10:00:00.000Z',
-      });
+      final booking = _makeBooking(
+        overrides: {
+          'status': 'confirmed',
+          'confirmedAt': '2026-10-30T10:00:00.000Z',
+        },
+      );
       expect(booking.confirmedAt, isNotNull);
       expect(booking.confirmedAt!.isUtc, isTrue);
     });
 
     test('parse cancellationReason khi booking cancelled', () {
-      final booking = _makeBooking(overrides: {
-        'status': 'cancelledByUser',
-        'cancellationReason': 'Tôi bận đột xuất',
-        'cancelledAt': '2026-10-30T11:00:00.000Z',
-      });
+      final booking = _makeBooking(
+        overrides: {
+          'status': 'cancelledByUser',
+          'cancellationReason': 'Tôi bận đột xuất',
+          'cancelledAt': '2026-10-30T11:00:00.000Z',
+        },
+      );
       expect(booking.cancellationReason, 'Tôi bận đột xuất');
       expect(booking.cancelledAt, isNotNull);
     });
 
     test('slotIds là immutable List', () {
-      final booking = _makeBooking(overrides: {
-        'slotIds': ['slot_001', 'slot_002'],
-      });
+      final booking = _makeBooking(
+        overrides: {
+          'slotIds': ['slot_001', 'slot_002'],
+        },
+      );
       expect(booking.slotIds, hasLength(2));
-      expect(() => (booking.slotIds as dynamic).add('slot_003'), throwsUnsupportedError);
+      expect(
+        () => (booking.slotIds as dynamic).add('slot_003'),
+        throwsUnsupportedError,
+      );
     });
 
     test('toJson → fromJson round-trip', () {
@@ -177,15 +213,24 @@ void main() {
       expect(restored.id, original.id);
       expect(restored.status, original.status);
       expect(restored.customerNote, original.customerNote);
-      expect(restored.confirmedAt?.toIso8601String(), original.confirmedAt?.toIso8601String());
+      expect(
+        restored.confirmedAt?.toIso8601String(),
+        original.confirmedAt?.toIso8601String(),
+      );
       expect(restored.totalAmount, original.totalAmount);
     });
 
-    test('priceSnapshot lớn hơn 0 và khớp totalAmount khi không có discount', () {
-      final booking = _makeBooking();
-      expect(booking.priceSnapshot, greaterThan(0));
-      expect(booking.subtotalAmount, booking.totalAmount); // không có discount
-    });
+    test(
+      'priceSnapshot lớn hơn 0 và khớp totalAmount khi không có discount',
+      () {
+        final booking = _makeBooking();
+        expect(booking.priceSnapshot, greaterThan(0));
+        expect(
+          booking.subtotalAmount,
+          booking.totalAmount,
+        ); // không có discount
+      },
+    );
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -205,10 +250,22 @@ void main() {
     });
 
     test('status parse đúng tất cả giá trị', () {
-      expect(_makeSlot(status: FieldSlotStatus.available).status, FieldSlotStatus.available);
-      expect(_makeSlot(status: FieldSlotStatus.held).status, FieldSlotStatus.held);
-      expect(_makeSlot(status: FieldSlotStatus.booked).status, FieldSlotStatus.booked);
-      expect(_makeSlot(status: FieldSlotStatus.blocked).status, FieldSlotStatus.blocked);
+      expect(
+        _makeSlot(status: FieldSlotStatus.available).status,
+        FieldSlotStatus.available,
+      );
+      expect(
+        _makeSlot(status: FieldSlotStatus.held).status,
+        FieldSlotStatus.held,
+      );
+      expect(
+        _makeSlot(status: FieldSlotStatus.booked).status,
+        FieldSlotStatus.booked,
+      );
+      expect(
+        _makeSlot(status: FieldSlotStatus.blocked).status,
+        FieldSlotStatus.blocked,
+      );
     });
 
     test('status không hợp lệ fallback về available', () {
@@ -279,9 +336,18 @@ void main() {
     test('status parse đúng tất cả giá trị', () {
       expect(_makeField(status: FieldStatus.active).status, FieldStatus.active);
       expect(_makeField(status: FieldStatus.draft).status, FieldStatus.draft);
-      expect(_makeField(status: FieldStatus.inactive).status, FieldStatus.inactive);
-      expect(_makeField(status: FieldStatus.maintenance).status, FieldStatus.maintenance);
-      expect(_makeField(status: FieldStatus.archived).status, FieldStatus.archived);
+      expect(
+        _makeField(status: FieldStatus.inactive).status,
+        FieldStatus.inactive,
+      );
+      expect(
+        _makeField(status: FieldStatus.maintenance).status,
+        FieldStatus.maintenance,
+      );
+      expect(
+        _makeField(status: FieldStatus.archived).status,
+        FieldStatus.archived,
+      );
     });
 
     test('status không hợp lệ fallback về draft', () {
@@ -291,8 +357,14 @@ void main() {
 
     test('amenities và imageUrls là immutable', () {
       final field = _makeField();
-      expect(() => (field.amenities as dynamic).add('pool'), throwsUnsupportedError);
-      expect(() => (field.imageUrls as dynamic).add('url'), throwsUnsupportedError);
+      expect(
+        () => (field.amenities as dynamic).add('pool'),
+        throwsUnsupportedError,
+      );
+      expect(
+        () => (field.imageUrls as dynamic).add('url'),
+        throwsUnsupportedError,
+      );
     });
 
     test('amenities parse đúng', () {
@@ -306,9 +378,14 @@ void main() {
     });
 
     test('imageUrls parse từ JSON list', () {
-      final field = _makeField(overrides: {
-        'imageUrls': ['https://example.com/img1.jpg', 'https://example.com/img2.jpg'],
-      });
+      final field = _makeField(
+        overrides: {
+          'imageUrls': [
+            'https://example.com/img1.jpg',
+            'https://example.com/img2.jpg',
+          ],
+        },
+      );
       expect(field.imageUrls, hasLength(2));
     });
 
@@ -336,10 +413,23 @@ void main() {
 
     test('field chỉ có thể đặt khi status active', () {
       // Đây là business rule: chỉ field active mới booking được
-      expect(_makeField(status: FieldStatus.active).status == FieldStatus.active, isTrue);
-      expect(_makeField(status: FieldStatus.draft).status == FieldStatus.active, isFalse);
-      expect(_makeField(status: FieldStatus.inactive).status == FieldStatus.active, isFalse);
-      expect(_makeField(status: FieldStatus.maintenance).status == FieldStatus.active, isFalse);
+      expect(
+        _makeField(status: FieldStatus.active).status == FieldStatus.active,
+        isTrue,
+      );
+      expect(
+        _makeField(status: FieldStatus.draft).status == FieldStatus.active,
+        isFalse,
+      );
+      expect(
+        _makeField(status: FieldStatus.inactive).status == FieldStatus.active,
+        isFalse,
+      );
+      expect(
+        _makeField(status: FieldStatus.maintenance).status ==
+            FieldStatus.active,
+        isFalse,
+      );
     });
   });
 
@@ -349,32 +439,44 @@ void main() {
 
   group('Booking — business logic validation', () {
     test('totalAmount = subtotalAmount khi không có discount', () {
-      final booking = _makeBooking(overrides: {
-        'subtotalAmount': 600000,
-        'discountAmount': 0,
-        'totalAmount': 600000,
-      });
-      expect(booking.totalAmount, booking.subtotalAmount - booking.discountAmount);
+      final booking = _makeBooking(
+        overrides: {
+          'subtotalAmount': 600000,
+          'discountAmount': 0,
+          'totalAmount': 600000,
+        },
+      );
+      expect(
+        booking.totalAmount,
+        booking.subtotalAmount - booking.discountAmount,
+      );
     });
 
     test('totalAmount có discount', () {
-      final booking = _makeBooking(overrides: {
-        'subtotalAmount': 600000,
-        'discountAmount': 60000,
-        'totalAmount': 540000,
-      });
+      final booking = _makeBooking(
+        overrides: {
+          'subtotalAmount': 600000,
+          'discountAmount': 60000,
+          'totalAmount': 540000,
+        },
+      );
       expect(booking.totalAmount, 540000);
       expect(booking.discountAmount, 60000);
     });
 
     test('nhiều slotIds được parse đúng', () {
-      final booking = _makeBooking(overrides: {
-        'slotIds': ['slot_001', 'slot_002', 'slot_003'],
-        'totalAmount': 900000,
-        'subtotalAmount': 900000,
-      });
+      final booking = _makeBooking(
+        overrides: {
+          'slotIds': ['slot_001', 'slot_002', 'slot_003'],
+          'totalAmount': 900000,
+          'subtotalAmount': 900000,
+        },
+      );
       expect(booking.slotIds, hasLength(3));
-      expect(booking.slotIds, containsAllInOrder(['slot_001', 'slot_002', 'slot_003']));
+      expect(
+        booking.slotIds,
+        containsAllInOrder(['slot_001', 'slot_002', 'slot_003']),
+      );
     });
 
     test('startsAt trước endsAt', () {

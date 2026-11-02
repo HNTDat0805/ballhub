@@ -21,7 +21,8 @@ class ScoreConfirmationDialog extends StatefulWidget {
   });
 
   @override
-  State<ScoreConfirmationDialog> createState() => _ScoreConfirmationDialogState();
+  State<ScoreConfirmationDialog> createState() =>
+      _ScoreConfirmationDialogState();
 }
 
 class _ScoreConfirmationDialogState extends State<ScoreConfirmationDialog> {
@@ -39,12 +40,18 @@ class _ScoreConfirmationDialogState extends State<ScoreConfirmationDialog> {
       title: Row(
         children: [
           Icon(
-            widget.isAlreadyConfirmed ? Icons.warning_amber_rounded : Icons.verified_outlined,
-            color: widget.isAlreadyConfirmed ? const Color(0xFFF57C00) : const Color(0xFF0F9D58),
+            widget.isAlreadyConfirmed
+                ? Icons.warning_amber_rounded
+                : Icons.verified_outlined,
+            color: widget.isAlreadyConfirmed
+                ? const Color(0xFFF57C00)
+                : const Color(0xFF0F9D58),
           ),
           const SizedBox(width: 8),
           Text(
-            widget.isAlreadyConfirmed ? 'Cảnh báo sửa kết quả' : 'Xác nhận kết quả trận đấu',
+            widget.isAlreadyConfirmed
+                ? 'Cảnh báo sửa kết quả'
+                : 'Xác nhận kết quả trận đấu',
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
         ],
@@ -117,10 +124,13 @@ class _ScoreConfirmationDialogState extends State<ScoreConfirmationDialog> {
         ),
         ElevatedButton(
           style: ElevatedButton.styleFrom(
-            backgroundColor: widget.isAlreadyConfirmed ? const Color(0xFFF57C00) : const Color(0xFF0F9D58),
+            backgroundColor: widget.isAlreadyConfirmed
+                ? const Color(0xFFF57C00)
+                : const Color(0xFF0F9D58),
           ),
           onPressed: () {
-            if (widget.isAlreadyConfirmed && _reasonController.text.trim().isEmpty) {
+            if (widget.isAlreadyConfirmed &&
+                _reasonController.text.trim().isEmpty) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Vui lòng nhập lý do điều chỉnh')),
               );

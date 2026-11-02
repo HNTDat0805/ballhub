@@ -22,7 +22,7 @@ export class BookingRepository {
      for (let index = 0; index < refs.length; index += 1) transaction.update(refs[index], { status: FieldSlotStatus.held, bookingId: booking.id, holdExpiresAt: booking.createdAt, updatedAt: booking.updatedAt });
    });
  }
- async transition(booking: BookingEntity, status: BookingStatus, reason: string | undefined, releaseSlots: boolean): Promise<BookingEntity> {
+ async transition(booking: BookingEntity, status: BookingStatus, reason: string | undefined, releaseSlots: boolean, allowedStatuses: BookingStatus[] = [BookingStatus.pending]): Promise<BookingEntity> {
    const now = new Date().toISOString();
    const updated: BookingEntity = { ...booking, status, statusReason: reason ?? null, updatedAt: now,
      confirmedAt: status === BookingStatus.confirmed ? now : booking.confirmedAt,
@@ -31,7 +31,7 @@ export class BookingRepository {
      cancellationReason: releaseSlots ? reason ?? null : booking.cancellationReason,
    };
    if (MemoryStore.isMemoryMode()) {
-     const current = MemoryStore.bookings.get(booking.id); if (!current || current.status !== BookingStatus.pending) throw new BookingConflictError('Trạng thái booking đã thay đổi.');
+     const current = MemoryStore.bookings.get(booking.id); if (!current || !allowedStatuses.includes(current.status)) throw new BookingConflictError('Trạng thái booking đã thay đổi.');
      const slots = MemoryStore.slots.get(booking.fieldId);
      for (const id of booking.slotIds) { const slot = slots?.get(id); if (slot && slot.bookingId === booking.id) slots!.set(id, { ...slot, status: releaseSlots ? FieldSlotStatus.available : FieldSlotStatus.booked, bookingId: releaseSlots ? null : booking.id, holdExpiresAt: null, updatedAt: now }); }
      MemoryStore.bookings.set(booking.id, updated); return updated;
@@ -41,7 +41,7 @@ export class BookingRepository {
      const slotRefs = booking.slotIds.map((id) => db.collection('fields').doc(booking.fieldId).collection('slots').doc(id));
      const [bookingSnapshot, ...slotSnapshots] = await Promise.all([transaction.get(bookingRef), ...slotRefs.map((ref) => transaction.get(ref))]);
      const current = bookingSnapshot.exists ? bookingSnapshot.data() as BookingEntity : null;
-     if (!current || current.status !== BookingStatus.pending) throw new BookingConflictError('Trạng thái booking đã thay đổi.');
+     if (!current || !allowedStatuses.includes(current.status)) throw new BookingConflictError('Trạng thái booking đã thay đổi.');
      transaction.set(bookingRef, updated);
      slotRefs.forEach((ref, index) => { const slot = slotSnapshots[index].data() as FieldSlotEntity | undefined; if (slot?.bookingId === booking.id) transaction.update(ref, { status: releaseSlots ? FieldSlotStatus.available : FieldSlotStatus.booked, bookingId: releaseSlots ? null : booking.id, holdExpiresAt: null, updatedAt: now }); });
    });

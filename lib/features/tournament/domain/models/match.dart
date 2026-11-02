@@ -16,12 +16,12 @@ enum MatchStatus {
   cancelled;
 
   String get displayName => switch (this) {
-        MatchStatus.scheduled => 'Chưa diễn ra',
-        MatchStatus.inProgress => 'Đang diễn ra',
-        MatchStatus.finished => 'Đã kết thúc',
-        MatchStatus.postponed => 'Bị hoãn',
-        MatchStatus.cancelled => 'Đã hủy',
-      };
+    MatchStatus.scheduled => 'Chưa diễn ra',
+    MatchStatus.inProgress => 'Đang diễn ra',
+    MatchStatus.finished => 'Đã kết thúc',
+    MatchStatus.postponed => 'Bị hoãn',
+    MatchStatus.cancelled => 'Đã hủy',
+  };
 }
 
 /// Mô hình một trận đấu trong giải bóng đá
@@ -72,7 +72,8 @@ class TournamentMatch {
       awayScore! >= 0;
 
   /// Kết quả chính thức: trận đấu đã kết thúc, tỷ số hợp lệ và đã được Ban tổ chức phê duyệt
-  bool get isOfficialResult => status == MatchStatus.finished && isConfirmed && hasValidScore;
+  bool get isOfficialResult =>
+      status == MatchStatus.finished && isConfirmed && hasValidScore;
 
   /// Chuỗi hiển thị tỷ số ngắn gọn ('3 - 1' hoặc 'vs' nếu chưa có tỷ số)
   String get scoreDisplay {
@@ -154,7 +155,9 @@ class TournamentMatch {
       homeTeamName: map['homeTeamName'] as String? ?? 'Đội nhà',
       awayTeamId: map['awayTeamId'] as String? ?? '',
       awayTeamName: map['awayTeamName'] as String? ?? 'Đội khách',
-      scheduledTime: DateTime.tryParse(map['scheduledTime'] as String? ?? '') ?? DateTime.now(),
+      scheduledTime:
+          DateTime.tryParse(map['scheduledTime'] as String? ?? '') ??
+          DateTime.now(),
       venue: map['venue'] as String? ?? 'Sân chính',
       status: MatchStatus.values.firstWhere(
         (s) => s.name == map['status'],
@@ -164,7 +167,9 @@ class TournamentMatch {
       awayScore: (map['awayScore'] as num?)?.toInt(),
       isConfirmed: map['isConfirmed'] as bool? ?? false,
       confirmedBy: map['confirmedBy'] as String?,
-      confirmedAt: map['confirmedAt'] != null ? DateTime.tryParse(map['confirmedAt'] as String) : null,
+      confirmedAt: map['confirmedAt'] != null
+          ? DateTime.tryParse(map['confirmedAt'] as String)
+          : null,
       notes: map['notes'] as String?,
     );
   }

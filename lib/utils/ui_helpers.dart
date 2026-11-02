@@ -35,19 +35,31 @@ String errorText(Object e) {
 
 String? validateEmail(String? v) {
   if (v == null || v.trim().isEmpty) return 'Vui lòng nhập email';
-  if (!RegExp(r'^[\w\.\-]+@[\w\-]+\.[\w\.\-]+$').hasMatch(v.trim())) return 'Email không hợp lệ';
+  if (!RegExp(r'^[\w\.\-]+@[\w\-]+\.[\w\.\-]+$').hasMatch(v.trim())) {
+    return 'Email không hợp lệ';
+  }
   return null;
 }
 
-Future<bool> confirmDialog(BuildContext context, String title, String content) async {
+Future<bool> confirmDialog(
+  BuildContext context,
+  String title,
+  String content,
+) async {
   final ok = await showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
       title: Text(title),
       content: Text(content),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Hủy')),
-        FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Đồng ý')),
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: const Text('Hủy'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(ctx, true),
+          child: const Text('Đồng ý'),
+        ),
       ],
     ),
   );

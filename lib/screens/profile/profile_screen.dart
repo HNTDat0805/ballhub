@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+
 import '../../core/theme/app_theme.dart';
 import '../../features/booking/data/api_booking_repository.dart';
 import '../../features/booking/domain/models/booking.dart';
+import '../../features/booking/presentation/screens/my_bookings_screen.dart';
 import '../../models/app_user.dart';
 import '../../models/team.dart';
 import '../../services/auth_service.dart';
@@ -34,6 +36,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     _currentUser = UserService.currentUser ?? widget.user;
+    final immediateTeams = TeamService.localTeams;
+    if (immediateTeams.isNotEmpty) {
+      _myTeams = immediateTeams;
+    }
     _loadProfileData();
     TeamService.changed.addListener(_loadProfileData);
     UserService.currentUserNotifier.addListener(_onUserNotifierChanged);
@@ -54,33 +60,57 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _loadProfileData() async {
-    try {
-      final teams = await TeamService.getMyTeams();
-      List<Booking> bookings = [];
-      try {
-        bookings = await _bookingRepo.getMyBookings();
-      } catch (_) {}
+    // 1. Cập nhật ngay lập tức từ bộ nhớ cục bộ để UI phản hồi 0ms
+    final immediateTeams = TeamService.localTeams;
+    if (immediateTeams.isNotEmpty && mounted) {
+      setState(() {
+        _myTeams = immediateTeams;
+      });
+    }
 
-      try {
-        final apiUser = await UserService.getProfile();
-        if (apiUser != null && mounted) {
-          _currentUser = apiUser;
-        }
-      } catch (_) {}
+    if (mounted) {
+      setState(() => _isLoading = true);
+    }
+
+    try {
+      // 2. Chạy song song thay vì tuần tự để tránh chờ đợi lâu
+      final results = await Future.wait([
+        TeamService.getMyTeams(),
+        _bookingRepo.getMyBookings().catchError((_) => <Booking>[]),
+        UserService.getProfile().catchError((_) => null),
+      ]);
+
+      final teams = results[0] as List<Team>;
+      final bookings = results[1] as List<Booking>;
+      final apiUser = results[2] as AppUser?;
 
       if (!mounted) return;
       setState(() {
-        _myTeams = teams;
+        _myTeams = teams.isNotEmpty ? teams : immediateTeams;
         _myBookings = bookings;
+        if (apiUser != null) {
+          _currentUser = apiUser;
+        }
         _isLoading = false;
       });
     } catch (_) {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() {
+          if (immediateTeams.isNotEmpty) {
+            _myTeams = immediateTeams;
+          }
+          _isLoading = false;
+        });
+      }
     }
   }
 
   Future<void> _logout(BuildContext context) async {
-    final ok = await confirmDialog(context, 'Đăng xuất', 'Bạn có chắc chắn muốn đăng xuất tài khoản Ballhub?');
+    final ok = await confirmDialog(
+      context,
+      'Đăng xuất',
+      'Bạn có chắc chắn muốn đăng xuất tài khoản Ballhub?',
+    );
     if (ok) {
       TeamService.clearLocalState();
       await AuthService.logout();
@@ -106,15 +136,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
         final currentUser = _currentUser;
         final nameInitials = currentUser.fullName.trim().isNotEmpty
             ? (currentUser.fullName.trim().length >= 2
-                ? currentUser.fullName.trim().substring(0, 2).toUpperCase()
-                : currentUser.fullName.trim().substring(0, 1).toUpperCase())
+                  ? currentUser.fullName.trim().substring(0, 2).toUpperCase()
+                  : currentUser.fullName.trim().substring(0, 1).toUpperCase())
             : 'BH';
 
         return Scaffold(
           backgroundColor: AppTheme.surfaceColor,
-          appBar: AppBar(
-            title: const Text('Cá nhân'),
-          ),
+          appBar: AppBar(title: const Text('Cá nhân')),
           body: RefreshIndicator(
             color: AppTheme.primaryDarkGreen,
             onRefresh: _loadProfileData,
@@ -170,10 +198,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 const SizedBox(height: 6),
                                 GestureDetector(
                                   onTap: () async {
-                                    final updated = await Navigator.push<AppUser?>(
-                                      context,
-                                      MaterialPageRoute(builder: (_) => EditProfileScreen(user: _currentUser)),
-                                    );
+                                    final updated =
+                                        await Navigator.push<AppUser?>(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => EditProfileScreen(
+                                              user: _currentUser,
+                                            ),
+                                          ),
+                                        );
                                     if (updated != null && mounted) {
                                       setState(() {
                                         _currentUser = updated;
@@ -203,9 +236,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
-                          _StatCol(number: '${_myTeams.length}', label: 'Đội bóng'),
+                          _StatCol(
+                            number: '${_myTeams.length}',
+                            label: 'Đội bóng',
+                          ),
                           const _StatDivider(),
-                          _StatCol(number: '${_myBookings.length}', label: 'Đơn đặt sân'),
+                          _StatCol(
+                            number: '${_myBookings.length}',
+                            label: 'Đơn đặt sân',
+                          ),
                           const _StatDivider(),
                           const _StatCol(number: '100%', label: 'Điểm uy tín'),
                         ],
@@ -216,23 +255,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const SizedBox(height: 24),
 
                 // --- ĐỘI BÓNG CỦA TÔI TỪ DATABASE ---
-                _sectionHeader(
-                  'Đội bóng của tôi',
-                  'Tạo đội',
-                  () async {
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const TeamFormScreen()),
-                    );
+                _sectionHeader('Đội bóng của tôi', 'Tạo đội', () async {
+                  final created = await Navigator.push<bool>(
+                    context,
+                    MaterialPageRoute(builder: (_) => const TeamFormScreen()),
+                  );
+                  if (created == true) {
                     _loadProfileData();
-                  },
-                ),
+                  }
+                }),
                 const SizedBox(height: 8),
-                if (_isLoading)
+                if (_isLoading && _myTeams.isEmpty)
                   const Center(
                     child: Padding(
-                      padding: EdgeInsets.all(16),
-                      child: CircularProgressIndicator(color: AppTheme.primaryDarkGreen),
+                      padding: EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CircularProgressIndicator(
+                            color: AppTheme.primaryDarkGreen,
+                          ),
+                          SizedBox(height: 12),
+                          Text(
+                            'Đang tải danh sách đội bóng...',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   )
                 else if (_myTeams.isEmpty)
@@ -245,21 +297,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.group_outlined, size: 36, color: AppTheme.textMuted),
+                        const Icon(
+                          Icons.group_outlined,
+                          size: 36,
+                          color: AppTheme.textMuted,
+                        ),
                         const SizedBox(width: 12),
                         const Expanded(
                           child: Text(
                             'Bạn chưa tham gia đội bóng nào.',
-                            style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                            style: TextStyle(
+                              color: AppTheme.textSecondary,
+                              fontSize: 13,
+                            ),
                           ),
                         ),
                         TextButton(
                           onPressed: () async {
-                            await Navigator.push(
+                            final created = await Navigator.push<bool>(
                               context,
-                              MaterialPageRoute(builder: (_) => const TeamFormScreen()),
+                              MaterialPageRoute(
+                                builder: (_) => const TeamFormScreen(),
+                              ),
                             );
-                            _loadProfileData();
+                            if (created == true) {
+                              _loadProfileData();
+                            }
                           },
                           child: const Text('Tạo đội ngay'),
                         ),
@@ -270,8 +333,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ..._myTeams.map((team) {
                     final initial = team.teamName.trim().isNotEmpty
                         ? (team.teamName.trim().length >= 2
-                            ? team.teamName.trim().substring(0, 2).toUpperCase()
-                            : team.teamName.trim().substring(0, 1).toUpperCase())
+                              ? team.teamName
+                                    .trim()
+                                    .substring(0, 2)
+                                    .toUpperCase()
+                              : team.teamName
+                                    .trim()
+                                    .substring(0, 1)
+                                    .toUpperCase())
                         : 'ĐB';
 
                     final isCaptain = team.captainId == AuthService.uid;
@@ -324,7 +393,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 const SizedBox(width: 14),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         team.teamName,
@@ -346,7 +416,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   ),
                                 ),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 4,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: AppTheme.primaryLightGreen,
                                     borderRadius: BorderRadius.circular(12),
@@ -376,15 +449,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const SizedBox(height: 24),
 
                 // --- HOẠT ĐỘNG GẦN ĐÂY TỪ DATABASE ---
-                const Text(
-                  'Hoạt động gần đây',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.textPrimary,
-                    letterSpacing: -0.3,
-                  ),
-                ),
+                _sectionHeader('Lịch sử đặt sân', 'Xem tất cả', () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          MyBookingsScreen(repository: _bookingRepo),
+                    ),
+                  ).then((_) => _loadProfileData());
+                }),
                 const SizedBox(height: 8),
                 if (_myBookings.isEmpty)
                   Container(
@@ -396,11 +469,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     child: const Row(
                       children: [
-                        Icon(Icons.history, size: 32, color: AppTheme.textMuted),
+                        Icon(
+                          Icons.history,
+                          size: 32,
+                          color: AppTheme.textMuted,
+                        ),
                         SizedBox(width: 12),
                         Text(
                           'Chưa có hoạt động đặt sân nào gần đây',
-                          style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                          style: TextStyle(
+                            color: AppTheme.textSecondary,
+                            fontSize: 13,
+                          ),
                         ),
                       ],
                     ),
@@ -415,15 +495,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: Column(
                       children: [
                         for (int i = 0; i < _myBookings.length; i++) ...[
-                          if (i > 0) const Divider(height: 1, indent: 64, color: AppTheme.borderColor),
-                          _activityItem(
-                            icon: Icons.event_available_outlined,
-                            iconColor: const Color(0xFF2563EB),
-                            bgColor: const Color(0xFFEFF6FF),
-                            title: _myBookings[i].fieldNameSnapshot.isNotEmpty
-                                ? _myBookings[i].fieldNameSnapshot
-                                : 'Đặt sân #${_myBookings[i].id.substring(0, 6)}',
-                            subtitle: 'Trạng thái: ${_myBookings[i].status.name} · ${_myBookings[i].totalAmount}đ',
+                          if (i > 0)
+                            const Divider(
+                              height: 1,
+                              indent: 64,
+                              color: AppTheme.borderColor,
+                            ),
+                          InkWell(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => MyBookingsScreen(
+                                    repository: _bookingRepo,
+                                  ),
+                                ),
+                              ).then((_) => _loadProfileData());
+                            },
+                            child: _activityItem(
+                              icon: Icons.event_available_outlined,
+                              iconColor: const Color(0xFF2563EB),
+                              bgColor: const Color(0xFFEFF6FF),
+                              title: _myBookings[i].fieldNameSnapshot.isNotEmpty
+                                  ? _myBookings[i].fieldNameSnapshot
+                                  : 'Đặt sân #${_myBookings[i].id.substring(0, 6)}',
+                              subtitle:
+                                  'Trạng thái: ${_myBookings[i].status.name} · ${_myBookings[i].totalAmount}đ',
+                            ),
                           ),
                         ],
                       ],
@@ -451,6 +549,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: Column(
                     children: [
                       _settingItem(
+                        icon: Icons.history_edu_outlined,
+                        title: 'Lịch sử đặt sân',
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  MyBookingsScreen(repository: _bookingRepo),
+                            ),
+                          ).then((_) => _loadProfileData());
+                        },
+                      ),
+                      const Divider(
+                        height: 1,
+                        indent: 56,
+                        color: AppTheme.borderColor,
+                      ),
+                      _settingItem(
                         icon: Icons.notifications_none_outlined,
                         title: 'Thông báo',
                         onTap: () {
@@ -458,15 +574,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             context: context,
                             builder: (ctx) => AlertDialog(
                               title: const Text('Thông báo hệ thống'),
-                              content: const Text('Tất cả thông báo về trận đấu, đặt sân và kết quả giải đấu đều được cập nhật theo thời gian thực.'),
+                              content: const Text(
+                                'Tất cả thông báo về trận đấu, đặt sân và kết quả giải đấu đều được cập nhật theo thời gian thực.',
+                              ),
                               actions: [
-                                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Đã hiểu')),
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx),
+                                  child: const Text('Đã hiểu'),
+                                ),
                               ],
                             ),
                           );
                         },
                       ),
-                      const Divider(height: 1, indent: 56, color: AppTheme.borderColor),
+                      const Divider(
+                        height: 1,
+                        indent: 56,
+                        color: AppTheme.borderColor,
+                      ),
                       _settingItem(
                         icon: Icons.shield_outlined,
                         title: 'Bảo mật & Đổi mật khẩu',
@@ -474,7 +599,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           final email = AuthService.currentUser?.email;
                           if (email == null || email.isEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Không tìm thấy email liên kết với tài khoản.')),
+                              const SnackBar(
+                                content: Text(
+                                  'Không tìm thấy email liên kết với tài khoản.',
+                                ),
+                              ),
                             );
                             return;
                           }
@@ -482,10 +611,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             context: context,
                             builder: (ctx) => AlertDialog(
                               title: const Text('Đặt lại mật khẩu'),
-                              content: Text('Hệ thống sẽ gửi liên kết đổi mật khẩu an toàn tới email:\n$email'),
+                              content: Text(
+                                'Hệ thống sẽ gửi liên kết đổi mật khẩu an toàn tới email:\n$email',
+                              ),
                               actions: [
-                                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Hủy')),
-                                ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Gửi email')),
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx, false),
+                                  child: const Text('Hủy'),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () => Navigator.pop(ctx, true),
+                                  child: const Text('Gửi email'),
+                                ),
                               ],
                             ),
                           );
@@ -496,14 +633,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             } catch (_) {}
                             messenger.showSnackBar(
                               SnackBar(
-                                content: Text('Đã gửi email hướng dẫn bảo mật tới $email'),
+                                content: Text(
+                                  'Đã gửi email hướng dẫn bảo mật tới $email',
+                                ),
                                 backgroundColor: AppTheme.primaryDarkGreen,
                               ),
                             );
                           }
                         },
                       ),
-                      const Divider(height: 1, indent: 56, color: AppTheme.borderColor),
+                      const Divider(
+                        height: 1,
+                        indent: 56,
+                        color: AppTheme.borderColor,
+                      ),
                       _settingItem(
                         icon: Icons.logout,
                         title: 'Đăng xuất',
@@ -522,7 +665,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _sectionHeader(String title, String actionText, VoidCallback onAction) {
+  Widget _sectionHeader(
+    String title,
+    String actionText,
+    VoidCallback onAction,
+  ) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -582,7 +729,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.textMuted,
+                  ),
                 ),
               ],
             ),
@@ -612,7 +762,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           color: isDestructive ? AppTheme.errorRed : AppTheme.textPrimary,
         ),
       ),
-      trailing: const Icon(Icons.chevron_right, size: 20, color: AppTheme.textMuted),
+      trailing: const Icon(
+        Icons.chevron_right,
+        size: 20,
+        color: AppTheme.textMuted,
+      ),
       onTap: onTap,
     );
   }
@@ -651,10 +805,6 @@ class _StatDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 1,
-      height: 32,
-      color: AppTheme.borderColor,
-    );
+    return Container(width: 1, height: 32, color: AppTheme.borderColor);
   }
 }
