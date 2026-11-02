@@ -167,15 +167,15 @@ void main() {
     });
 
     test('Head-to-head tie breaker resolves rank between teams with equal points and GD', () {
-      // Team A beats Team B 1-0 (A: 3 pts, +1 GD)
-      // Team B beats Team C 2-0 (B: 3 pts, +1 GD)
-      // Team C beats Team A 2-0 (C: 3 pts, 0 GD)
-      // Let's test a simple 2-team tie:
-      // Match 1: Team A vs Team B -> Team A wins 2-1
-      // Match 2: Team A vs Team C -> Team C wins 1-0 (A has 3 pts, GD 0, GF 2)
-      // Match 3: Team B vs Team C -> Team B wins 1-0 (B has 3 pts, GD 0, GF 2)
-      // Both Team A and Team B have 3 pts, 0 GD, 2 GF.
-      // But in Match 1 (Head-to-head), Team A beat Team B 2-1!
+      // Đội A thắng Đội B 1-0 (A: 3 điểm, +1 hiệu số)
+      // Đội B thắng Đội C 2-0 (B: 3 điểm, +1 hiệu số)
+      // Đội C thắng Đội A 2-0 (C: 3 điểm, 0 hiệu số)
+      // Thử nghiệm tình huống đồng điểm giữa 2 đội:
+      // Trận 1: Đội A gặp Đội B -> Đội A thắng 2-1
+      // Trận 2: Đội A gặp Đội C -> Đội C thắng 1-0 (A có 3 điểm, hiệu số 0, ghi 2 bàn)
+      // Trận 3: Đội B gặp Đội C -> Đội B thắng 1-0 (B có 3 điểm, hiệu số 0, ghi 2 bàn)
+      // Cả Đội A và Đội B đều có 3 điểm, hiệu số 0, ghi 2 bàn.
+      // Nhưng ở Trận 1 (đối đầu trực tiếp), Đội A đã đánh bại Đội B với tỷ số 2-1!
       final m1 = TournamentMatch(
         id: 'm1',
         tournamentId: 't1',
@@ -233,12 +233,12 @@ void main() {
       final rowA = standings.firstWhere((r) => r.teamId == 'team_A');
       final rowB = standings.firstWhere((r) => r.teamId == 'team_B');
 
-      // Both have 3 pts, 0 GD, 2 GF
+      // Cả hai đội đều có 3 điểm, 0 hiệu số bàn thắng, 2 bàn thắng ghi được
       expect(rowA.points, equals(rowB.points));
       expect(rowA.goalDifference, equals(rowB.goalDifference));
       expect(rowA.goalsFor, equals(rowB.goalsFor));
 
-      // Team A should rank higher than Team B due to Head-to-Head win!
+      // Đội A phải xếp hạng cao hơn Đội B nhờ thành tích đối đầu trực tiếp vượt trội!
       expect(rowA.rank < rowB.rank, isTrue);
     });
   });

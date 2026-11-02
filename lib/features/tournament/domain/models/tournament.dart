@@ -99,10 +99,16 @@ class Tournament {
     required DateTime now,
     required int currentApprovedTeamsCount,
   }) {
-    if (status != TournamentStatus.registrationOpen) return false;
-    if (now.isAfter(registrationDeadline)) return false;
-    if (currentApprovedTeamsCount >= maxTeams) return false;
-    return true;
+    if (status != TournamentStatus.registrationOpen) {
+      return false; // Chỉ mở đăng ký khi giải ở trạng thái registrationOpen
+    }
+    if (now.isAfter(registrationDeadline)) {
+      return false; // Không được đăng ký nếu đã quá hạn chót
+    }
+    if (currentApprovedTeamsCount >= maxTeams) {
+      return false; // Không cho phép đăng ký nếu đã đủ số đội tối đa
+    }
+    return true; // Thỏa mãn tất cả điều kiện đăng ký
   }
 
   /// Kiểm tra điều kiện để Ban tổ chức có thể tạo lịch thi đấu tự động:
@@ -111,11 +117,13 @@ class Tournament {
   bool canGenerateSchedule({required int approvedTeamsCount}) {
     if (status != TournamentStatus.registrationOpen &&
         status != TournamentStatus.preparing) {
-      return false;
+      return false; // Chỉ cho phép tạo lịch khi giải ở trạng thái chuẩn bị hoặc đang mở đăng ký
     }
-    return approvedTeamsCount >= 2;
+    return approvedTeamsCount >=
+        2; // Cần tối thiểu 2 đội bóng để sinh lịch thi đấu
   }
 
+  /// Tạo bản sao mới của đối tượng Tournament với các trường cần thay đổi được cập nhật
   Tournament copyWith({
     String? id,
     String? name,
@@ -140,95 +148,116 @@ class Tournament {
     DateTime? updatedAt,
   }) {
     return Tournament(
-      id: id ?? this.id,
-      name: name ?? this.name,
-      description: description ?? this.description,
-      bannerUrl: bannerUrl ?? this.bannerUrl,
-      location: location ?? this.location,
-      placeId: placeId ?? this.placeId,
-      latitude: latitude ?? this.latitude,
-      longitude: longitude ?? this.longitude,
-      province: province ?? this.province,
-      district: district ?? this.district,
-      ward: ward ?? this.ward,
-      startDate: startDate ?? this.startDate,
-      endDate: endDate ?? this.endDate,
-      registrationDeadline: registrationDeadline ?? this.registrationDeadline,
-      maxTeams: maxTeams ?? this.maxTeams,
-      format: format ?? this.format,
-      status: status ?? this.status,
-      organizerId: organizerId ?? this.organizerId,
-      organizerName: organizerName ?? this.organizerName,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
+      id: id ?? this.id, // Giữ nguyên id cũ nếu không truyền id mới
+      name: name ?? this.name, // Cập nhật tên giải đấu
+      description: description ?? this.description, // Cập nhật mô tả giải
+      bannerUrl: bannerUrl ?? this.bannerUrl, // Cập nhật link ảnh banner
+      location: location ?? this.location, // Cập nhật địa điểm thi đấu
+      placeId: placeId ?? this.placeId, // Cập nhật Google Places ID
+      latitude: latitude ?? this.latitude, // Cập nhật vĩ độ bản đồ
+      longitude: longitude ?? this.longitude, // Cập nhật kinh độ bản đồ
+      province: province ?? this.province, // Cập nhật tỉnh/thành phố
+      district: district ?? this.district, // Cập nhật quận/huyện
+      ward: ward ?? this.ward, // Cập nhật phường/xã
+      startDate: startDate ?? this.startDate, // Cập nhật ngày bắt đầu giải
+      endDate: endDate ?? this.endDate, // Cập nhật ngày bế mạc
+      registrationDeadline:
+          registrationDeadline ??
+          this.registrationDeadline, // Cập nhật hạn chót đăng ký
+      maxTeams: maxTeams ?? this.maxTeams, // Cập nhật số đội tối đa
+      format: format ?? this.format, // Cập nhật thể thức thi đấu
+      status: status ?? this.status, // Cập nhật trạng thái vòng đời giải
+      organizerId: organizerId ?? this.organizerId, // Cập nhật ID ban tổ chức
+      organizerName:
+          organizerName ?? this.organizerName, // Cập nhật tên ban tổ chức
+      createdAt: createdAt ?? this.createdAt, // Giữ nguyên ngày tạo
+      updatedAt: updatedAt ?? this.updatedAt, // Cập nhật thời điểm sửa đổi
     );
   }
 
+  /// Chuyển đổi đối tượng Tournament thành `Map<String, dynamic>` để lưu trữ vào Firestore hoặc gửi API
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
-      'name': name,
-      'description': description,
-      'bannerUrl': bannerUrl,
-      'location': location,
-      if (placeId != null && placeId!.isNotEmpty) 'placeId': placeId,
-      if (latitude != null) 'latitude': latitude,
-      if (longitude != null) 'longitude': longitude,
-      if (province != null && province!.isNotEmpty) 'province': province,
-      if (district != null && district!.isNotEmpty) 'district': district,
-      if (ward != null && ward!.isNotEmpty) 'ward': ward,
-      'startDate': startDate.toIso8601String(),
-      'endDate': endDate.toIso8601String(),
-      'registrationDeadline': registrationDeadline.toIso8601String(),
-      'maxTeams': maxTeams,
-      'format': format.name,
-      'status': status.name,
-      'organizerId': organizerId,
-      'organizerName': organizerName,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
+      'id': id, // Mã định danh duy nhất của giải đấu
+      'name': name, // Tên giải đấu
+      'description': description, // Mô tả quy mô, điều lệ giải
+      'bannerUrl': bannerUrl, // Đường dẫn ảnh bìa giải đấu
+      'location': location, // Chuỗi địa chỉ hiển thị sân thi đấu
+      if (placeId != null && placeId!.isNotEmpty)
+        'placeId': placeId, // ID Google Place nếu có
+      if (latitude != null) 'latitude': latitude, // Tọa độ vĩ độ
+      if (longitude != null) 'longitude': longitude, // Tọa độ kinh độ
+      if (province != null && province!.isNotEmpty)
+        'province': province, // Tỉnh/Thành phố
+      if (district != null && district!.isNotEmpty)
+        'district': district, // Quận/Huyện
+      if (ward != null && ward!.isNotEmpty) 'ward': ward, // Phường/Xã
+      'startDate': startDate
+          .toIso8601String(), // Thời gian khai mạc theo chuẩn ISO 8601
+      'endDate': endDate
+          .toIso8601String(), // Thời gian bế mạc theo chuẩn ISO 8601
+      'registrationDeadline': registrationDeadline
+          .toIso8601String(), // Hạn chót đăng ký theo chuẩn ISO 8601
+      'maxTeams': maxTeams, // Số lượng đội bóng tối đa tham gia
+      'format': format.name, // Tên thể thức thi đấu: roundRobinSingle, roundRobinDouble, knockout
+      'status': status.name, // Tên trạng thái: preparing, registrationOpen, inProgress, completed, cancelled
+      'organizerId': organizerId, // UID người tạo / Ban tổ chức giải
+      'organizerName': organizerName, // Tên hiển thị người tạo
+      'createdAt': createdAt.toIso8601String(), // Thời gian tạo bản ghi
+      'updatedAt': updatedAt
+          .toIso8601String(), // Thời gian cập nhật bản ghi gần nhất
     };
   }
 
+  /// Khởi tạo đối tượng Tournament từ Map dữ liệu (từ Firestore hoặc REST API response)
   factory Tournament.fromMap(Map<dynamic, dynamic> map, String id) {
     return Tournament(
-      id: id,
-      name: map['name'] as String? ?? 'Chưa đặt tên',
-      description: map['description'] as String? ?? '',
-      bannerUrl: map['bannerUrl'] as String? ?? '',
-      location: map['location'] as String? ?? '',
-      placeId: map['placeId'] as String?,
-      latitude: (map['latitude'] as num?)?.toDouble(),
-      longitude: (map['longitude'] as num?)?.toDouble(),
-      province: map['province'] as String?,
-      district: map['district'] as String?,
-      ward: map['ward'] as String?,
+      id: id, // Gán ID từ document ID hoặc trường id
+      name:
+          map['name'] as String? ??
+          'Chưa đặt tên', // Tên giải mặc định nếu rỗng
+      description: map['description'] as String? ?? '', // Mô tả giải đấu
+      bannerUrl: map['bannerUrl'] as String? ?? '', // Ảnh banner giải đấu
+      location: map['location'] as String? ?? '', // Tên địa điểm thi đấu
+      placeId: map['placeId'] as String?, // Mã Google Place ID
+      latitude: (map['latitude'] as num?)
+          ?.toDouble(), // Parse vĩ độ kiểu số thực
+      longitude: (map['longitude'] as num?)
+          ?.toDouble(), // Parse kinh độ kiểu số thực
+      province: map['province'] as String?, // Tên tỉnh/thành phố
+      district: map['district'] as String?, // Tên quận/huyện
+      ward: map['ward'] as String?, // Tên phường/xã
       startDate:
-          DateTime.tryParse(map['startDate'] as String? ?? '') ??
-          DateTime.now(),
+          DateTime.tryParse(map['startDate'] as String? ?? '') ?? DateTime.now(), // Parse ngày bắt đầu giải, fallback thời điểm hiện tại
       endDate:
           DateTime.tryParse(map['endDate'] as String? ?? '') ??
-          DateTime.now().add(const Duration(days: 7)),
+          DateTime.now().add(
+            const Duration(days: 7),
+          ), // Parse ngày kết thúc giải, mặc định 7 ngày sau
       registrationDeadline:
           DateTime.tryParse(map['registrationDeadline'] as String? ?? '') ??
-          DateTime.now(),
-      maxTeams: (map['maxTeams'] as num?)?.toInt() ?? 8,
+          DateTime.now(), // Parse hạn chót đăng ký giải đấu
+      maxTeams:
+          (map['maxTeams'] as num?)?.toInt() ??
+          8, // Số đội tối đa, mặc định là 8
       format: TournamentFormat.values.firstWhere(
         (f) => f.name == map['format'],
-        orElse: () => TournamentFormat.roundRobinSingle,
+        orElse: () => TournamentFormat.roundRobinSingle, // Mặc định là vòng tròn 1 lượt nếu không tìm thấy
       ),
       status: TournamentStatus.values.firstWhere(
         (s) => s.name == map['status'],
-        orElse: () => TournamentStatus.preparing,
+        orElse: () => TournamentStatus
+            .preparing, // Mặc định là đang chuẩn bị nếu không tìm thấy
       ),
-      organizerId: map['organizerId'] as String? ?? '',
-      organizerName: map['organizerName'] as String? ?? '',
+      organizerId: map['organizerId'] as String? ?? '', // UID Ban tổ chức
+      organizerName:
+          map['organizerName'] as String? ?? '', // Tên hiển thị Ban tổ chức
       createdAt:
           DateTime.tryParse(map['createdAt'] as String? ?? '') ??
-          DateTime.now(),
+          DateTime.now(), // Thời điểm tạo giải đấu
       updatedAt:
           DateTime.tryParse(map['updatedAt'] as String? ?? '') ??
-          DateTime.now(),
+          DateTime.now(), // Thời điểm cập nhật giải đấu gần nhất
     );
   }
 }

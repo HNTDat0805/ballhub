@@ -12,12 +12,14 @@ class BookingDetailScreen extends StatefulWidget {
   final String bookingId;
   final BookingRepository repository;
   final bool isNewBooking;
+  final Booking? initialBooking;
 
   const BookingDetailScreen({
     super.key,
     required this.bookingId,
     required this.repository,
     this.isNewBooking = false,
+    this.initialBooking,
   });
 
   @override
@@ -30,7 +32,10 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _controller = BookingDetailController(repository: widget.repository);
+    _controller = BookingDetailController(
+      repository: widget.repository,
+      initialBooking: widget.initialBooking,
+    );
     _controller.addListener(_onUpdate);
     _controller.loadBooking(widget.bookingId);
   }
@@ -72,14 +77,15 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
   }
 
   Widget _buildBody() {
-    if (_controller.isLoading) {
+    if (_controller.isLoading && _controller.booking == null) {
       return const BookingLoadingState(message: 'Đang tải chi tiết đặt sân...');
     }
 
     if (_controller.errorMessage != null && _controller.booking == null) {
       return BookingErrorState(
         message: _controller.errorMessage!,
-        onRetry: () => _controller.loadBooking(widget.bookingId),
+        onRetry: () =>
+            _controller.loadBooking(widget.bookingId, showFullLoading: true),
       );
     }
 
@@ -89,7 +95,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        // New booking success banner
+        // Banner thông báo đặt sân thành công
         if (widget.isNewBooking && booking.status == BookingStatus.pending)
           Container(
             margin: const EdgeInsets.only(bottom: 16),
@@ -133,7 +139,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
               ],
             ),
           ),
-        // Cancelled banner
+        // Banner thông báo đơn đặt sân đã bị hủy
         if (booking.status == BookingStatus.cancelledByUser ||
             booking.status == BookingStatus.cancelledByOwner)
           Container(
@@ -183,10 +189,10 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
               ],
             ),
           ),
-        // Status + ID
+        // Trạng thái và Mã đơn đặt sân
         _buildStatusSection(booking),
         const SizedBox(height: 12),
-        // Field info
+        // Thông tin sân bóng
         _buildInfoCard('Thông tin sân', [
           _InfoRow(
             icon: Icons.sports_soccer_rounded,
@@ -200,7 +206,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
           ),
         ]),
         const SizedBox(height: 12),
-        // Booking details
+        // Chi tiết khung giờ và thông tin đặt sân
         _buildInfoCard('Chi tiết đặt sân', [
           _InfoRow(
             icon: Icons.calendar_today_outlined,
@@ -225,7 +231,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
             ),
         ]),
         const SizedBox(height: 12),
-        // Price
+        // Bảng chi tiết giá tiền và thanh toán
         _buildInfoCard('Chi phí', [
           _InfoRow(
             icon: Icons.receipt_outlined,
@@ -251,7 +257,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
             ),
           ),
         ]),
-        // Owner response
+        // Phản hồi từ chủ sân
         if (booking.statusReason != null ||
             booking.ownerNote != null ||
             booking.cancellationReason != null) ...[
@@ -278,7 +284,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
           ]),
         ],
         const SizedBox(height: 12),
-        // Timeline
+        // Dòng thời gian tiến trình xử lý đơn đặt
         _buildTimeline(booking),
         const SizedBox(height: 24),
       ],

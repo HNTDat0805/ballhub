@@ -88,7 +88,7 @@ class _SlotSelectionScreenState extends State<SlotSelectionScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Field info card
+          // Thẻ thông tin tóm tắt sân bóng
           _SummaryCard(
             title: 'Thông tin sân',
             children: [
@@ -114,7 +114,7 @@ class _SlotSelectionScreenState extends State<SlotSelectionScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          // Booking details card
+          // Thẻ chi tiết đặt sân
           _SummaryCard(
             title: 'Chi tiết đặt sân',
             children: [
@@ -143,7 +143,7 @@ class _SlotSelectionScreenState extends State<SlotSelectionScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          // Price breakdown
+          // Bảng chi tiết giá tiền
           _SummaryCard(
             title: 'Chi phí',
             children: [
@@ -168,7 +168,7 @@ class _SlotSelectionScreenState extends State<SlotSelectionScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          // Note
+          // Ghi chú của khách hàng
           _SummaryCard(
             title: 'Ghi chú (không bắt buộc)',
             children: [
@@ -185,7 +185,7 @@ class _SlotSelectionScreenState extends State<SlotSelectionScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          // Policy note
+          // Quy định và chính sách đặt sân
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -214,7 +214,7 @@ class _SlotSelectionScreenState extends State<SlotSelectionScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          // Error message
+          // Thông báo lỗi khi đặt sân thất bại
           if (_controller.errorMessage != null)
             Container(
               margin: const EdgeInsets.only(bottom: 12),
@@ -243,7 +243,7 @@ class _SlotSelectionScreenState extends State<SlotSelectionScreen> {
                 ],
               ),
             ),
-          // Submit button
+          // Nút xác nhận gửi yêu cầu đặt sân
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
@@ -283,7 +283,7 @@ class _SlotSelectionScreenState extends State<SlotSelectionScreen> {
     if (!mounted) return;
 
     if (success && _controller.createdBooking != null) {
-      // Navigate to booking detail
+      // Chuyển hướng tới màn hình chi tiết đơn đặt sân
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(
@@ -291,6 +291,7 @@ class _SlotSelectionScreenState extends State<SlotSelectionScreen> {
             bookingId: _controller.createdBooking!.id,
             repository: widget.repository,
             isNewBooking: true,
+            initialBooking: _controller.createdBooking,
           ),
         ),
         (route) => route.isFirst,
@@ -300,7 +301,7 @@ class _SlotSelectionScreenState extends State<SlotSelectionScreen> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Shared summary widgets
+// Các widget tóm tắt dùng chung
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _SummaryCard extends StatelessWidget {

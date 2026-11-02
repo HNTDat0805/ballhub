@@ -20,6 +20,8 @@ class TeamService {
   static ApiClient _api = ApiClient();
   @visibleForTesting
   static set api(ApiClient client) => _api = client;
+  @visibleForTesting
+  static ApiClient get api => _api;
 
   @visibleForTesting
   static void resetStateForTesting() {
@@ -27,7 +29,10 @@ class TeamService {
     _deletedTeamIds.clear();
     _deletedTeamNames.clear();
     _userCreatedTeams.clear();
+    _myTeamsCache.clear();
     _localInvitations.clear();
+    _cachedTeams.clear();
+    _cachedMembers.clear();
   }
 
   // Báo cho các màn hình biết dữ liệu đội đã thay đổi để load lại
@@ -38,17 +43,41 @@ class TeamService {
   static final Set<String> _deletedTeamIds = {};
   static final Set<String> _deletedTeamNames = {};
   static final List<Team> _userCreatedTeams = [];
+  static final List<Team> _myTeamsCache = [];
   static final List<FriendlyInvitation> _localInvitations = [];
+  static final Map<String, Team> _cachedTeams = {};
+  static final Map<String, List<TeamMember>> _cachedMembers = {};
 
-  /// Danh sách các đội bóng do người dùng vừa tạo (lưu trong bộ nhớ cục bộ để phản hồi UI ngay lập tức)
-  static List<Team> get localTeams => List.unmodifiable(
-    _userCreatedTeams.where((t) {
-      if (_leftTeamIds.contains(t.teamId)) return false;
-      if (_deletedTeamIds.contains(t.teamId)) return false;
-      if (_deletedTeamNames.contains(t.teamName.toLowerCase())) return false;
+  /// Danh sách các đội bóng của người dùng hiện tại (lưu trong bộ nhớ cục bộ để phản hồi UI 0ms)
+  static List<Team> get localTeams {
+    final list = <Team>[];
+    final seen = <String>{};
+
+    for (final t in [..._userCreatedTeams, ..._myTeamsCache]) {
+      if (_leftTeamIds.contains(t.teamId)) continue;
+      if (_deletedTeamIds.contains(t.teamId)) continue;
+      if (_deletedTeamNames.contains(t.teamName.toLowerCase())) continue;
+      if (seen.add(t.teamId)) {
+        list.add(t);
+      }
+    }
+    return List.unmodifiable(list);
+  }
+
+  /// Kiểm tra xem một đội bóng đã bị xóa / giải tán hay chưa
+  static bool isTeamDeleted(String teamId, [String? teamName]) {
+    if (_deletedTeamIds.contains(teamId)) return true;
+    if (teamName != null &&
+        _deletedTeamNames.contains(teamName.toLowerCase())) {
       return true;
-    }),
-  );
+    }
+    return false;
+  }
+
+  /// Kiểm tra xem người dùng hiện tại đã rời khỏi đội bóng này chưa
+  static bool hasLeftTeam(String teamId) {
+    return _leftTeamIds.contains(teamId);
+  }
 
   /// Dọn dẹp trạng thái cục bộ khi người dùng đăng xuất
   static void clearLocalState() {
@@ -56,8 +85,77 @@ class TeamService {
     _deletedTeamIds.clear();
     _deletedTeamNames.clear();
     _userCreatedTeams.clear();
+    _myTeamsCache.clear();
     _localInvitations.clear();
+    _cachedTeams.clear();
+    _cachedMembers.clear();
     _notify();
+  }
+
+  /// Tra cứu nhanh thông tin đội bóng từ bộ nhớ cache hoặc seed data (đồng bộ 0ms)
+  static Team? findTeamCached(String teamId) {
+    if (_deletedTeamIds.contains(teamId)) return null;
+
+    final created = _userCreatedTeams
+        .where((t) => t.teamId == teamId)
+        .firstOrNull;
+    if (created != null) {
+      if (_deletedTeamNames.contains(created.teamName.toLowerCase())) {
+        return null;
+      }
+      return created;
+    }
+
+    final cached = _cachedTeams[teamId];
+    if (cached != null) {
+      if (_deletedTeamNames.contains(cached.teamName.toLowerCase())) {
+        return null;
+      }
+      return cached;
+    }
+
+    final fallback = TeamSeedData.getSampleTeams().where((t) {
+      if (_deletedTeamIds.contains(t.teamId)) return false;
+      if (_deletedTeamNames.contains(t.teamName.toLowerCase())) return false;
+      return t.teamId == teamId;
+    }).firstOrNull;
+
+    return fallback;
+  }
+
+  /// Tra cứu nhanh danh sách thành viên từ cache hoặc seed data (đồng bộ 0ms)
+  static List<TeamMember>? findMembersCached(String teamId) {
+    if (_deletedTeamIds.contains(teamId)) return null;
+
+    final cached = _cachedMembers[teamId];
+    if (cached != null) {
+      if (_leftTeamIds.contains(teamId)) {
+        final uid = AuthService.uid;
+        return cached.where((m) => m.userId != uid).toList();
+      }
+      return cached;
+    }
+
+    final created = _userCreatedTeams
+        .where((t) => t.teamId == teamId)
+        .firstOrNull;
+    if (created != null) {
+      return [
+        TeamMember(
+          userId: AuthService.uid ?? 'current_user',
+          role: 'Captain',
+          fullName: AuthService.currentUser?.displayName ?? 'Tôi (Đội trưởng)',
+          position: 'Đội trưởng',
+        ),
+      ];
+    }
+
+    final fallback = TeamSeedData.getSampleMembers(teamId);
+    if (_leftTeamIds.contains(teamId)) {
+      final uid = AuthService.uid;
+      return fallback.where((m) => m.userId != uid).toList();
+    }
+    return fallback;
   }
 
   // ================= ĐỘI BÓNG =================
@@ -120,13 +218,20 @@ class TeamService {
           return true;
         }).toList();
 
+    for (final t in combined) {
+      _cachedTeams[t.teamId] = t;
+    }
+
     return combined;
   }
 
   static Future<List<Team>> getMyTeams() async {
     List<Team> result = [];
     try {
-      final res = await _api.get('/teams/mine');
+      final res = await _api.get(
+        '/teams/mine',
+        timeout: const Duration(seconds: 3),
+      );
       if (res is List) {
         result = res
             .whereType<Map>()
@@ -158,6 +263,13 @@ class TeamService {
           return true;
         }).toList();
 
+    _myTeamsCache.clear();
+    _myTeamsCache.addAll(all);
+
+    for (final t in all) {
+      _cachedTeams[t.teamId] = t;
+    }
+
     return all;
   }
 
@@ -176,22 +288,38 @@ class TeamService {
     }
 
     try {
-      final res = await _api.get('/teams/$teamId');
+      final res = await _api.get(
+        '/teams/$teamId',
+        timeout: const Duration(seconds: 3),
+      );
       if (res is Map) {
         final t = Team.fromMap(Map<String, dynamic>.from(res));
         if (_deletedTeamIds.contains(t.teamId) ||
             _deletedTeamNames.contains(t.teamName.toLowerCase())) {
           return null;
         }
+        _cachedTeams[t.teamId] = t;
         return t;
       }
     } catch (_) {}
+
+    final cached = _cachedTeams[teamId];
+    if (cached != null) {
+      if (_deletedTeamNames.contains(cached.teamName.toLowerCase())) {
+        return null;
+      }
+      return cached;
+    }
 
     final fallback = TeamSeedData.getSampleTeams().where((t) {
       if (_deletedTeamIds.contains(t.teamId)) return false;
       if (_deletedTeamNames.contains(t.teamName.toLowerCase())) return false;
       return t.teamId == teamId;
     }).firstOrNull;
+
+    if (fallback != null) {
+      _cachedTeams[fallback.teamId] = fallback;
+    }
 
     return fallback;
   }
@@ -225,7 +353,11 @@ class TeamService {
       district: district,
       ward: ward,
     );
+    if (name.isNotEmpty) {
+      _deletedTeamNames.remove(name.toLowerCase());
+    }
     _userCreatedTeams.insert(0, newTeam);
+    _myTeamsCache.insert(0, newTeam);
     try {
       final res = await _api.post(
         '/teams',
@@ -253,6 +385,16 @@ class TeamService {
         } else {
           _userCreatedTeams.insert(0, serverTeam);
         }
+        final myIdx = _myTeamsCache.indexWhere(
+          (t) =>
+              t.teamId == localId ||
+              t.teamName.toLowerCase() == name.toLowerCase(),
+        );
+        if (myIdx != -1) {
+          _myTeamsCache[myIdx] = serverTeam;
+        } else {
+          _myTeamsCache.insert(0, serverTeam);
+        }
       }
     } catch (e) {
       if (e is ApiException) {
@@ -264,6 +406,7 @@ class TeamService {
           );
         } else {
           _userCreatedTeams.remove(newTeam);
+          _myTeamsCache.remove(newTeam);
           throw AppException(e.message);
         }
       } else {
@@ -304,6 +447,26 @@ class TeamService {
         province: province ?? old.province,
         district: district ?? old.district,
         ward: ward ?? old.ward,
+      );
+    }
+
+    final cached = _cachedTeams[teamId];
+    if (cached != null) {
+      _cachedTeams[teamId] = Team(
+        teamId: cached.teamId,
+        teamName: name,
+        area: area,
+        description: description,
+        captainId: cached.captainId,
+        captainName: cached.captainName,
+        memberCount: cached.memberCount,
+        createdAt: cached.createdAt,
+        placeId: placeId ?? cached.placeId,
+        latitude: latitude ?? cached.latitude,
+        longitude: longitude ?? cached.longitude,
+        province: province ?? cached.province,
+        district: district ?? cached.district,
+        ward: ward ?? cached.ward,
       );
     }
 
@@ -355,8 +518,12 @@ class TeamService {
     final resolvedName = teamName ?? originalTeam?.teamName;
 
     _deletedTeamIds.add(teamId);
+    _cachedTeams.remove(teamId);
+    _cachedMembers.remove(teamId);
     if (originalTeam != null && originalTeam.teamId != teamId) {
       _deletedTeamIds.add(originalTeam.teamId);
+      _cachedTeams.remove(originalTeam.teamId);
+      _cachedMembers.remove(originalTeam.teamId);
     }
     if (resolvedName != null && resolvedName.isNotEmpty) {
       _deletedTeamNames.add(resolvedName.toLowerCase());
@@ -365,6 +532,24 @@ class TeamService {
     if (originalIndex != -1) {
       _userCreatedTeams.removeAt(originalIndex);
     }
+
+    _myTeamsCache.removeWhere(
+      (t) =>
+          t.teamId == teamId ||
+          (originalTeam != null && t.teamId == originalTeam.teamId) ||
+          (resolvedName != null &&
+              t.teamName.toLowerCase() == resolvedName.toLowerCase()),
+    );
+
+    // Dọn dẹp teamId của người dùng nếu họ đang giữ id của đội này
+    final cur = AuthContext.instance.currentUser;
+    if (cur.teamId == teamId ||
+        (originalTeam != null && cur.teamId == originalTeam.teamId)) {
+      AuthContext.instance.switchUser(cur.copyWith(teamId: null));
+    }
+
+    // BÁO CHO TOÀN BỘ MÀN HÌNH CẬP NHẬT GIAO DIỆN NGAY LẬP TỨC (0MS)
+    _notify();
 
     try {
       await _api.delete('/teams/$teamId');
@@ -391,6 +576,7 @@ class TeamService {
           }
           if (originalTeam != null) {
             _userCreatedTeams.insert(originalIndex, originalTeam);
+            _myTeamsCache.insert(0, originalTeam);
           }
           throw AppException(e.message);
         }
@@ -400,12 +586,6 @@ class TeamService {
         );
       }
     } finally {
-      // Dọn dẹp teamId của người dùng nếu họ đang giữ id của đội này
-      final cur = AuthContext.instance.currentUser;
-      if (cur.teamId == teamId ||
-          (originalTeam != null && cur.teamId == originalTeam.teamId)) {
-        AuthContext.instance.switchUser(cur.copyWith(teamId: null));
-      }
       _notify();
     }
   }
@@ -413,6 +593,19 @@ class TeamService {
   /// Rời đội bóng (Dành cho thành viên)
   static Future<void> leaveTeam(String teamId) async {
     _leftTeamIds.add(teamId);
+    _cachedTeams.remove(teamId);
+    _cachedMembers.remove(teamId);
+    _userCreatedTeams.removeWhere((t) => t.teamId == teamId);
+    _myTeamsCache.removeWhere((t) => t.teamId == teamId);
+
+    final cur = AuthContext.instance.currentUser;
+    if (cur.teamId == teamId) {
+      AuthContext.instance.switchUser(cur.copyWith(teamId: null));
+    }
+
+    // BÁO CHO TOÀN BỘ MÀN HÌNH CẬP NHẬT GIAO DIỆN NGAY LẬP TỨC (0MS)
+    _notify();
+
     final uid = AuthService.uid;
     try {
       if (uid != null) {
@@ -449,21 +642,36 @@ class TeamService {
 
   static Future<List<TeamMember>> getMembers(String teamId) async {
     try {
-      final res = await _api.get('/teams/$teamId/members');
+      final res = await _api.get(
+        '/teams/$teamId/members',
+        timeout: const Duration(seconds: 3),
+      );
       if (res is List) {
         final list = res
             .whereType<Map>()
             .map((m) => TeamMember.fromMap(Map<String, dynamic>.from(m)))
             .toList();
-        if (list.isNotEmpty) return list;
+        if (list.isNotEmpty) {
+          _cachedMembers[teamId] = list;
+          return list;
+        }
       }
     } catch (_) {}
+
+    final cached = _cachedMembers[teamId];
+    if (cached != null) {
+      if (_leftTeamIds.contains(teamId)) {
+        final uid = AuthService.uid;
+        return cached.where((m) => m.userId != uid).toList();
+      }
+      return cached;
+    }
 
     final created = _userCreatedTeams
         .where((t) => t.teamId == teamId)
         .firstOrNull;
     if (created != null) {
-      return [
+      final defaultMembers = [
         TeamMember(
           userId: AuthService.uid ?? 'current_user',
           role: 'Captain',
@@ -471,9 +679,12 @@ class TeamService {
           position: 'Đội trưởng',
         ),
       ];
+      _cachedMembers[teamId] = defaultMembers;
+      return defaultMembers;
     }
 
     final fallback = TeamSeedData.getSampleMembers(teamId);
+    _cachedMembers[teamId] = fallback;
     if (_leftTeamIds.contains(teamId)) {
       final uid = AuthService.uid;
       return fallback.where((m) => m.userId != uid).toList();
@@ -699,6 +910,7 @@ class TeamService {
       final res = await _api.get(
         '/invitations',
         queryParams: {'teamId': teamId},
+        timeout: const Duration(seconds: 3),
       );
       if (res is List) {
         serverInvs = res

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../../core/api/api_client.dart';
+import '../../data/api_booking_repository.dart';
 import '../../data/booking_repository.dart';
 import '../../domain/models/booking.dart';
 import '../../domain/models/field_slot.dart';
@@ -16,7 +17,7 @@ import '../../domain/models/football_field.dart';
 /// - [OwnerBookingController]: owner quản lý booking
 
 // ─────────────────────────────────────────────────────────────────────────────
-// FieldListController
+// Bộ điều khiển danh sách sân bóng (FieldListController)
 // ─────────────────────────────────────────────────────────────────────────────
 
 class FieldListController extends ChangeNotifier {
@@ -41,35 +42,44 @@ class FieldListController extends ChangeNotifier {
   String? get districtFilter => _districtFilter;
   String? get fieldTypeFilter => _fieldTypeFilter;
 
+  /// Cập nhật từ khóa tìm kiếm sân bóng theo tên hoặc địa chỉ
   void setSearchQuery(String query) {
     _searchQuery = query;
     notifyListeners();
   }
 
+  /// Thiết lập bộ lọc theo Tỉnh / Thành phố
   void setCityFilter(String? city) {
     _cityFilter = city;
     notifyListeners();
   }
 
+  /// Thiết lập bộ lọc theo Quận / Huyện
   void setDistrictFilter(String? district) {
     _districtFilter = district;
     notifyListeners();
   }
 
+  /// Thiết lập bộ lọc theo loại sân (sân 5, 7, 11)
   void setFieldTypeFilter(String? type) {
     _fieldTypeFilter = type;
     notifyListeners();
   }
 
+  /// Xóa thông báo lỗi hiển thị trên giao diện
   void clearError() {
     _errorMessage = null;
     notifyListeners();
   }
 
+  /// Tải danh sách sân bóng từ Backend REST API theo các tiêu chí tìm kiếm và bộ lọc đã chọn
   Future<void> loadFields() async {
+    // 1. Kích hoạt trạng thái loading và xóa lỗi cũ
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
+
+    // 2. Gọi repository truy vấn danh sách sân
     try {
       _fields = await _repo.getFields(
         city: _cityFilter,
@@ -83,6 +93,7 @@ class FieldListController extends ChangeNotifier {
     } catch (e) {
       _errorMessage = 'Không thể tải danh sách sân. Vui lòng thử lại.';
     } finally {
+      // 3. Kết thúc loading và cập nhật giao diện
       _isLoading = false;
       notifyListeners();
     }
@@ -90,9 +101,10 @@ class FieldListController extends ChangeNotifier {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// FieldDetailController
+// Bộ điều khiển chi tiết sân bóng (FieldDetailController)
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Controller quản lý thông tin chi tiết một sân bóng và danh sách khung giờ trống theo ngày
 class FieldDetailController extends ChangeNotifier {
   final BookingRepository _repo;
 
@@ -111,15 +123,20 @@ class FieldDetailController extends ChangeNotifier {
   List<FieldSlot> get slots => _slots;
   String get selectedDateKey => _selectedDateKey;
 
+  /// Lấy chuỗi ngày hôm nay định dạng YYYY-MM-DD
   static String _todayKey() {
     final now = DateTime.now();
     return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
   }
 
+  /// Tải thông tin chi tiết của sân bóng và nạp các khung giờ trống của ngày đang chọn
   Future<void> loadField(String fieldId) async {
+    // 1. Kích hoạt loading và xóa lỗi cũ
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
+
+    // 2. Lấy thông tin sân từ repository và tải danh sách slot
     try {
       _field = await _repo.getFieldById(fieldId);
       await _loadSlots();
@@ -128,20 +145,23 @@ class FieldDetailController extends ChangeNotifier {
     } catch (e) {
       _errorMessage = 'Không thể tải thông tin sân. Vui lòng thử lại.';
     } finally {
+      // 3. Tắt loading và cập nhật giao diện
       _isLoading = false;
       notifyListeners();
     }
   }
 
+  /// Chọn một ngày cụ thể trên lịch để xem các khung giờ tương ứng
   Future<void> selectDate(String dateKey) async {
-    if (_selectedDateKey == dateKey) return;
-    _selectedDateKey = dateKey;
+    if (_selectedDateKey == dateKey) return; // Nếu chọn lại ngày cũ thì bỏ qua
+    _selectedDateKey = dateKey; // Cập nhật ngày đã chọn
     notifyListeners();
     if (_field != null) {
-      await _loadSlots();
+      await _loadSlots(); // Tải lại danh sách slot cho ngày mới
     }
   }
 
+  /// Tải danh sách các khung giờ (slots) từ backend cho sân và ngày hiện tại
   Future<void> _loadSlots() async {
     if (_field == null) return;
     try {
@@ -154,7 +174,7 @@ class FieldDetailController extends ChangeNotifier {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SlotSelectionController — xử lý chọn slot liên tiếp
+// Bộ điều khiển chọn khung giờ (SlotSelectionController) — xử lý chọn slot liên tiếp
 // ─────────────────────────────────────────────────────────────────────────────
 
 class SlotSelectionController extends ChangeNotifier {
@@ -239,7 +259,7 @@ class SlotSelectionController extends ChangeNotifier {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// CreateBookingController — xử lý tạo booking
+// Bộ điều khiển tạo đơn đặt sân (CreateBookingController) — xử lý tạo booking
 // ─────────────────────────────────────────────────────────────────────────────
 
 class CreateBookingController extends ChangeNotifier {
@@ -303,14 +323,25 @@ class CreateBookingController extends ChangeNotifier {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// BookingListController — lịch sử booking của user
+// Bộ điều khiển danh sách đặt sân (BookingListController) — lịch sử booking của user
 // ─────────────────────────────────────────────────────────────────────────────
 
 class BookingListController extends ChangeNotifier {
   final BookingRepository _repo;
 
-  BookingListController({required BookingRepository repository})
-    : _repo = repository;
+  BookingListController({
+    required BookingRepository repository,
+    List<Booking>? initialBookings,
+  }) : _repo = repository,
+       _bookings =
+           initialBookings ??
+           (repository is ApiBookingRepository
+               ? List.of(ApiBookingRepository.localBookings)
+               : []) {
+    if (_bookings.isNotEmpty) {
+      _bookings.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    }
+  }
 
   bool _isLoading = false;
   String? _errorMessage;
@@ -336,17 +367,24 @@ class BookingListController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> loadMyBookings() async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
+  Future<void> loadMyBookings({bool showFullLoading = false}) async {
+    if (showFullLoading || _bookings.isEmpty) {
+      _isLoading = true;
+      _errorMessage = null;
+      notifyListeners();
+    }
     try {
-      _bookings = await _repo.getMyBookings();
+      final list = await _repo.getMyBookings();
+      _bookings = list;
       _bookings.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     } on ApiException catch (e) {
-      _errorMessage = e.message;
+      if (_bookings.isEmpty) {
+        _errorMessage = e.message;
+      }
     } catch (e) {
-      _errorMessage = 'Không thể tải danh sách đặt sân. Vui lòng thử lại.';
+      if (_bookings.isEmpty) {
+        _errorMessage = 'Không thể tải danh sách đặt sân. Vui lòng thử lại.';
+      }
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -375,14 +413,17 @@ class BookingListController extends ChangeNotifier {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// BookingDetailController — chi tiết 1 booking
+// Bộ điều khiển chi tiết đặt sân (BookingDetailController) — chi tiết 1 booking
 // ─────────────────────────────────────────────────────────────────────────────
 
 class BookingDetailController extends ChangeNotifier {
   final BookingRepository _repo;
 
-  BookingDetailController({required BookingRepository repository})
-    : _repo = repository;
+  BookingDetailController({
+    required BookingRepository repository,
+    Booking? initialBooking,
+  }) : _repo = repository,
+       _booking = initialBooking;
 
   bool _isLoading = false;
   bool _isCancelling = false;
@@ -399,16 +440,25 @@ class BookingDetailController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> loadBooking(String bookingId) async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
+  Future<void> loadBooking(
+    String bookingId, {
+    bool showFullLoading = false,
+  }) async {
+    if (showFullLoading || _booking == null) {
+      _isLoading = true;
+      _errorMessage = null;
+      notifyListeners();
+    }
     try {
       _booking = await _repo.getBooking(bookingId);
     } on ApiException catch (e) {
-      _errorMessage = e.message;
+      if (_booking == null) {
+        _errorMessage = e.message;
+      }
     } catch (e) {
-      _errorMessage = 'Không thể tải thông tin đặt sân. Vui lòng thử lại.';
+      if (_booking == null) {
+        _errorMessage = 'Không thể tải thông tin đặt sân. Vui lòng thử lại.';
+      }
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -437,7 +487,7 @@ class BookingDetailController extends ChangeNotifier {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// OwnerBookingController — chủ sân quản lý booking
+// Bộ điều khiển quản lý đặt sân chủ sân (OwnerBookingController) — chủ sân quản lý booking
 // ─────────────────────────────────────────────────────────────────────────────
 
 class OwnerBookingController extends ChangeNotifier {
@@ -475,17 +525,23 @@ class OwnerBookingController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> loadOwnerBookings() async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
+  Future<void> loadOwnerBookings({bool showFullLoading = false}) async {
+    if (showFullLoading || _bookings.isEmpty) {
+      _isLoading = true;
+      _errorMessage = null;
+      notifyListeners();
+    }
     try {
       _bookings = await _repo.getOwnerBookings();
       _bookings.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     } on ApiException catch (e) {
-      _errorMessage = e.message;
+      if (_bookings.isEmpty) {
+        _errorMessage = e.message;
+      }
     } catch (e) {
-      _errorMessage = 'Không thể tải danh sách đặt sân. Vui lòng thử lại.';
+      if (_bookings.isEmpty) {
+        _errorMessage = 'Không thể tải danh sách đặt sân. Vui lòng thử lại.';
+      }
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -553,7 +609,7 @@ class OwnerBookingController extends ChangeNotifier {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// OwnerFieldController — chủ sân quản lý sân
+// Bộ điều khiển sân của chủ sân (OwnerFieldController) — chủ sân quản lý sân
 // ─────────────────────────────────────────────────────────────────────────────
 
 class OwnerFieldController extends ChangeNotifier {

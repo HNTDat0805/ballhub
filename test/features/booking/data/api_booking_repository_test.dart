@@ -87,7 +87,7 @@ void main() {
       'updatedAt': '2026-06-01T00:00:00.000Z',
     };
 
-    // 1. getFields returns list
+    // 1. getFields trả về danh sách sân bóng thành công
     test('1. getFields fetches list of fields with query parameters', () async {
       final mock = MockHttpClient((req) async {
         expect(req.url.path, '/api/v1/fields');
@@ -109,7 +109,7 @@ void main() {
       expect(fields.first.name, 'Sân Bóng Chuyên Nghiệp');
     });
 
-    // 2. getFields fallback on error
+    // 2. getFields dự phòng trả về danh sách rỗng khi gặp lỗi
     test('2. getFields returns fallback sample fields on error', () async {
       final mock = MockHttpClient((req) async => jsonResponse('Error', 500));
       final repo = ApiBookingRepository(
@@ -470,7 +470,7 @@ void main() {
       expect(rejected.status, BookingStatus.rejected);
     });
 
-    // 19. filter by fieldType in getFields
+    // 19. lọc theo loại sân trong getFields
     test('19. getFields passes fieldType parameter properly', () async {
       final mock = MockHttpClient((req) async {
         expect(req.url.queryParameters['fieldType'], '7_a_side');
@@ -490,7 +490,7 @@ void main() {
       expect(fields.length, 1);
     });
 
-    // 20. filter by search query in getFields
+    // 20. lọc theo từ khóa tìm kiếm trong getFields
     test('20. getFields passes search keyword properly', () async {
       final mock = MockHttpClient((req) async {
         expect(req.url.queryParameters['search'], 'Chuyên Nghiệp');
@@ -559,7 +559,7 @@ void main() {
       expect(cancelled.cancellationReason, 'Bận đột xuất');
     });
 
-    // 23. ownerCancelBooking posts cancellation reason to /owner/bookings/:id/cancel
+    // 23. ownerCancelBooking gửi lý do hủy đơn đến /owner/bookings/:id/cancel
     test('23. ownerCancelBooking cancels confirmed booking by owner', () async {
       late Map<String, dynamic> body;
       final mock = MockHttpClient((req) async {
@@ -586,7 +586,7 @@ void main() {
       expect(cancelled.status, BookingStatus.cancelledByOwner);
     });
 
-    // 24. createBooking updates local booked slots and triggers bookingChanged notifier
+    // 24. createBooking cập nhật trạng thái slot đã đặt và kích hoạt thông báo bookingChanged
     test('24. createBooking updates local booked slots and triggers bookingChanged notifier', () async {
       ApiBookingRepository.clearLocalState();
       var notificationCount = 0;
@@ -609,14 +609,14 @@ void main() {
         ),
       );
 
-      // Verify slot is initially available
+      // Kiểm tra xác nhận khung giờ ban đầu ở trạng thái còn trống (available)
       final initialSlots = await repo.getFieldSlots(
         'f_1',
         dateKey: '2026-07-01',
       );
       expect(initialSlots.first.status, FieldSlotStatus.available);
 
-      // Create booking
+      // Thực hiện tạo đơn đặt sân
       final created = await repo.createBooking(
         fieldId: 'f_1',
         slotIds: ['slot_1'],
@@ -625,7 +625,7 @@ void main() {
       expect(created.id, 'bk_1');
       expect(notificationCount, 1);
 
-      // Slots fetched again should now show booked immediately
+      // Tải lại danh sách slot ngay sau đó phải hiển thị trạng thái đã đặt (booked) tức thời
       final updatedSlots = await repo.getFieldSlots(
         'f_1',
         dateKey: '2026-07-01',
@@ -636,7 +636,7 @@ void main() {
       ApiBookingRepository.clearLocalState();
     });
 
-    // 25. cancelBooking clears booked slot and notifies listeners
+    // 25. cancelBooking giải phóng khung giờ đã đặt và thông báo tới các listener
     test(
       '25. cancelBooking clears booked slot and notifies listeners',
       () async {
@@ -675,7 +675,7 @@ void main() {
         );
         expect(notificationCount, 1);
 
-        // Cancel booking
+        // Thực hiện hủy đơn đặt sân
         await repo.cancelBooking('bk_1', reason: 'Bận việc đột xuất');
         expect(notificationCount, 2);
 
@@ -745,7 +745,7 @@ void main() {
       expect(created.name, 'Sân Bóng Hoa Lư Mới');
       expect(notificationCount, 1);
 
-      // getFields must immediately contain the newly created field at the top
+      // getFields phải chứa sân bóng vừa tạo mới ngay ở đầu danh sách
       final fields = await repo.getFields();
       expect(fields.any((f) => f.id == 'field_hoa_lu_new'), isTrue);
       expect(fields.first.name, 'Sân Bóng Hoa Lư Mới');

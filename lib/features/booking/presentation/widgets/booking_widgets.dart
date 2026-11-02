@@ -150,7 +150,7 @@ class FieldCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Cover image
+            // Ảnh bìa sân bóng
             _FieldCoverImage(
               imageUrl: field.coverImageUrl,
               fieldType: field.fieldType,
@@ -160,7 +160,7 @@ class FieldCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Name + status
+                  // Tên sân và trạng thái
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -181,7 +181,7 @@ class FieldCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 6),
-                  // Address
+                  // Địa chỉ sân
                   Row(
                     children: [
                       const Icon(
@@ -204,7 +204,7 @@ class FieldCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  // Price + amenities
+                  // Giá thuê và các tiện ích đi kèm
                   Row(
                     children: [
                       Container(
@@ -416,7 +416,7 @@ class TimeSlotTile extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Time
+            // Khung giờ
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -440,7 +440,7 @@ class TimeSlotTile extends StatelessWidget {
                 ],
               ),
             ),
-            // Price
+            // Giá tiền
             if (state == SlotUiState.available || state == SlotUiState.selected)
               Text(
                 _formatPrice(slot.basePrice, slot.currency),
@@ -453,7 +453,7 @@ class TimeSlotTile extends StatelessWidget {
                 ),
               ),
             const SizedBox(width: 10),
-            // State badge
+            // Huy hiệu trạng thái khung giờ
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
@@ -568,7 +568,7 @@ class BookingCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header: field name + status
+              // Tiêu đề: tên sân và trạng thái
               Row(
                 children: [
                   Expanded(
@@ -588,7 +588,7 @@ class BookingCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 8),
-              // Address
+              // Địa chỉ sân bóng
               Row(
                 children: [
                   const Icon(
@@ -613,7 +613,7 @@ class BookingCard extends StatelessWidget {
               const SizedBox(height: 6),
               const Divider(height: 1),
               const SizedBox(height: 8),
-              // Date + time
+              // Ngày thi đấu và khung giờ
               Row(
                 children: [
                   const Icon(
@@ -646,7 +646,7 @@ class BookingCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 6),
-              // Price
+              // Giá thuê sân
               Row(
                 children: [
                   const Icon(
@@ -733,7 +733,7 @@ class BookingCard extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// LoadingState, EmptyState, ErrorState — reusable states
+// LoadingState, EmptyState, ErrorState — các trạng thái giao diện tái sử dụng
 // ─────────────────────────────────────────────────────────────────────────────
 
 class BookingLoadingState extends StatelessWidget {

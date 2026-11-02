@@ -57,7 +57,7 @@ class ApiTournamentRepository implements TournamentRepository {
   }
 
   // ----------------------------------------------------
-  // TOURNAMENTS
+  // QUẢN LÝ GIẢI ĐẤU (TOURNAMENTS)
   // ----------------------------------------------------
 
   @override
@@ -217,7 +217,7 @@ class ApiTournamentRepository implements TournamentRepository {
   }
 
   // ----------------------------------------------------
-  // TEAMS & REGISTRATION
+  // ĐỘI BÓNG & ĐĂNG KÝ (TEAMS & REGISTRATION)
   // ----------------------------------------------------
 
   /// Quản lý luồng phát sóng (Broadcast Stream) danh sách đội bóng cho từng giải đấu
@@ -350,7 +350,7 @@ class ApiTournamentRepository implements TournamentRepository {
   }
 
   // ----------------------------------------------------
-  // MATCHES & SCHEDULE
+  // LỊCH THI ĐẤU & KẾT QUẢ TRẬN ĐẤU (MATCHES & SCHEDULE)
   // ----------------------------------------------------
 
   StreamController<List<TournamentMatch>> _getMatchesController(
@@ -498,14 +498,14 @@ class ApiTournamentRepository implements TournamentRepository {
 
     await _api.put('/matches/$matchId/result', body: body);
 
-    // Refresh matches, standings, and audit logs
+    // Tải lại dữ liệu trận đấu, bảng xếp hạng và nhật ký kiểm toán
     await refreshMatches(tournamentId);
     await refreshStandings(tournamentId);
     await refreshAudits(tournamentId);
   }
 
   // ----------------------------------------------------
-  // STANDINGS
+  // BẢNG XẾP HẠNG (STANDINGS)
   // ----------------------------------------------------
 
   StreamController<List<StandingsRow>> _getStandingsController(
@@ -584,7 +584,7 @@ class ApiTournamentRepository implements TournamentRepository {
   }
 
   // ----------------------------------------------------
-  // AUDIT LOGS
+  // NHẬT KÝ KIỂM TOÁN TỶ SỐ (AUDIT LOGS)
   // ----------------------------------------------------
 
   StreamController<List<MatchAudit>> _getAuditsController(String tournamentId) {

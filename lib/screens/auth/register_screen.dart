@@ -11,7 +11,7 @@ import '../auth_gate.dart';
 /// - Header: `← Tạo tài khoản`
 /// - Tiêu đề: "Gia nhập sân chơi\ncủa bạn."
 /// - Mô tả: "Tìm đội, đặt sân và sẵn sàng cho trận tiếp theo."
-/// - Input:
+/// - Dữ liệu đầu vào:
 ///   - Họ và tên
 ///   - Số điện thoại
 ///   - Mật khẩu (ít nhất 8 ký tự)
@@ -143,7 +143,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 18),
 
-                // Email
+                // Ô nhập địa chỉ Email
                 const Text(
                   'Email',
                   style: TextStyle(

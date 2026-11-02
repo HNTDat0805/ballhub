@@ -65,7 +65,7 @@ class _BookingHomeScreenState extends State<BookingHomeScreen> {
   Widget build(BuildContext context) {
     final user = AuthContext.instance.currentUser;
 
-    // Build screens and nav items based on role
+    // Xây dựng danh sách màn hình và các mục điều hướng dựa theo vai trò tài khoản
     final (screens, navItems) = user.isFieldOwner
         ? _buildOwnerNav()
         : _buildUserNav();
@@ -86,7 +86,7 @@ class _BookingHomeScreenState extends State<BookingHomeScreen> {
     return (
       [
         FieldListScreen(repository: _repo),
-        MyBookingsScreen(repository: _repo),
+        MyBookingsScreen(repository: _repo, controller: _userCtrl),
         _ProfileTab(),
       ],
       const [
@@ -162,7 +162,7 @@ class _ProfileTabState extends State<_ProfileTab> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // User card
+          // Thẻ thông tin tài khoản người dùng
           Card(
             child: Padding(
               padding: const EdgeInsets.all(20),
@@ -238,7 +238,7 @@ class _ProfileTabState extends State<_ProfileTab> {
               ),
             ),
           ),
-          // User switcher
+          // Danh sách tài khoản thử nghiệm
           ...AuthContext.sampleUsers.map((sampleUser) {
             final isActive = sampleUser.id == user.id;
             return Card(
@@ -281,7 +281,7 @@ class _ProfileTabState extends State<_ProfileTab> {
                     : () {
                         AuthContext.instance.switchUser(sampleUser);
                         setState(() {});
-                        // Show restart hint
+                        // Hiển thị gợi ý làm mới giao diện
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(
@@ -300,7 +300,7 @@ class _ProfileTabState extends State<_ProfileTab> {
           const SizedBox(height: 16),
           const Divider(),
           const SizedBox(height: 8),
-          // App info
+          // Thông tin ứng dụng
           const ListTile(
             leading: Icon(
               Icons.info_outline_rounded,

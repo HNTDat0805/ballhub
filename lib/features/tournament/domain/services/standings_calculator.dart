@@ -62,23 +62,23 @@ class StandingsCalculator {
       }
     }
 
-    // 3. Convert to list and sort using official football tie-breakers
+    // 3. Chuyển thành danh sách và sắp xếp theo quy chuẩn phân hạng bóng đá chính thức (FIFA/V-League)
     final list = stats.values.toList();
 
     list.sort((a, b) {
-      // Criterion 1: Points
+      // Tiêu chí 1: Tổng điểm (Points) - đội nhiều điểm hơn xếp trên
       final ptsCompare = b.points.compareTo(a.points);
       if (ptsCompare != 0) return ptsCompare;
 
-      // Criterion 2: Goal Difference
+      // Tiêu chí 2: Hiệu số bàn thắng - bàn thua (Goal Difference)
       final gdCompare = b.goalDifference.compareTo(a.goalDifference);
       if (gdCompare != 0) return gdCompare;
 
-      // Criterion 3: Goals For (Scored)
+      // Tiêu chí 3: Tổng số bàn thắng ghi được (Goals For)
       final gfCompare = b.goalsFor.compareTo(a.goalsFor);
       if (gfCompare != 0) return gfCompare;
 
-      // Criterion 4: Head-to-Head points between tied teams
+      // Tiêu chí 4: Thành tích đối đầu trực tiếp (Head-to-Head) giữa 2 đội bằng điểm
       final h2hCompare = _compareHeadToHead(
         a.teamId,
         b.teamId,
@@ -86,11 +86,11 @@ class StandingsCalculator {
       );
       if (h2hCompare != 0) return h2hCompare;
 
-      // Fallback: Alphabetical
+      // Tiêu chí dự phòng cuối cùng: Xếp theo thứ tự bảng chữ cái tên đội
       return a.teamName.compareTo(b.teamName);
     });
 
-    // 4. Assign ranks (1-indexed)
+    // 4. Gán số thứ tự hạng (Rank bắt đầu từ 1)
     final standings = <StandingsRow>[];
     for (int i = 0; i < list.length; i++) {
       final item = list[i];
@@ -115,7 +115,8 @@ class StandingsCalculator {
     return standings;
   }
 
-  /// Calculates head-to-head point difference between two tied teams
+  /// So sánh thành tích đối đầu trực tiếp giữa 2 đội bóng có cùng điểm số.
+  /// Đội nào giành nhiều điểm hơn trong các trận đối đầu trực tiếp sẽ được xếp trên.
   static int _compareHeadToHead(
     String teamA,
     String teamB,
@@ -124,12 +125,14 @@ class StandingsCalculator {
     int pointsA = 0;
     int pointsB = 0;
 
+    // 1. Duyệt qua tất cả trận đấu và lọc các trận đối đầu trực tiếp giữa Team A và Team B
     for (final m in matches) {
       if ((m.homeTeamId == teamA && m.awayTeamId == teamB) ||
           (m.homeTeamId == teamB && m.awayTeamId == teamA)) {
         final scoreA = (m.homeTeamId == teamA) ? m.homeScore! : m.awayScore!;
         final scoreB = (m.homeTeamId == teamB) ? m.homeScore! : m.awayScore!;
 
+        // 2. Tính điểm đối đầu (Thắng: 3đ, Hòa: 1đ, Thua: 0đ)
         if (scoreA > scoreB) {
           pointsA += 3;
         } else if (scoreB > scoreA) {
@@ -141,7 +144,8 @@ class StandingsCalculator {
       }
     }
 
-    return pointsB.compareTo(pointsA); // descending
+    // 3. Trả về so sánh giảm dần theo điểm đối đầu
+    return pointsB.compareTo(pointsA);
   }
 }
 

@@ -93,7 +93,7 @@ FootballField _makeField({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Booking model tests
+// Kiểm thử mô hình dữ liệu Booking (Đơn đặt sân)
 // ─────────────────────────────────────────────────────────────────────────────
 
 void main() {
@@ -234,7 +234,7 @@ void main() {
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // FieldSlot model tests
+  // Kiểm thử mô hình dữ liệu FieldSlot (Khung giờ sân bóng)
   // ─────────────────────────────────────────────────────────────────────────────
 
   group('FieldSlot.fromJson', () {
@@ -314,7 +314,7 @@ void main() {
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // FootballField model tests
+  // Kiểm thử mô hình dữ liệu FootballField (Sân bóng)
   // ─────────────────────────────────────────────────────────────────────────────
 
   group('FootballField.fromJson', () {
@@ -434,7 +434,7 @@ void main() {
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // Booking business logic validation tests
+  // Kiểm thử quy tắc nghiệp vụ hợp lệ của Booking
   // ─────────────────────────────────────────────────────────────────────────────
 
   group('Booking — business logic validation', () {

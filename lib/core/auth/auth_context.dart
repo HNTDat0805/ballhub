@@ -108,7 +108,7 @@ class AuthContext extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Pre-configured persona users for quick testing/verification in development
+  // Danh sách tài khoản giả lập cấu hình sẵn phục vụ kiểm thử nhanh trong quá trình phát triển
   static final List<AppUser> sampleUsers = [
     const AppUser(
       id: 'user_organizer_01',
@@ -144,20 +144,20 @@ class AuthContext extends ChangeNotifier {
     ),
   ];
 
-  /// Checks if current user can manage this specific tournament
+  /// Kiểm tra xem người dùng hiện tại có quyền quản lý giải đấu cụ thể này hay không
   bool canManageTournament(String organizerId) {
     if (_currentUser.isAdmin) return true;
     if (_currentUser.isOrganizer && _currentUser.id == organizerId) return true;
     return false;
   }
 
-  /// Checks if current user can register a team
+  /// Kiểm tra xem người dùng hiện tại có quyền đăng ký đội bóng vào giải hay không
   bool canRegisterTeam() {
     return _currentUser.role == UserRole.teamCaptain ||
         _currentUser.isOrganizer;
   }
 
-  /// Checks if current user can update or confirm match score
+  /// Kiểm tra xem người dùng hiện tại có quyền cập nhật hoặc xác nhận kết quả trận đấu hay không
   bool canManageMatch(String organizerId) {
     return canManageTournament(organizerId);
   }

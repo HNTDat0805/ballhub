@@ -83,7 +83,11 @@ class ApiClient {
   }
 
   /// Gửi HTTP GET request với các query parameters tùy chọn
-  Future<dynamic> get(String path, {Map<String, dynamic>? queryParams}) async {
+  Future<dynamic> get(
+    String path, {
+    Map<String, dynamic>? queryParams,
+    Duration? timeout,
+  }) async {
     Uri uri = Uri.parse('$baseUrl$path');
     if (queryParams != null && queryParams.isNotEmpty) {
       final cleanParams = queryParams.map(
@@ -95,7 +99,7 @@ class ApiClient {
     try {
       final response = await _client
           .get(uri, headers: _buildHeaders())
-          .timeout(const Duration(seconds: 10));
+          .timeout(timeout ?? const Duration(seconds: 10));
       return _processResponse(response);
     } catch (e) {
       _handleNetworkError(e, 'GET $path');
@@ -103,7 +107,7 @@ class ApiClient {
   }
 
   /// Gửi HTTP POST request kèm JSON body
-  Future<dynamic> post(String path, {dynamic body}) async {
+  Future<dynamic> post(String path, {dynamic body, Duration? timeout}) async {
     final uri = Uri.parse('$baseUrl$path');
     try {
       final response = await _client
@@ -112,7 +116,7 @@ class ApiClient {
             headers: _buildHeaders(),
             body: body != null ? jsonEncode(body) : null,
           )
-          .timeout(const Duration(seconds: 10));
+          .timeout(timeout ?? const Duration(seconds: 10));
       return _processResponse(response);
     } catch (e) {
       _handleNetworkError(e, 'POST $path');
@@ -120,7 +124,7 @@ class ApiClient {
   }
 
   /// Gửi HTTP PATCH request để cập nhật một phần dữ liệu
-  Future<dynamic> patch(String path, {dynamic body}) async {
+  Future<dynamic> patch(String path, {dynamic body, Duration? timeout}) async {
     final uri = Uri.parse('$baseUrl$path');
     try {
       final response = await _client
@@ -129,7 +133,7 @@ class ApiClient {
             headers: _buildHeaders(),
             body: body != null ? jsonEncode(body) : null,
           )
-          .timeout(const Duration(seconds: 10));
+          .timeout(timeout ?? const Duration(seconds: 10));
       return _processResponse(response);
     } catch (e) {
       _handleNetworkError(e, 'PATCH $path');
@@ -137,7 +141,7 @@ class ApiClient {
   }
 
   /// Gửi HTTP PUT request để thay thế hoặc xác nhận dữ liệu (ví dụ: cập nhật kết quả trận đấu)
-  Future<dynamic> put(String path, {dynamic body}) async {
+  Future<dynamic> put(String path, {dynamic body, Duration? timeout}) async {
     final uri = Uri.parse('$baseUrl$path');
     try {
       final response = await _client
@@ -146,7 +150,7 @@ class ApiClient {
             headers: _buildHeaders(),
             body: body != null ? jsonEncode(body) : null,
           )
-          .timeout(const Duration(seconds: 10));
+          .timeout(timeout ?? const Duration(seconds: 10));
       return _processResponse(response);
     } catch (e) {
       _handleNetworkError(e, 'PUT $path');
@@ -154,12 +158,12 @@ class ApiClient {
   }
 
   /// Gửi HTTP DELETE request để xóa tài nguyên
-  Future<dynamic> delete(String path) async {
+  Future<dynamic> delete(String path, {Duration? timeout}) async {
     final uri = Uri.parse('$baseUrl$path');
     try {
       final response = await _client
           .delete(uri, headers: _buildHeaders())
-          .timeout(const Duration(seconds: 10));
+          .timeout(timeout ?? const Duration(seconds: 10));
       return _processResponse(response);
     } catch (e) {
       _handleNetworkError(e, 'DELETE $path');
@@ -185,7 +189,7 @@ class ApiClient {
       return jsonBody;
     }
 
-    // Error response
+    // Xử lý phản hồi lỗi từ máy chủ Backend
     String message = 'Lỗi kết nối máy chủ (${response.statusCode})';
     String code = 'API_ERROR';
     dynamic details;

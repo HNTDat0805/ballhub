@@ -48,18 +48,23 @@ class _TeamListScreenState extends State<TeamListScreen> {
   }
 
   Future<void> _loadTeams() async {
+    // Loại bỏ ngay lập tức mọi đội đã bị giải tán khỏi danh sách hiển thị
+    _teams = _teams
+        .where((t) => !TeamService.isTeamDeleted(t.teamId, t.teamName))
+        .toList();
+
     final cached = TeamService.localTeams;
-    if (cached.isNotEmpty &&
-        _selectedFilter == 0 &&
-        _searchController.text.isEmpty) {
+    if (_selectedFilter == 0 && _searchController.text.isEmpty) {
       _teams = [
         ...cached,
         ..._teams.where(
-          (t) => !cached.any(
-            (c) =>
-                c.teamId == t.teamId ||
-                c.teamName.toLowerCase() == t.teamName.toLowerCase(),
-          ),
+          (t) =>
+              !TeamService.isTeamDeleted(t.teamId, t.teamName) &&
+              !cached.any(
+                (c) =>
+                    c.teamId == t.teamId ||
+                    c.teamName.toLowerCase() == t.teamName.toLowerCase(),
+              ),
         ),
       ];
     }
@@ -276,13 +281,25 @@ class _TeamListScreenState extends State<TeamListScreen> {
                               OutlinedButton.icon(
                                 onPressed: () {
                                   Navigator.pop(ctx);
-                                  Navigator.push(
+                                  Navigator.push<bool>(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (_) =>
-                                          TeamDetailScreen(teamId: team.teamId),
+                                      builder: (_) => TeamDetailScreen(
+                                        teamId: team.teamId,
+                                        initialTeam: team,
+                                      ),
                                     ),
-                                  ).then((_) {
+                                  ).then((res) {
+                                    if (res == true && mounted) {
+                                      setState(() {
+                                        _teams.removeWhere(
+                                          (t) =>
+                                              t.teamId == team.teamId ||
+                                              t.teamName.toLowerCase() ==
+                                                  team.teamName.toLowerCase(),
+                                        );
+                                      });
+                                    }
                                     if (mounted) _loadTeams();
                                   });
                                 },
@@ -958,12 +975,22 @@ class _TeamListScreenState extends State<TeamListScreen> {
       ),
       child: InkWell(
         onTap: () {
-          Navigator.push(
+          Navigator.push<bool>(
             context,
             MaterialPageRoute(
-              builder: (_) => TeamDetailScreen(teamId: team.teamId),
+              builder: (_) =>
+                  TeamDetailScreen(teamId: team.teamId, initialTeam: team),
             ),
-          ).then((_) {
+          ).then((res) {
+            if (res == true && mounted) {
+              setState(() {
+                _teams.removeWhere(
+                  (t) =>
+                      t.teamId == team.teamId ||
+                      t.teamName.toLowerCase() == team.teamName.toLowerCase(),
+                );
+              });
+            }
             if (mounted) _loadTeams();
           });
         },

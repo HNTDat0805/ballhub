@@ -175,6 +175,7 @@ class _OwnerBookingsScreenState extends State<OwnerBookingsScreen>
         builder: (_) => BookingDetailScreen(
           bookingId: booking.id,
           repository: widget.repository,
+          initialBooking: booking,
         ),
       ),
     ).then((_) {
@@ -387,7 +388,7 @@ class _OwnerBookingCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header: field + status
+              // Tiêu đề: tên sân và trạng thái
               Row(
                 children: [
                   Expanded(
@@ -404,7 +405,7 @@ class _OwnerBookingCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 6),
-              // Booker info
+              // Thông tin người đặt sân
               Row(
                 children: [
                   const Icon(
@@ -423,7 +424,7 @@ class _OwnerBookingCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 4),
-              // Date + time
+              // Ngày thi đấu và khung giờ
               Row(
                 children: [
                   const Icon(
@@ -458,7 +459,7 @@ class _OwnerBookingCard extends StatelessWidget {
                   ),
                 ],
               ),
-              // Action buttons (confirm/reject for pending, cancel for confirmed)
+              // Các nút hành động (xác nhận/từ chối với đơn chờ duyệt, hủy với đơn đã xác nhận)
               if (onConfirm != null ||
                   onReject != null ||
                   onCancel != null) ...[

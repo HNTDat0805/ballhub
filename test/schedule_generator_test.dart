@@ -87,7 +87,7 @@ void main() {
 
       expect(matches.length, equals(6));
 
-      // Each round should have 2 matches
+      // Mỗi vòng đấu phải có đúng 2 trận đấu
       final round1 = matches.where((m) => m.round == 1).toList();
       final round2 = matches.where((m) => m.round == 2).toList();
       final round3 = matches.where((m) => m.round == 3).toList();
@@ -96,7 +96,7 @@ void main() {
       expect(round2.length, equals(2));
       expect(round3.length, equals(2));
 
-      // In any single round, no team plays twice
+      // Trong bất kỳ vòng đấu đơn nào, không có đội nào phải thi đấu 2 lần
       for (final r in [round1, round2, round3]) {
         final teamsInRound = <String>{};
         for (final m in r) {
@@ -117,10 +117,10 @@ void main() {
           approvedTeams: threeTeams,
         );
 
-        // Formula for N=3: N*(N-1)/2 = 3*2/2 = 3 matches
+        // Công thức tính số trận với N=3: N*(N-1)/2 = 3*2/2 = 3 trận
         expect(matches.length, equals(3));
 
-        // No null or dummy teams in match list
+        // Không có đội giả định hoặc giá trị rỗng trong danh sách trận đấu
         for (final m in matches) {
           expect(m.homeTeamId.isNotEmpty, isTrue);
           expect(m.awayTeamId.isNotEmpty, isTrue);
@@ -147,7 +147,7 @@ void main() {
         approvedTeams: fourTeams,
       );
 
-      // Suppose match 0 is played and officially confirmed
+      // Giả sử trận đấu đầu tiên đã diễn ra và được xác nhận chính thức
       final playedMatch = initialMatches[0].copyWith(
         homeScore: 2,
         awayScore: 1,
@@ -158,14 +158,14 @@ void main() {
       final matchesWithResult = List<TournamentMatch>.from(initialMatches);
       matchesWithResult[0] = playedMatch;
 
-      // Re-generate schedule
+      // Tiến hành tạo lại lịch thi đấu
       final regenerated = ScheduleGenerator.generate(
         tournament: tournament,
         approvedTeams: fourTeams,
         existingMatches: matchesWithResult,
       );
 
-      // Confirm that the played match kept its score and confirmed state
+      // Kiểm tra xác nhận rằng trận đấu đã thi đấu vẫn giữ nguyên tỷ số và trạng thái xác nhận
       final preservedMatch = regenerated.firstWhere(
         (m) =>
             m.homeTeamId == playedMatch.homeTeamId &&

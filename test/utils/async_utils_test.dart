@@ -158,13 +158,13 @@ void main() {
       await tester.tap(find.text('Start'));
       await tester.pump();
 
-      // Loading dialog should be visible
+      // Hộp thoại tải dữ liệu phải được hiển thị
       expect(find.text('Đang tải'), findsOneWidget);
 
       completer.complete('done');
       await tester.pumpAndSettle();
 
-      // Dialog should be dismissed
+      // Hộp thoại phải được đóng lại
       expect(find.text('Đang tải'), findsNothing);
     });
 
@@ -227,26 +227,26 @@ void main() {
 
         expect(find.text('Submit Form'), findsOneWidget);
 
-        // Tap button to start async action
+        // Nhấn nút để bắt đầu hành động bất đồng bộ
         await tester.tap(find.byType(AsyncElevatedButton));
         await tester.pump();
 
-        // While busy, spinner is displayed and original child is hidden
+        // Trong lúc đang bận xử lý, vòng xoay loading hiển thị và nội dung ban đầu bị ẩn đi
         expect(find.byType(CircularProgressIndicator), findsOneWidget);
         expect(find.text('Submit Form'), findsNothing);
 
-        // Attempt second tap while in-flight
+        // Thử nhấn nút lần 2 khi yêu cầu trước chưa hoàn tất
         await tester.tap(find.byType(AsyncElevatedButton));
         await tester.pump();
 
-        // Ensure double submit was blocked
+        // Đảm bảo hành động gửi trùng lặp đã bị chặn lại thành công
         expect(executionCount, 1);
 
-        // Complete async action
+        // Hoàn thành hành động bất đồng bộ
         completer.complete();
         await tester.pumpAndSettle();
 
-        // Button returns to normal state
+        // Nút quay trở về trạng thái ban đầu
         expect(find.text('Submit Form'), findsOneWidget);
         expect(find.byType(CircularProgressIndicator), findsNothing);
       },

@@ -5,9 +5,9 @@ import '../domain/models/football_field.dart';
 /// Định nghĩa contract (giao diện) cho tất cả thao tác booking qua REST API.
 /// Implementation thực tế là [ApiBookingRepository].
 ///
-/// Architecture: UI → Controller → BookingRepository → ApiClient → REST API
+/// Kiến trúc: Giao diện (UI) → Bộ điều khiển (Controller) → Kho dữ liệu (BookingRepository) → ApiClient → REST API Backend
 abstract interface class BookingRepository {
-  // ───────── Field ─────────
+  // ───────── Quản lý Sân bóng (Field) ─────────
 
   /// Lấy danh sách sân bóng có thể lọc theo city, district, fieldType, status, ownerId
   Future<List<FootballField>> getFields({
@@ -31,7 +31,7 @@ abstract interface class BookingRepository {
   /// Cập nhật trạng thái sân (active/inactive/maintenance/archived)
   Future<FootballField> updateFieldStatus(String fieldId, String status);
 
-  // ───────── Slot ─────────
+  // ───────── Quản lý Khung giờ (Slot) ─────────
 
   /// Lấy danh sách slot của một sân theo ngày (dateKey: YYYY-MM-DD)
   Future<List<FieldSlot>> getFieldSlots(String fieldId, {String? dateKey});
@@ -52,7 +52,7 @@ abstract interface class BookingRepository {
   /// Chủ sân mở khóa một slot
   Future<FieldSlot> unblockSlot(String fieldId, String slotId);
 
-  // ───────── Booking ─────────
+  // ───────── Đặt sân người dùng (Booking) ─────────
 
   /// Tạo booking mới (user gửi fieldId + slotIds)
   Future<Booking> createBooking({
@@ -70,7 +70,7 @@ abstract interface class BookingRepository {
   /// User hủy booking của mình
   Future<Booking> cancelBooking(String bookingId, {String? reason});
 
-  // ───────── Owner Booking ─────────
+  // ───────── Quản lý Đặt sân của Chủ sân (Owner Booking) ─────────
 
   /// Chủ sân xem danh sách booking thuộc sân của mình
   Future<List<Booking>> getOwnerBookings();

@@ -72,87 +72,121 @@ class Booking {
     required this.updatedAt,
   }) : slotIds = List.unmodifiable(slotIds);
 
+  /// Khởi tạo đối tượng Booking từ Map JSON do REST API Backend trả về
   factory Booking.fromJson(Map<String, dynamic> json) {
     return Booking(
-      id: json['id'] as String? ?? '',
-      fieldId: json['fieldId'] as String? ?? '',
-      ownerId: json['ownerId'] as String? ?? '',
-      bookerId: json['bookerId'] as String? ?? '',
-      dateKey: json['dateKey'] as String? ?? '',
-      startsAt: _dateTime(json['startsAt']),
-      endsAt: _dateTime(json['endsAt']),
-      slotIds: _stringList(json['slotIds']),
-      fieldNameSnapshot: json['fieldNameSnapshot'] as String? ?? '',
-      fieldAddressSnapshot: json['fieldAddressSnapshot'] as String? ?? '',
-      priceSnapshot: (json['priceSnapshot'] as num?)?.toInt() ?? 0,
-      currency: json['currency'] as String? ?? 'VND',
-      bookerNameSnapshot: json['bookerNameSnapshot'] as String? ?? '',
-      bookerPhoneSnapshot: json['bookerPhoneSnapshot'] as String? ?? '',
+      id: json['id'] as String? ?? '', // Mã định danh booking duy nhất
+      fieldId: json['fieldId'] as String? ?? '', // ID sân bóng được đặt
+      ownerId: json['ownerId'] as String? ?? '', // ID chủ sân bóng
+      bookerId: json['bookerId'] as String? ?? '', // ID người đặt sân
+      dateKey: json['dateKey'] as String? ?? '', // Ngày đá YYYY-MM-DD
+      startsAt: _dateTime(json['startsAt']), // Thời gian bắt đầu
+      endsAt: _dateTime(json['endsAt']), // Thời gian kết thúc
+      slotIds: _stringList(
+        json['slotIds'],
+      ), // Danh sách ID các khung giờ đã chọn
+      fieldNameSnapshot:
+          json['fieldNameSnapshot'] as String? ??
+          '', // Ảnh chụp tên sân tại thời điểm đặt
+      fieldAddressSnapshot:
+          json['fieldAddressSnapshot'] as String? ??
+          '', // Ảnh chụp địa chỉ sân tại thời điểm đặt
+      priceSnapshot:
+          (json['priceSnapshot'] as num?)?.toInt() ??
+          0, // Đơn giá mỗi slot tại thời điểm đặt
+      currency: json['currency'] as String? ?? 'VND', // Đơn vị tiền tệ
+      bookerNameSnapshot:
+          json['bookerNameSnapshot'] as String? ?? '', // Tên người đặt sân
+      bookerPhoneSnapshot:
+          json['bookerPhoneSnapshot'] as String? ?? '', // Số điện thoại liên hệ
       status: BookingStatus.values.firstWhere(
         (status) => status.name == json['status'],
-        orElse: () => BookingStatus.pending,
+        orElse: () => BookingStatus.pending, // Mặc định là pending chờ duyệt
       ),
-      statusReason: json['statusReason'] as String?,
-      subtotalAmount: (json['subtotalAmount'] as num?)?.toInt() ?? 0,
-      discountAmount: (json['discountAmount'] as num?)?.toInt() ?? 0,
-      totalAmount: (json['totalAmount'] as num?)?.toInt() ?? 0,
-      customerNote: json['customerNote'] as String?,
-      ownerNote: json['ownerNote'] as String?,
-      cancellationReason: json['cancellationReason'] as String?,
-      confirmedAt: _nullableDateTime(json['confirmedAt']),
-      rejectedAt: _nullableDateTime(json['rejectedAt']),
-      cancelledAt: _nullableDateTime(json['cancelledAt']),
-      completedAt: _nullableDateTime(json['completedAt']),
-      reviewedBy: json['reviewedBy'] as String?,
-      createdAt: _dateTime(json['createdAt']),
-      updatedAt: _dateTime(json['updatedAt']),
+      statusReason: json['statusReason'] as String?, // Lý do chuyển trạng thái
+      subtotalAmount:
+          (json['subtotalAmount'] as num?)?.toInt() ?? 0, // Tiền tạm tính
+      discountAmount:
+          (json['discountAmount'] as num?)?.toInt() ??
+          0, // Tiền giảm giá khuyến mãi
+      totalAmount:
+          (json['totalAmount'] as num?)?.toInt() ??
+          0, // Tổng tiền phải thanh toán
+      customerNote:
+          json['customerNote'] as String?, // Ghi chú của khách hàng khi đặt sân
+      ownerNote: json['ownerNote'] as String?, // Ghi chú nội bộ của chủ sân
+      cancellationReason:
+          json['cancellationReason'] as String?, // Lý do hủy đặt sân nếu có
+      confirmedAt: _nullableDateTime(
+        json['confirmedAt'],
+      ), // Thời điểm chủ sân xác nhận
+      rejectedAt: _nullableDateTime(
+        json['rejectedAt'],
+      ), // Thời điểm chủ sân từ chối
+      cancelledAt: _nullableDateTime(json['cancelledAt']), // Thời điểm bị hủy
+      completedAt: _nullableDateTime(
+        json['completedAt'],
+      ), // Thời điểm trận đấu hoàn tất
+      reviewedBy: json['reviewedBy'] as String?, // Người xét duyệt đơn
+      createdAt: _dateTime(json['createdAt']), // Thời điểm tạo đơn
+      updatedAt: _dateTime(
+        json['updatedAt'],
+      ), // Thời điểm cập nhật đơn gần nhất
     );
   }
 
+  /// Chuyển đổi đối tượng Booking thành Map JSON để lưu trữ hoặc gửi API
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
-      'fieldId': fieldId,
-      'ownerId': ownerId,
-      'bookerId': bookerId,
-      'dateKey': dateKey,
-      'startsAt': startsAt.toUtc().toIso8601String(),
-      'endsAt': endsAt.toUtc().toIso8601String(),
-      'slotIds': slotIds,
-      'fieldNameSnapshot': fieldNameSnapshot,
-      'fieldAddressSnapshot': fieldAddressSnapshot,
-      'priceSnapshot': priceSnapshot,
-      'currency': currency,
-      'bookerNameSnapshot': bookerNameSnapshot,
-      'bookerPhoneSnapshot': bookerPhoneSnapshot,
-      'status': status.name,
-      'statusReason': statusReason,
-      'subtotalAmount': subtotalAmount,
-      'discountAmount': discountAmount,
-      'totalAmount': totalAmount,
-      'customerNote': customerNote,
-      'ownerNote': ownerNote,
-      'cancellationReason': cancellationReason,
-      'confirmedAt': confirmedAt?.toUtc().toIso8601String(),
-      'rejectedAt': rejectedAt?.toUtc().toIso8601String(),
-      'cancelledAt': cancelledAt?.toUtc().toIso8601String(),
-      'completedAt': completedAt?.toUtc().toIso8601String(),
-      'reviewedBy': reviewedBy,
-      'createdAt': createdAt.toUtc().toIso8601String(),
-      'updatedAt': updatedAt.toUtc().toIso8601String(),
+      'id': id, // Mã booking
+      'fieldId': fieldId, // Mã sân
+      'ownerId': ownerId, // Mã chủ sân
+      'bookerId': bookerId, // Mã người đặt
+      'dateKey': dateKey, // Ngày đặt
+      'startsAt': startsAt
+          .toUtc()
+          .toIso8601String(), // Giờ bắt đầu chuẩn UTC ISO 8601
+      'endsAt': endsAt
+          .toUtc()
+          .toIso8601String(), // Giờ kết thúc chuẩn UTC ISO 8601
+      'slotIds': slotIds, // Danh sách slot
+      'fieldNameSnapshot': fieldNameSnapshot, // Tên sân snapshot
+      'fieldAddressSnapshot': fieldAddressSnapshot, // Địa chỉ sân snapshot
+      'priceSnapshot': priceSnapshot, // Giá snapshot
+      'currency': currency, // Tiền tệ
+      'bookerNameSnapshot': bookerNameSnapshot, // Tên người đặt snapshot
+      'bookerPhoneSnapshot': bookerPhoneSnapshot, // Số điện thoại snapshot
+      'status': status.name, // Trạng thái đơn đặt sân
+      'statusReason': statusReason, // Lý do trạng thái
+      'subtotalAmount': subtotalAmount, // Tạm tính
+      'discountAmount': discountAmount, // Giảm giá
+      'totalAmount': totalAmount, // Tổng tiền
+      'customerNote': customerNote, // Ghi chú khách
+      'ownerNote': ownerNote, // Ghi chú chủ sân
+      'cancellationReason': cancellationReason, // Lý do hủy
+      'confirmedAt': confirmedAt?.toUtc().toIso8601String(), // Giờ xác nhận
+      'rejectedAt': rejectedAt?.toUtc().toIso8601String(), // Giờ từ chối
+      'cancelledAt': cancelledAt?.toUtc().toIso8601String(), // Giờ hủy
+      'completedAt': completedAt?.toUtc().toIso8601String(), // Giờ hoàn thành
+      'reviewedBy': reviewedBy, // Người duyệt
+      'createdAt': createdAt.toUtc().toIso8601String(), // Giờ tạo
+      'updatedAt': updatedAt.toUtc().toIso8601String(), // Giờ cập nhật
     };
   }
 
+  /// Hàm tiện ích trích xuất danh sách chuỗi an toàn từ JSON
   static List<String> _stringList(Object? value) {
     if (value is! List) return const [];
     return value.whereType<String>().toList(growable: false);
   }
 
+  /// Parse DateTime an toàn, nếu null trả về epoch 0 UTC
   static DateTime _dateTime(Object? value) {
     return _nullableDateTime(value) ??
         DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
   }
 
+  /// Parse nullable DateTime từ chuỗi ISO
   static DateTime? _nullableDateTime(Object? value) {
     return value is String ? DateTime.tryParse(value) : null;
   }

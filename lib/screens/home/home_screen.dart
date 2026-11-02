@@ -70,6 +70,19 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadFeaturedData() async {
+    // 0. Xóa ngay lập tức featured team nếu đội đó vừa bị giải tán (0ms)
+    if (_featuredTeam != null &&
+        TeamService.isTeamDeleted(
+          _featuredTeam!.teamId,
+          _featuredTeam!.teamName,
+        )) {
+      if (mounted) {
+        setState(() {
+          _featuredTeam = null;
+        });
+      }
+    }
+
     // 1. Tải đội bóng thật từ Firestore / Fallback theo tỉnh thành đã chọn
     try {
       final teams = await TeamService.search(area: _selectedProvince);
@@ -674,12 +687,24 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return InkWell(
       onTap: () {
-        Navigator.push(
+        Navigator.push<bool>(
           context,
           MaterialPageRoute(
-            builder: (_) => TeamDetailScreen(teamId: team.teamId),
+            builder: (_) =>
+                TeamDetailScreen(teamId: team.teamId, initialTeam: team),
           ),
-        );
+        ).then((res) {
+          if (res == true && mounted) {
+            setState(() {
+              if (_featuredTeam?.teamId == team.teamId ||
+                  _featuredTeam?.teamName.toLowerCase() ==
+                      team.teamName.toLowerCase()) {
+                _featuredTeam = null;
+              }
+            });
+          }
+          if (mounted) _loadFeaturedData();
+        });
       },
       borderRadius: BorderRadius.circular(16),
       child: Container(

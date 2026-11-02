@@ -289,7 +289,7 @@ class _CreateEditTournamentScreenState
               const Divider(),
               const SizedBox(height: 8),
 
-              // Format & Teams
+              // Thể thức thi đấu và Số lượng đội
               Row(
                 children: [
                   Expanded(
@@ -366,7 +366,7 @@ class _CreateEditTournamentScreenState
                 const SizedBox(height: 16),
               ],
 
-              // Dates Picker Cards
+              // Thẻ chọn ngày đăng ký và ngày bắt đầu giải đấu
               Card(
                 margin: EdgeInsets.zero,
                 child: Padding(

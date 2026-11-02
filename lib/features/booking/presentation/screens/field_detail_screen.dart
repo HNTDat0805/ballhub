@@ -19,7 +19,7 @@ import 'my_bookings_screen.dart';
 ///   - Horizontal Date Picker: 7 ngày tiếp theo tính từ thời điểm hiện tại
 ///   - Chú thích: `□ Còn trống` | `✓ Đang chọn` | `▧ Đã đặt`
 ///   - Ma trận khung giờ (Slot Matrix): Dữ liệu lấy từ API/Database
-/// - Bottom Sticky Booking Bar:
+/// - Thanh ghim nút đặt sân cố định ở chân màn hình:
 ///   - Giá, mô tả khung giờ chọn, chính sách hủy 24h, Nút `→ Đặt sân`
 class FieldDetailScreen extends StatefulWidget {
   final String fieldId;
@@ -260,6 +260,7 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> {
                     bookingId: newBooking.id,
                     repository: widget.repository,
                     isNewBooking: true,
+                    initialBooking: newBooking,
                   ),
                 ),
               );
@@ -368,7 +369,7 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> {
             child: ListView(
               padding: EdgeInsets.zero,
               children: [
-                // Cover Image
+                // Ảnh bìa sân bóng
                 Container(
                   height: 200,
                   width: double.infinity,
@@ -865,7 +866,7 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> {
             ),
           ),
 
-          // Sticky Bottom Bar
+          // Thanh ghim cố định ở chân màn hình
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: const BoxDecoration(

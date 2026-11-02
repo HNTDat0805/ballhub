@@ -168,7 +168,7 @@ class _OwnerFieldsScreenState extends State<OwnerFieldsScreen> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// OwnerFieldCard
+// Thẻ hiển thị sân bóng của chủ sân (OwnerFieldCard)
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _OwnerFieldCard extends StatelessWidget {
@@ -213,7 +213,7 @@ class _OwnerFieldCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Name + status
+            // Tên sân và trạng thái
             Row(
               children: [
                 Expanded(
@@ -230,7 +230,7 @@ class _OwnerFieldCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 6),
-            // Address
+            // Địa chỉ sân bóng
             Row(
               children: [
                 const Icon(
@@ -253,7 +253,7 @@ class _OwnerFieldCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 4),
-            // Price + type
+            // Giá thuê và loại sân
             Row(
               children: [
                 const Icon(
@@ -289,7 +289,7 @@ class _OwnerFieldCard extends StatelessWidget {
             const SizedBox(height: 10),
             const Divider(height: 1),
             const SizedBox(height: 8),
-            // Action row
+            // Hàng nút thao tác
             Row(
               children: [
                 Expanded(

@@ -93,7 +93,7 @@ void main() {
       },
     );
 
-    // 3. getProfile network error
+    // 3. lỗi mạng khi lấy hồ sơ người dùng
     test('3. getProfile handles network error gracefully', () async {
       final mock = MockHttpClient(
         (req) async => jsonResponse('Network down', 503),
@@ -354,7 +354,7 @@ void main() {
       expect(notified, true);
     });
 
-    // 16. AppUser fromMap and toMap roundtrip
+    // 16. Chuyển đổi qua lại giữa fromMap và toMap của AppUser
     test('16. AppUser fromMap and toMap roundtrip preserves all fields', () {
       final user = AppUser.fromMap(sampleUserMap);
       expect(user.userId, 'usr_test_1');
@@ -397,7 +397,7 @@ void main() {
       },
     );
 
-    // 19. AppUser defaults empty strings for required fields if missing
+    // 19. AppUser mặc định chuỗi rỗng cho các trường bắt buộc nếu thiếu
     test(
       '19. AppUser defaults empty strings for required fields if missing',
       () {

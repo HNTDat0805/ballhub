@@ -164,7 +164,7 @@ class _TournamentDetailScreenState extends State<TournamentDetailScreen>
                     content: Text('Đã tạo lịch thi đấu thành công!'),
                   ),
                 );
-                _tabController.animateTo(2); // Jump to Schedule tab
+                _tabController.animateTo(2); // Chuyển sang Tab Lịch thi đấu
               }
             },
             child: const Text('Bắt đầu tạo lịch'),
@@ -760,7 +760,7 @@ class _TournamentDetailScreenState extends State<TournamentDetailScreen>
           ),
           const SizedBox(height: 24),
 
-          // Organizer Status Transition Controls
+          // Các nút điều khiển chuyển đổi trạng thái giải đấu của Ban tổ chức
           if (isOrganizer) ...[
             const Text(
               'QUẢN LÝ TIẾN ĐỘ GIẢI ĐẤU (BAN TỔ CHỨC)',
@@ -857,7 +857,7 @@ class _TournamentDetailScreenState extends State<TournamentDetailScreen>
         return Scaffold(
           body: Column(
             children: [
-              // Team stats summary header
+              // Thanh tiêu đề thống kê số lượng đội bóng
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
@@ -919,7 +919,7 @@ class _TournamentDetailScreenState extends State<TournamentDetailScreen>
               ),
               const Divider(height: 1),
 
-              // Teams list
+              // Danh sách đội bóng đăng ký tham gia
               Expanded(
                 child: teams.isEmpty
                     ? Center(
@@ -1095,7 +1095,7 @@ class _TournamentDetailScreenState extends State<TournamentDetailScreen>
             return Scaffold(
               body: Column(
                 children: [
-                  // Generator Action Bar
+                  // Thanh công cụ tạo lịch thi đấu tự động
                   if (isOrganizer)
                     Container(
                       color: Colors.white,
@@ -1138,7 +1138,7 @@ class _TournamentDetailScreenState extends State<TournamentDetailScreen>
                     ),
                   const Divider(height: 1),
 
-                  // Match fixtures list
+                  // Danh sách lịch thi đấu các trận
                   Expanded(
                     child: matches.isEmpty
                         ? Center(
@@ -1238,7 +1238,7 @@ class _TournamentDetailScreenState extends State<TournamentDetailScreen>
                         icon: const Icon(Icons.refresh, size: 16),
                         label: const Text('Tính lại bảng xếp hạng'),
                         onPressed: () async {
-                          // Trigger fresh re-calculation from confirmed matches
+                          // Kích hoạt tính toán lại bảng xếp hạng từ các trận có kết quả chính thức
                           await controller.watchTournaments().first;
                         },
                       ),
@@ -1289,7 +1289,7 @@ class _TournamentDetailScreenState extends State<TournamentDetailScreen>
           Expanded(
             child: TabBarView(
               children: [
-                // Finished matches
+                // Danh sách các trận đấu đã kết thúc
                 StreamBuilder<List<TournamentMatch>>(
                   stream: controller.watchMatches(tournament.id),
                   builder: (context, snapshot) {
@@ -1325,7 +1325,7 @@ class _TournamentDetailScreenState extends State<TournamentDetailScreen>
                   },
                 ),
 
-                // Audit logs
+                // Nhật ký kiểm toán tỷ số trận đấu
                 _buildAuditLogsView(tournament.id),
               ],
             ),
@@ -1336,7 +1336,7 @@ class _TournamentDetailScreenState extends State<TournamentDetailScreen>
   }
 
   Widget _buildAuditLogsView(String tournamentId) {
-    // Audit logs from repository
+    // Lấy dữ liệu nhật ký kiểm toán từ repository
     return StreamBuilder<List<TournamentMatch>>(
       stream: widget.controller.watchMatches(tournamentId),
       builder: (context, snapshot) {

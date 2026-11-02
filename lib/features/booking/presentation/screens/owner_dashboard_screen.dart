@@ -57,7 +57,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     super.dispose();
   }
 
-  // ─── Derived stats ───
+  // ─── Các chỉ số thống kê tổng hợp ───
   int get _totalFields => _fieldCtrl.fields.length;
   int get _activeFields =>
       _fieldCtrl.fields.where((f) => f.status == FieldStatus.active).length;
@@ -118,7 +118,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
           slivers: [
             // Header chào mừng
             SliverToBoxAdapter(child: _WelcomeBanner(ownerName: owner.name)),
-            // Stat cards
+            // Thẻ hiển thị các chỉ số thống kê
             SliverToBoxAdapter(
               child: isLoading
                   ? const Padding(
@@ -137,7 +137,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                       todayCount: _todayCount,
                     ),
             ),
-            // Quick actions
+            // Các thao tác nhanh
             SliverToBoxAdapter(
               child: _QuickActions(
                 onGoToFields: () =>
@@ -195,7 +195,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                 }, childCount: _upcomingBookings.length.clamp(0, 5)),
               ),
             ],
-            // Empty state
+            // Trạng thái trống khi chưa có dữ liệu
             if (!isLoading &&
                 _bookingCtrl.bookings.isEmpty &&
                 _fieldCtrl.fields.isEmpty)
@@ -237,7 +237,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Private widgets
+// Các widget thành phần nội bộ
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _WelcomeBanner extends StatelessWidget {
@@ -631,7 +631,7 @@ class _UpcomingBookingTile extends StatelessWidget {
           padding: const EdgeInsets.all(14),
           child: Row(
             children: [
-              // Date column
+              // Cột hiển thị ngày
               Container(
                 width: 48,
                 padding: const EdgeInsets.symmetric(vertical: 6),
@@ -660,7 +660,7 @@ class _UpcomingBookingTile extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              // Info
+              // Thông tin chi tiết
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

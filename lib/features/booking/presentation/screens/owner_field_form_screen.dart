@@ -28,7 +28,7 @@ class _OwnerFieldFormScreenState extends State<OwnerFieldFormScreen> {
   late final OwnerFieldController _controller;
   final _formKey = GlobalKey<FormState>();
 
-  // Form controllers
+  // Các bộ điều khiển nhập liệu cho biểu mẫu
   final _nameCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
   final _addressCtrl = TextEditingController();
@@ -148,7 +148,7 @@ class _OwnerFieldFormScreenState extends State<OwnerFieldFormScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            // Error message
+            // Thông báo lỗi nếu có
             if (_controller.errorMessage != null)
               Container(
                 margin: const EdgeInsets.only(bottom: 12),
@@ -237,7 +237,7 @@ class _OwnerFieldFormScreenState extends State<OwnerFieldFormScreen> {
             ),
             const SizedBox(height: 20),
             _sectionTitle('Chi tiết sân'),
-            // Field type dropdown
+            // Danh sách thả xuống chọn loại sân (Sân 5, 7, 11)
             DropdownButtonFormField<String>(
               initialValue: _fieldType,
               decoration: const InputDecoration(labelText: 'Loại sân *'),

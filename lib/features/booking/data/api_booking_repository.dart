@@ -17,7 +17,7 @@ class ApiBookingRepository implements BookingRepository {
 
   static final List<FootballField> _userCreatedFields = [];
 
-  // ───────── Field ─────────
+  // ───────── Quản lý Sân bóng (Field) ─────────
 
   @override
   Future<List<FootballField>> getFields({
@@ -38,7 +38,11 @@ class ApiBookingRepository implements BookingRepository {
     };
     List<FootballField> list = [];
     try {
-      final data = await _client.get('/fields', queryParams: params);
+      final data = await _client.get(
+        '/fields',
+        queryParams: params,
+        timeout: const Duration(seconds: 3),
+      );
       list = _parseList(data, FootballField.fromJson);
       if (list.isEmpty) {
         list = BookingSeedData.getSampleFields(
@@ -110,7 +114,10 @@ class ApiBookingRepository implements BookingRepository {
     if (created != null) return created;
 
     try {
-      final data = await _client.get('/fields/$fieldId');
+      final data = await _client.get(
+        '/fields/$fieldId',
+        timeout: const Duration(seconds: 3),
+      );
       return FootballField.fromJson(_toMap(data));
     } catch (_) {
       return BookingSeedData.getSampleFields().firstWhere(
@@ -223,7 +230,7 @@ class ApiBookingRepository implements BookingRepository {
     }
   }
 
-  // ───────── Slot ─────────
+  // ───────── Quản lý Khung giờ (Slot) ─────────
 
   @override
   Future<List<FieldSlot>> getFieldSlots(
@@ -235,6 +242,7 @@ class ApiBookingRepository implements BookingRepository {
       final data = await _client.get(
         '/fields/$fieldId/slots',
         queryParams: params,
+        timeout: const Duration(seconds: 3),
       );
       final list = _parseList(data, FieldSlot.fromJson);
       if (list.isNotEmpty) {
@@ -304,6 +312,10 @@ class ApiBookingRepository implements BookingRepository {
   static final List<Booking> _fallbackBookings = [];
   static final Set<String> _bookedSlotIds = {};
 
+  /// Danh sách các đơn đặt sân đã được lưu trong bộ nhớ cục bộ (đồng bộ 0ms)
+  static List<Booking> get localBookings =>
+      List.unmodifiable(_fallbackBookings);
+
   /// ValueNotifier thông báo cho toàn bộ ứng dụng khi danh sách hoặc trạng thái đặt sân thay đổi
   static final ValueNotifier<int> bookingChanged = ValueNotifier<int>(0);
 
@@ -319,7 +331,7 @@ class ApiBookingRepository implements BookingRepository {
     notifyBookingChanged();
   }
 
-  // ───────── Booking ─────────
+  // ───────── Đặt sân người dùng (Booking) ─────────
 
   @override
   Future<Booking> createBooking({
@@ -396,19 +408,40 @@ class ApiBookingRepository implements BookingRepository {
   @override
   Future<List<Booking>> getMyBookings() async {
     try {
-      final data = await _client.get('/bookings/me');
+      final data = await _client.get(
+        '/bookings/me',
+        timeout: const Duration(seconds: 3),
+      );
       final list = _parseList(data, Booking.fromJson);
-      if (list.isNotEmpty) return list;
+      if (list.isNotEmpty) {
+        _fallbackBookings.clear();
+        _fallbackBookings.addAll(list);
+        return list;
+      }
     } catch (_) {}
-    return _fallbackBookings;
+    return List.of(_fallbackBookings);
   }
 
   @override
   Future<Booking> getBooking(String bookingId) async {
+    final cached = _fallbackBookings
+        .where((b) => b.id == bookingId)
+        .firstOrNull;
     try {
-      final data = await _client.get('/bookings/$bookingId');
-      return Booking.fromJson(_toMap(data));
+      final data = await _client.get(
+        '/bookings/$bookingId',
+        timeout: const Duration(seconds: 3),
+      );
+      final booking = Booking.fromJson(_toMap(data));
+      final idx = _fallbackBookings.indexWhere((b) => b.id == bookingId);
+      if (idx != -1) {
+        _fallbackBookings[idx] = booking;
+      } else {
+        _fallbackBookings.add(booking);
+      }
+      return booking;
     } catch (_) {
+      if (cached != null) return cached;
       return _fallbackBookings.firstWhere(
         (b) => b.id == bookingId,
         orElse: () => _fallbackBookings.first,
@@ -470,12 +503,15 @@ class ApiBookingRepository implements BookingRepository {
     }
   }
 
-  // ───────── Owner Booking ─────────
+  // ───────── Quản lý Đặt sân của Chủ sân (Owner Booking) ─────────
 
   @override
   Future<List<Booking>> getOwnerBookings() async {
     try {
-      final data = await _client.get('/owner/bookings');
+      final data = await _client.get(
+        '/owner/bookings',
+        timeout: const Duration(seconds: 3),
+      );
       return _parseList(data, Booking.fromJson);
     } catch (_) {
       return [];
@@ -512,7 +548,7 @@ class ApiBookingRepository implements BookingRepository {
     return Booking.fromJson(_toMap(result));
   }
 
-  // ───────── Helpers & Fallbacks ─────────
+  // ───────── Hàm tiện ích & Dữ liệu dự phòng ─────────
 
   static Map<String, dynamic> _toMap(dynamic val) {
     if (val is Map<String, dynamic>) return val;

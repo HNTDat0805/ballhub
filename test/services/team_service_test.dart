@@ -85,7 +85,7 @@ void main() {
       'updatedAt': '2026-06-04T00:00:00.000Z',
     };
 
-    // 1. search teams
+    // 1. tìm kiếm đội bóng
     test('1. search teams passes keyword and area queries to /teams', () async {
       final mock = MockHttpClient((req) async {
         expect(req.url.path, '/api/v1/teams');
@@ -109,7 +109,7 @@ void main() {
       expect(list.first.teamName, 'FC Test Một');
     });
 
-    // 2. search teams fallback
+    // 2. dữ liệu dự phòng khi tìm kiếm đội bóng thất bại
     test(
       '2. search teams falls back to sample teams on network error',
       () async {
@@ -713,14 +713,14 @@ void main() {
         message: 'Thách đấu sân 7',
       );
 
-      // Now pending status should be detected immediately
+      // Lúc này trạng thái chờ phản hồi (pending) phải được nhận diện ngay lập tức
       expect(TeamService.hasPendingInvitation('team_target_xyz'), isTrue);
       final found = TeamService.getInvitationForTeam('team_target_xyz');
       expect(found, isNotNull);
       expect(found!.id, inv.id);
       expect(found.message, 'Thách đấu sân 7');
 
-      // Cancel invitation
+      // Hủy lời mời giao hữu
       await TeamService.respondInvitation(inv.id, 'Cancelled');
       expect(TeamService.hasPendingInvitation('team_target_xyz'), isFalse);
       expect(TeamService.getInvitationForTeam('team_target_xyz'), isNull);
@@ -753,10 +753,10 @@ void main() {
         client: mock,
       );
 
-      // Initially empty
+      // Ban đầu danh sách trống
       expect(TeamService.localTeams.isEmpty, isTrue);
 
-      // Create team
+      // Tiến hành tạo đội bóng mới
       await TeamService.createTeam(
         'FC Sài Gòn Chiến',
         'Quận 1, TP. Hồ Chí Minh',

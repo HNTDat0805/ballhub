@@ -17,8 +17,14 @@ import 'team_form_screen.dart';
 class TeamDetailScreen extends StatefulWidget {
   final String teamId;
   final bool? isMyTeam;
+  final Team? initialTeam;
 
-  const TeamDetailScreen({super.key, required this.teamId, this.isMyTeam});
+  const TeamDetailScreen({
+    super.key,
+    required this.teamId,
+    this.isMyTeam,
+    this.initialTeam,
+  });
 
   @override
   State<TeamDetailScreen> createState() => _TeamDetailScreenState();
@@ -37,6 +43,20 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
   @override
   void initState() {
     super.initState();
+    _team = widget.initialTeam ?? TeamService.findTeamCached(widget.teamId);
+    _members = TeamService.findMembersCached(widget.teamId) ?? [];
+    _isLoading = _team == null;
+
+    final uid = AuthService.uid;
+    if (_team != null && uid != null) {
+      final isCaptainOfTeam = _team?.captainId == uid;
+      final isMemberOfList = _members.any((m) => m.userId == uid);
+      _isUserTeam =
+          widget.isMyTeam == true || isCaptainOfTeam || isMemberOfList;
+    } else if (widget.isMyTeam == true) {
+      _isUserTeam = true;
+    }
+
     TeamService.changed.addListener(_onTeamServiceChanged);
     _loadTeamData();
   }
@@ -53,21 +73,33 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
     }
   }
 
-  Future<void> _loadTeamData() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+  Future<void> _loadTeamData({bool showFullLoading = false}) async {
+    if (showFullLoading || _team == null) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
 
     try {
-      final team = await TeamService.getTeam(widget.teamId);
-      final members = await TeamService.getMembers(widget.teamId);
-      final myTeams = await TeamService.getMyTeams();
+      // Chạy đồng thời cả 4 tác vụ mạng bằng Future.wait để loại bỏ độ trễ nối tiếp
+      final results = await Future.wait([
+        TeamService.getTeam(widget.teamId),
+        TeamService.getMembers(widget.teamId),
+        TeamService.getMyTeams(),
+        TeamService.getInvitations(widget.teamId),
+      ]);
+
+      final team = results[0] as Team?;
+      final members = results[1] as List<TeamMember>;
+      final myTeams = results[2] as List<Team>;
+      final allInvs = results[3] as List<FriendlyInvitation>;
 
       final uid = AuthService.uid;
       final belongsToMyTeams = myTeams.any((t) => t.teamId == widget.teamId);
       final isMemberOfList = uid != null && members.any((m) => m.userId == uid);
-      final isCaptainOfTeam = uid != null && team?.captainId == uid;
+      final isCaptainOfTeam =
+          uid != null && (team?.captainId == uid || _team?.captainId == uid);
       final isUserTeam =
           widget.isMyTeam == true ||
           belongsToMyTeams ||
@@ -78,7 +110,6 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
       List<FriendlyInvitation> receivedInvs = [];
 
       try {
-        final allInvs = await TeamService.getInvitations(widget.teamId);
         final myTeamIds = myTeams.map((t) => t.teamId).toSet();
 
         if (isUserTeam) {
@@ -113,8 +144,10 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
 
       if (!mounted) return;
       setState(() {
-        _team = team;
-        _members = members;
+        _team = team ?? _team;
+        if (members.isNotEmpty || _members.isEmpty) {
+          _members = members;
+        }
         _isUserTeam = isUserTeam;
         _activeInvitation = activeInv;
         _receivedInvitations = receivedInvs;
@@ -124,7 +157,9 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _errorMessage = e.toString().replaceFirst('Exception: ', '');
+        if (_team == null) {
+          _errorMessage = e.toString().replaceFirst('Exception: ', '');
+        }
       });
     }
   }
@@ -185,16 +220,20 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
 
     if (confirm != true || !mounted) return;
 
+    // 1. Kích hoạt loading action
     setState(() => _isActionLoading = true);
     try {
+      // 2. Gọi TeamService để xóa/giải tán đội bóng từ Backend và xóa sạch cache
       await TeamService.deleteTeam(team.teamId, teamName: team.teamName);
       if (!mounted) return;
+      // 3. Thông báo cho người dùng
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Đã giải tán đội bóng "${team.teamName}" thành công.'),
           backgroundColor: AppTheme.primaryDarkGreen,
         ),
       );
+      // 4. Quay lại màn hình trước và trả về cờ true để cập nhật UI tức thì
       Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
@@ -213,6 +252,7 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
     final team = _team;
     if (team == null) return;
 
+    // 1. Hiển thị dialog hỏi xác nhận rời đội
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -259,10 +299,13 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
 
     if (confirm != true || !mounted) return;
 
+    // 2. Kích hoạt loading action
     setState(() => _isActionLoading = true);
     try {
+      // 3. Gọi TeamService rời đội và cập nhật danh sách
       await TeamService.leaveTeam(team.teamId);
       if (!mounted) return;
+      // 4. Báo thông báo rời đội thành công và quay lại màn hình trước
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Bạn đã rời khỏi đội bóng "${team.teamName}".'),
@@ -630,7 +673,7 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton(
-                  onPressed: _loadTeamData,
+                  onPressed: () => _loadTeamData(showFullLoading: true),
                   child: const Text('Thử lại'),
                 ),
               ],

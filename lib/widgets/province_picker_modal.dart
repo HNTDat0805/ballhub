@@ -76,7 +76,7 @@ class _ProvincePickerModalState extends State<ProvincePickerModal> {
       ),
       child: Column(
         children: [
-          // Handle bar
+          // Thanh kéo tiện ích
           Center(
             child: Container(
               width: 40,
@@ -89,7 +89,7 @@ class _ProvincePickerModalState extends State<ProvincePickerModal> {
             ),
           ),
 
-          // Header
+          // Tiêu đề modal
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             child: Row(
@@ -122,7 +122,7 @@ class _ProvincePickerModalState extends State<ProvincePickerModal> {
             ),
           ),
 
-          // Search bar
+          // Thanh tìm kiếm tỉnh thành
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
             child: TextField(
@@ -167,7 +167,7 @@ class _ProvincePickerModalState extends State<ProvincePickerModal> {
           const SizedBox(height: 8),
           const Divider(height: 1),
 
-          // Listview
+          // Danh sách kết quả tỉnh thành
           Expanded(
             child: _isLoading
                 ? const Center(

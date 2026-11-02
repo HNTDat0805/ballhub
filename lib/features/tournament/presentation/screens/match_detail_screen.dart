@@ -98,7 +98,7 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
         ),
       );
       if (reason == null && widget.match.isConfirmed) {
-        // User cancelled dialog
+        // Người dùng đã hủy hộp thoại
         return;
       }
     }
@@ -162,7 +162,7 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Match Header Card
+                // Thẻ thông tin tiêu đề trận đấu
                 Card(
                   margin: EdgeInsets.zero,
                   child: Padding(
@@ -187,10 +187,10 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
                         ),
                         const SizedBox(height: 16),
 
-                        // Scoreboard
+                        // Bảng tỷ số trận đấu
                         Row(
                           children: [
-                            // Home Team
+                            // Đội nhà
                             Expanded(
                               child: Column(
                                 children: [
@@ -227,7 +227,7 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
                               ),
                             ),
 
-                            // VS / Score indicator
+                            // Chỉ số hiển thị tỷ số hoặc ký hiệu đối đầu
                             Padding(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 16,
@@ -267,7 +267,7 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
                               ),
                             ),
 
-                            // Away Team
+                            // Đội khách
                             Expanded(
                               child: Column(
                                 children: [
@@ -347,7 +347,7 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
                 ),
                 const SizedBox(height: 18),
 
-                // Operator Score Entry Form (Organizer/Admin only)
+                // Biểu mẫu nhập kết quả trận đấu (Chỉ dành cho Ban tổ chức / Quản trị viên)
                 if (canManage) ...[
                   const Text(
                     'CẬP NHẬT TỶ SỐ VÀ TRẠNG THÁI (BAN TỔ CHỨC)',
@@ -457,7 +457,7 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
                     ),
                   ),
                 ] else ...[
-                  // Readonly message for non-organizers
+                  // Thông báo chỉ xem dành cho người dùng không phải ban tổ chức
                   Card(
                     color: Colors.blue.shade50,
                     margin: EdgeInsets.zero,

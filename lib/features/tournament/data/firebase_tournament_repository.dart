@@ -23,7 +23,7 @@ class FirebaseTournamentRepository implements TournamentRepository {
   final FirebaseDatabase? _db;
   final bool _isFirebaseReady;
 
-  // In-memory fallback cache to ensure offline safety and resilience
+  // Bộ nhớ đệm dự phòng trong RAM đảm bảo hoạt động an toàn và bền bỉ khi offline
   final Map<String, Tournament> _cacheTournaments = {};
   final Map<String, List<TournamentTeam>> _cacheTeams = {};
   final Map<String, List<TournamentMatch>> _cacheMatches = {};
@@ -134,7 +134,7 @@ class FirebaseTournamentRepository implements TournamentRepository {
   }
 
   // ----------------------------------------------------
-  // TOURNAMENTS
+  // QUẢN LÝ GIẢI ĐẤU (TOURNAMENTS)
   // ----------------------------------------------------
 
   @override
@@ -156,7 +156,7 @@ class FirebaseTournamentRepository implements TournamentRepository {
       });
     }
 
-    // Local stream fallback
+    // Luồng dữ liệu dự phòng cục bộ khi offline
     Timer.run(
       () => _tournamentStreamController.add(_cacheTournaments.values.toList()),
     );
@@ -197,7 +197,7 @@ class FirebaseTournamentRepository implements TournamentRepository {
   Future<void> deleteTournament(String tournamentId) async {
     final db = _db;
     if (isConnectedToFirebase && db != null) {
-      // Safe cleanup of related nodes
+      // Dọn dẹp an toàn các nút dữ liệu liên quan
       await db.ref('tournaments/$tournamentId').remove();
       await db.ref('tournament_teams/$tournamentId').remove();
       await db.ref('matches/$tournamentId').remove();
@@ -213,7 +213,7 @@ class FirebaseTournamentRepository implements TournamentRepository {
   }
 
   // ----------------------------------------------------
-  // TEAMS & REGISTRATION
+  // ĐỘI BÓNG & ĐĂNG KÝ (TEAMS & REGISTRATION)
   // ----------------------------------------------------
 
   StreamController<List<TournamentTeam>> _getTeamsController(
@@ -254,7 +254,7 @@ class FirebaseTournamentRepository implements TournamentRepository {
   Future<void> registerTeam(TournamentTeam team) async {
     final db = _db;
     if (isConnectedToFirebase && db != null) {
-      // Prevent duplicate registration: check by teamId
+      // Chống đăng ký trùng: kiểm tra theo teamId
       final existingSnap = await db
           .ref('tournament_teams/${team.tournamentId}')
           .orderByChild('teamId')
@@ -321,7 +321,7 @@ class FirebaseTournamentRepository implements TournamentRepository {
   }
 
   // ----------------------------------------------------
-  // MATCHES & RESULTS
+  // LỊCH THI ĐẤU & KẾT QUẢ (MATCHES & RESULTS)
   // ----------------------------------------------------
 
   StreamController<List<TournamentMatch>> _getMatchesController(
@@ -416,7 +416,7 @@ class FirebaseTournamentRepository implements TournamentRepository {
 
     final now = DateTime.now();
 
-    // 1. Fetch current match to record old values for audit
+    // 1. Lấy thông tin trận đấu hiện tại để ghi nhận dữ liệu cũ phục vụ nhật ký kiểm toán
     TournamentMatch? currentMatch;
     if (isConnectedToFirebase) {
       final snap = await _db!.ref('matches/$tournamentId/$matchId').get();
@@ -445,7 +445,7 @@ class FirebaseTournamentRepository implements TournamentRepository {
       await _db!.ref('matches/$tournamentId/$matchId').update(matchUpdateData);
     }
 
-    // 2. Log audit trail
+    // 2. Ghi nhật ký kiểm toán vào hệ thống
     final auditId = 'audit_${now.millisecondsSinceEpoch}_$matchId';
     final audit = MatchAudit(
       id: auditId,
@@ -472,7 +472,7 @@ class FirebaseTournamentRepository implements TournamentRepository {
     auditList.insert(0, audit);
     _getAuditsController(tournamentId).add(List.from(auditList));
 
-    // Update in-memory match cache
+    // Cập nhật bộ nhớ đệm trận đấu trong RAM
     final mList = _cacheMatches[tournamentId];
     if (mList != null) {
       final idx = mList.indexWhere((m) => m.id == matchId);
@@ -490,7 +490,7 @@ class FirebaseTournamentRepository implements TournamentRepository {
       }
     }
 
-    // 3. Automatically trigger deterministic standings recalculation if result is official
+    // 3. Tự động kích hoạt tính toán lại bảng xếp hạng chuẩn nếu kết quả trận đấu đã chính thức
     await recalculateAndSaveStandings(tournamentId);
   }
 
@@ -564,7 +564,7 @@ class FirebaseTournamentRepository implements TournamentRepository {
       allMatches = _cacheMatches[tournamentId] ?? [];
     }
 
-    // Pure deterministic calculation: handles ties, goal diff, points, head-to-head
+    // Tính toán xác định thuần túy: xử lý hiệu số, điểm số, thành tích đối đầu trực tiếp
     final newStandings = StandingsCalculator.compute(
       teams: approvedTeams,
       matches: allMatches,
@@ -583,7 +583,7 @@ class FirebaseTournamentRepository implements TournamentRepository {
   }
 
   // ----------------------------------------------------
-  // AUDIT LOGS
+  // NHẬT KÝ KIỂM TOÁN TỶ SỐ (AUDIT LOGS)
   // ----------------------------------------------------
 
   StreamController<List<MatchAudit>> _getAuditsController(String tournamentId) {

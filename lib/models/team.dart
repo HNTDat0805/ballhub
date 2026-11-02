@@ -53,6 +53,7 @@ class Team {
   /// Phường / Xã
   final String? ward;
 
+  /// Khởi tạo một đối tượng đội bóng [Team]
   Team({
     required this.teamId,
     required this.teamName,
@@ -70,6 +71,7 @@ class Team {
     this.ward,
   });
 
+  /// Chuyển đổi dữ liệu JSON/Map nhận từ REST API hoặc Firestore thành thực thể [Team]
   factory Team.fromMap(Map<String, dynamic> m) => Team(
     teamId: (m['teamId'] ?? m['id'] ?? '').toString(),
     teamName: (m['teamName'] ?? m['name'] ?? '').toString(),
@@ -87,6 +89,7 @@ class Team {
     ward: m['ward'] as String?,
   );
 
+  /// Chuyển đổi thực thể [Team] thành Map JSON để gửi lên Backend REST API
   Map<String, dynamic> toMap() => {
     'teamId': teamId,
     'teamName': teamName,
@@ -105,13 +108,24 @@ class Team {
   };
 }
 
+/// Đại diện cho một thành viên trong đội bóng (Đội trưởng hoặc Cầu thủ thành viên)
 class TeamMember {
+  /// Mã định danh người dùng
   final String userId;
-  final String role; // Captain / Member
+
+  /// Vai trò trong đội: 'Captain' (Đội trưởng) hoặc 'Member' (Thành viên)
+  final String role;
+
+  /// Họ và tên thành viên
   final String fullName;
+
+  /// Ảnh đại diện định dạng base64 (nếu có)
   final String? avatarBase64;
+
+  /// Vị trí thi đấu sở trường (Tiền đạo, Tiền vệ, Hậu vệ, Thủ môn)
   final String? position;
 
+  /// Khởi tạo một thực thể [TeamMember]
   TeamMember({
     required this.userId,
     required this.role,
@@ -120,6 +134,7 @@ class TeamMember {
     this.position,
   });
 
+  /// Chuyển đổi dữ liệu Map từ API thành thực thể [TeamMember]
   factory TeamMember.fromMap(Map<String, dynamic> m) => TeamMember(
     userId: m['userId'] ?? '',
     role: m['role'] ?? 'Member',
@@ -129,15 +144,30 @@ class TeamMember {
   );
 }
 
+/// Đại diện cho một yêu cầu xin gia nhập đội bóng từ người chơi gửi tới Đội trưởng
 class JoinRequest {
+  /// Mã định danh yêu cầu
   final String requestId;
+
+  /// Mã đội bóng muốn gia nhập
   final String teamId;
+
+  /// Mã người gửi yêu cầu
   final String userId;
+
+  /// Lời nhắn kèm theo của người xin gia nhập
   final String? message;
+
+  /// Họ tên người xin gia nhập
   final String fullName;
+
+  /// Ảnh đại diện
   final String? avatarBase64;
+
+  /// Vị trí thi đấu sở trường
   final String? position;
 
+  /// Khởi tạo [JoinRequest]
   JoinRequest({
     required this.requestId,
     required this.teamId,
@@ -148,6 +178,7 @@ class JoinRequest {
     this.position,
   });
 
+  /// Chuyển đổi Map từ Backend thành [JoinRequest]
   factory JoinRequest.fromMap(Map<String, dynamic> m) => JoinRequest(
     requestId: m['requestId'] ?? '',
     teamId: m['teamId'] ?? '',
@@ -159,17 +190,25 @@ class JoinRequest {
   );
 }
 
+/// Ứng viên đối thủ phù hợp được gợi ý từ thuật toán Matchmaking
 class MatchmakingCandidate {
+  /// Thực thể đội bóng đối thủ
   final Team team;
+
+  /// Điểm số phù hợp (Match Score 0-100) tính theo khoảng cách địa lý và trình độ
   final int matchScore;
+
+  /// Lý do gợi ý đối thủ (ví dụ: "Cùng khu vực TP. Hồ Chí Minh")
   final String reason;
 
+  /// Khởi tạo đối thủ gợi ý [MatchmakingCandidate]
   MatchmakingCandidate({
     required this.team,
     required this.matchScore,
     required this.reason,
   });
 
+  /// Chuyển đổi từ dữ liệu gợi ý API thành [MatchmakingCandidate]
   factory MatchmakingCandidate.fromMap(Map<String, dynamic> m) =>
       MatchmakingCandidate(
         team: Team.fromMap(Map<String, dynamic>.from(m['team'] as Map)),
@@ -178,18 +217,39 @@ class MatchmakingCandidate {
       );
 }
 
+/// Đại diện cho một lời mời thi đấu giao hữu (Cáp kèo) giữa 2 đội bóng
 class FriendlyInvitation {
+  /// Mã định danh lời mời
   final String id;
+
+  /// Mã đội bóng gửi lời mời
   final String fromTeamId;
+
+  /// Tên đội bóng gửi lời mời
   final String fromTeamName;
+
+  /// Mã đội bóng nhận lời mời
   final String toTeamId;
+
+  /// Tên đội bóng nhận lời mời
   final String toTeamName;
+
+  /// Nội dung tin nhắn thách đấu
   final String message;
+
+  /// Địa điểm/Sân bóng dự kiến thi đấu
   final String? venue;
+
+  /// Thời gian thi đấu đề xuất
   final String? proposedDate;
+
+  /// Trạng thái lời mời: 'Pending' (Chờ), 'Accepted' (Đã nhận), 'Declined' (Từ chối)
   final String status;
+
+  /// Thời điểm tạo lời mời
   final DateTime? createdAt;
 
+  /// Khởi tạo một lời mời thi đấu giao hữu [FriendlyInvitation]
   FriendlyInvitation({
     required this.id,
     required this.fromTeamId,
@@ -203,6 +263,7 @@ class FriendlyInvitation {
     this.createdAt,
   });
 
+  /// Chuyển đổi Map từ Backend thành thực thể [FriendlyInvitation]
   factory FriendlyInvitation.fromMap(Map<String, dynamic> m) =>
       FriendlyInvitation(
         id: m['id'] ?? '',

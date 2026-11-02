@@ -362,7 +362,7 @@ class _GoogleMapsAreaPickerModalState extends State<GoogleMapsAreaPickerModal>
       ),
       child: Column(
         children: [
-          // Drag handle
+          // Thanh kéo mở rộng modal
           Center(
             child: Container(
               width: 44,
@@ -375,7 +375,7 @@ class _GoogleMapsAreaPickerModalState extends State<GoogleMapsAreaPickerModal>
             ),
           ),
 
-          // Header Google Maps style
+          // Tiêu đề phong cách Google Maps
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             child: Row(
@@ -598,7 +598,7 @@ class _GoogleMapsAreaPickerModalState extends State<GoogleMapsAreaPickerModal>
                   ),
           ),
 
-          // Bottom Confirmation Card
+          // Thẻ xác nhận lựa chọn ở chân màn hình
           _buildBottomConfirmation(),
         ],
       ),
@@ -672,7 +672,7 @@ class _GoogleMapsAreaPickerModalState extends State<GoogleMapsAreaPickerModal>
                 ),
               ),
               const SizedBox(height: 4),
-              // Marker Google Maps Pin
+              // Điểm đánh dấu ghim vị trí kiểu Google Maps
               Container(
                 width: 36,
                 height: 36,
@@ -696,13 +696,13 @@ class _GoogleMapsAreaPickerModalState extends State<GoogleMapsAreaPickerModal>
                   ),
                 ),
               ),
-              // Ground pin pointer
+              // Chấm tiếp đất của ghim bản đồ
               Icon(Icons.arrow_drop_down, color: Colors.red.shade700, size: 20),
             ],
           ),
         ),
 
-        // Map Control Floating Buttons (+ / - / Layer / GPS)
+        // Các nút điều khiển bản đồ nổi (+ / - / Lớp bản đồ / Định vị)
         Positioned(
           right: 16,
           bottom: 16,

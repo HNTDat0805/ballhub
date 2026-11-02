@@ -17,10 +17,11 @@ class TeamCard extends StatelessWidget {
         : team.teamName[0].toUpperCase();
     return Card(
       child: ListTile(
-        onTap: () => Navigator.push(
+        onTap: () => Navigator.push<bool>(
           context,
           MaterialPageRoute(
-            builder: (_) => TeamDetailScreen(teamId: team.teamId),
+            builder: (_) =>
+                TeamDetailScreen(teamId: team.teamId, initialTeam: team),
           ),
         ),
         leading: CircleAvatar(

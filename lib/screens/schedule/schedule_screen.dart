@@ -52,7 +52,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       ),
       body: Column(
         children: [
-          // Filter Chips & Month Bar
+          // Các thẻ bộ lọc và thanh chọn tháng
           Container(
             color: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

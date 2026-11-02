@@ -27,7 +27,7 @@ class MatchCardWidget extends StatelessWidget {
           padding: const EdgeInsets.all(14.0),
           child: Column(
             children: [
-              // Header: Round and Status
+              // Tiêu đề: Vòng đấu và Trạng thái
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -68,10 +68,10 @@ class MatchCardWidget extends StatelessWidget {
                 ],
               ),
               const Divider(height: 18),
-              // Teams and score
+              // Thông tin hai đội bóng và Bảng điểm
               Row(
                 children: [
-                  // Home Team
+                  // Đội nhà (Home Team)
                   Expanded(
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.end,
@@ -105,7 +105,7 @@ class MatchCardWidget extends StatelessWidget {
                     ),
                   ),
 
-                  // Score Box
+                  // Khung hiển thị tỷ số trận đấu
                   Container(
                     margin: const EdgeInsets.symmetric(horizontal: 14),
                     padding: const EdgeInsets.symmetric(
@@ -135,7 +135,7 @@ class MatchCardWidget extends StatelessWidget {
                     ),
                   ),
 
-                  // Away Team
+                  // Đội khách (Away Team)
                   Expanded(
                     child: Row(
                       children: [
@@ -169,7 +169,7 @@ class MatchCardWidget extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 10),
-              // Venue
+              // Địa điểm thi đấu (Sân vận động)
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

@@ -11,8 +11,13 @@ import 'booking_detail_screen.dart';
 /// Màn hình danh sách booking của user hiện tại — phân tab theo trạng thái
 class MyBookingsScreen extends StatefulWidget {
   final BookingRepository repository;
+  final BookingListController? controller;
 
-  const MyBookingsScreen({super.key, required this.repository});
+  const MyBookingsScreen({
+    super.key,
+    required this.repository,
+    this.controller,
+  });
 
   @override
   State<MyBookingsScreen> createState() => _MyBookingsScreenState();
@@ -21,6 +26,7 @@ class MyBookingsScreen extends StatefulWidget {
 class _MyBookingsScreenState extends State<MyBookingsScreen>
     with SingleTickerProviderStateMixin {
   late final BookingListController _controller;
+  late final bool _ownsController;
   late final TabController _tabController;
 
   static const _tabs = [
@@ -34,7 +40,10 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
   @override
   void initState() {
     super.initState();
-    _controller = BookingListController(repository: widget.repository);
+    _ownsController = widget.controller == null;
+    _controller =
+        widget.controller ??
+        BookingListController(repository: widget.repository);
     _tabController = TabController(length: _tabs.length, vsync: this);
     _controller.addListener(_onUpdate);
     _tabController.addListener(_onTabChanged);
@@ -44,7 +53,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
 
   void _onBookingChanged() {
     if (mounted) {
-      _controller.loadMyBookings();
+      _controller.loadMyBookings(showFullLoading: false);
     }
   }
 
@@ -62,7 +71,9 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     ApiBookingRepository.bookingChanged.removeListener(_onBookingChanged);
     _controller.removeListener(_onUpdate);
     _tabController.removeListener(_onTabChanged);
-    _controller.dispose();
+    if (_ownsController) {
+      _controller.dispose();
+    }
     _tabController.dispose();
     super.dispose();
   }
@@ -95,16 +106,16 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
   }
 
   Widget _buildBody() {
-    if (_controller.isLoading) {
+    if (_controller.isLoading && _controller.bookings.isEmpty) {
       return const BookingLoadingState(
         message: 'Đang tải danh sách đặt sân...',
       );
     }
 
-    if (_controller.errorMessage != null) {
+    if (_controller.errorMessage != null && _controller.bookings.isEmpty) {
       return BookingErrorState(
         message: _controller.errorMessage!,
-        onRetry: _controller.loadMyBookings,
+        onRetry: () => _controller.loadMyBookings(showFullLoading: true),
       );
     }
 
@@ -126,7 +137,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
 
     return RefreshIndicator(
       color: AppTheme.primaryGreen,
-      onRefresh: _controller.loadMyBookings,
+      onRefresh: () => _controller.loadMyBookings(showFullLoading: false),
       child: ListView.builder(
         padding: const EdgeInsets.symmetric(vertical: 8),
         itemCount: bookings.length,
@@ -222,11 +233,12 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
         builder: (_) => BookingDetailScreen(
           bookingId: booking.id,
           repository: widget.repository,
+          initialBooking: booking,
         ),
       ),
     ).then((_) {
-      // Reload to get latest status after returning
-      if (mounted) _controller.loadMyBookings();
+      // Tải lại để lấy trạng thái mới nhất sau khi quay về
+      if (mounted) _controller.loadMyBookings(showFullLoading: false);
     });
   }
 }

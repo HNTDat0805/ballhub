@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../features/booking/data/api_booking_repository.dart';
+import '../../features/booking/data/booking_repository.dart';
 import '../../features/booking/domain/models/booking.dart';
 import '../../features/booking/presentation/screens/my_bookings_screen.dart';
 import '../../models/app_user.dart';
@@ -18,15 +19,16 @@ import 'edit_profile_screen.dart';
 /// Màn hình Cá nhân (Page 12 - figma.pdf)
 class ProfileScreen extends StatefulWidget {
   final AppUser user;
+  final BookingRepository? bookingRepository;
 
-  const ProfileScreen({super.key, required this.user});
+  const ProfileScreen({super.key, required this.user, this.bookingRepository});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final _bookingRepo = ApiBookingRepository();
+  late final BookingRepository _bookingRepo;
   List<Team> _myTeams = [];
   List<Booking> _myBookings = [];
   bool _isLoading = true;
@@ -35,6 +37,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
+    _bookingRepo = widget.bookingRepository ?? ApiBookingRepository();
     _currentUser = UserService.currentUser ?? widget.user;
     final immediateTeams = TeamService.localTeams;
     if (immediateTeams.isNotEmpty) {
@@ -59,12 +62,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.dispose();
   }
 
+  /// Tải dữ liệu trang cá nhân: danh sách đội bóng của tôi, lịch sử đơn đặt sân và hồ sơ người dùng
   Future<void> _loadProfileData() async {
     // 1. Cập nhật ngay lập tức từ bộ nhớ cục bộ để UI phản hồi 0ms
-    final immediateTeams = TeamService.localTeams;
-    if (immediateTeams.isNotEmpty && mounted) {
+    if (mounted) {
       setState(() {
-        _myTeams = immediateTeams;
+        _myTeams = _myTeams
+            .where(
+              (t) =>
+                  !TeamService.isTeamDeleted(t.teamId, t.teamName) &&
+                  !TeamService.hasLeftTeam(t.teamId),
+            )
+            .toList();
+        final immediateTeams = TeamService.localTeams;
+        if (immediateTeams.isNotEmpty) {
+          _myTeams = immediateTeams;
+        } else if (_myTeams.isEmpty ||
+            _myTeams.every(
+              (t) => TeamService.isTeamDeleted(t.teamId, t.teamName),
+            )) {
+          _myTeams = [];
+        }
       });
     }
 
@@ -73,8 +91,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     try {
-      // 2. Chạy song song thay vì tuần tự để tránh chờ đợi lâu
-      final results = await Future.wait([
+      // 2. Chạy song song các tác vụ mạng thay vì tuần tự để tiết kiệm thời gian chờ
+      final results = await Future.wait<dynamic>([
         TeamService.getMyTeams(),
         _bookingRepo.getMyBookings().catchError((_) => <Booking>[]),
         UserService.getProfile().catchError((_) => null),
@@ -84,9 +102,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final bookings = results[1] as List<Booking>;
       final apiUser = results[2] as AppUser?;
 
+      // 3. Cập nhật state UI với dữ liệu mới nhận được
       if (!mounted) return;
       setState(() {
-        _myTeams = teams.isNotEmpty ? teams : immediateTeams;
+        _myTeams = teams;
         _myBookings = bookings;
         if (apiUser != null) {
           _currentUser = apiUser;
@@ -94,27 +113,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _isLoading = false;
       });
     } catch (_) {
+      // 4. Nếu có lỗi mạng, fallback hiển thị dữ liệu cục bộ an toàn
       if (mounted) {
         setState(() {
-          if (immediateTeams.isNotEmpty) {
-            _myTeams = immediateTeams;
-          }
+          _myTeams = TeamService.localTeams;
           _isLoading = false;
         });
       }
     }
   }
 
+  /// Xử lý đăng xuất tài khoản Ballhub: xác nhận người dùng, xóa cache cục bộ và điều hướng về AuthGate
   Future<void> _logout(BuildContext context) async {
+    // 1. Hiển thị dialog hỏi xác nhận người dùng
     final ok = await confirmDialog(
       context,
       'Đăng xuất',
       'Bạn có chắc chắn muốn đăng xuất tài khoản Ballhub?',
     );
+
+    // 2. Nếu đồng ý, dọn dẹp state và đăng xuất Firebase Auth
     if (ok) {
-      TeamService.clearLocalState();
-      await AuthService.logout();
+      TeamService.clearLocalState(); // Xóa sạch cache đội bóng và quyền
+      await AuthService.logout(); // Kết thúc phiên Firebase Auth
       if (context.mounted) {
+        // 3. Điều hướng về màn hình đăng nhập/đăng ký
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (_) => const AuthGate()),
@@ -358,15 +381,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         child: InkWell(
                           borderRadius: BorderRadius.circular(16),
                           onTap: () async {
-                            await Navigator.push(
+                            final changed = await Navigator.push<bool>(
                               context,
                               MaterialPageRoute(
                                 builder: (_) => TeamDetailScreen(
                                   teamId: team.teamId,
                                   isMyTeam: true,
+                                  initialTeam: team,
                                 ),
                               ),
                             );
+                            if (changed == true && mounted) {
+                              setState(() {
+                                _myTeams.removeWhere(
+                                  (t) =>
+                                      t.teamId == team.teamId ||
+                                      t.teamName.toLowerCase() ==
+                                          team.teamName.toLowerCase(),
+                                );
+                              });
+                            }
                             _loadProfileData();
                           },
                           child: Padding(
@@ -540,12 +574,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
+                Material(
+                  color: Colors.white,
+                  shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppTheme.borderColor),
+                    side: const BorderSide(color: AppTheme.borderColor),
                   ),
+                  clipBehavior: Clip.antiAlias,
                   child: Column(
                     children: [
                       _settingItem(

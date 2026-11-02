@@ -30,7 +30,7 @@ void main() {
       ApiTournamentRepository.resetCacheForTesting();
     });
 
-    // 1. refreshTournaments maps list
+    // 1. refreshTournaments ánh xạ danh sách giải đấu
     test(
       '1. refreshTournaments maps API array into Tournament domain list',
       () async {
@@ -349,7 +349,7 @@ void main() {
       expect(firstEmission.first.name, 'Stream Cup');
     });
 
-    // 9. refreshTeams maps list
+    // 9. refreshTeams ánh xạ danh sách đội thi đấu
     test(
       '9. refreshTeams maps API registrations into TournamentTeam domain list',
       () async {
@@ -494,7 +494,7 @@ void main() {
       expect(first.first.teamName, 'FC Gamma');
     });
 
-    // 13. refreshMatches maps list
+    // 13. refreshMatches ánh xạ danh sách trận đấu
     test(
       '13. refreshMatches maps API matches into TournamentMatch list',
       () async {
@@ -660,7 +660,7 @@ void main() {
       },
     );
 
-    // 18. refreshStandings maps list
+    // 18. refreshStandings ánh xạ danh sách bảng xếp hạng
     test(
       '18. refreshStandings maps API standings array into StandingsRow list',
       () async {
@@ -767,7 +767,7 @@ void main() {
       expect(first.first.points, 3);
     });
 
-    // 21. refreshAudits maps list
+    // 21. refreshAudits ánh xạ danh sách nhật ký kiểm toán
     test(
       '21. refreshAudits maps API audit log array into MatchAudit list',
       () async {
@@ -848,7 +848,7 @@ void main() {
       },
     );
 
-    // 23. User-created tournament has 0 teams, 0 matches, 0 standings and never inherits sample data
+    // 23. Giải đấu do người dùng tạo có 0 đội, 0 trận, 0 BXH và không kế thừa dữ liệu mẫu
     test('23. User-created tournament returns empty teams, matches, and standings and never inherits sample data', () async {
       final mockClient = MockHttpClient(
         (req) async => throw http.ClientException('Network error / offline'),
@@ -894,7 +894,7 @@ void main() {
       expect(standings.isEmpty, true);
     });
 
-    // 24. Pre-seeded demo tournament falls back to sample data only for demo ID
+    // 24. Giải đấu demo mẫu chỉ dùng dữ liệu dự phòng cho đúng ID demo
     test('24. Pre-seeded demo tournament falls back to sample data only for demo ID', () async {
       final mockClient = MockHttpClient((req) async {
         return http.Response('Server error / offline', 500);

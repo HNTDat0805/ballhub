@@ -83,25 +83,28 @@ class _AddressAutocompleteFieldState extends State<AddressAutocompleteField> {
     super.dispose();
   }
 
+  /// Xử lý sự kiện thay đổi trạng thái con trỏ (focus): hiện gợi ý nếu đang có dữ liệu và ẩn khi mất focus
   void _onFocusChanged() {
     if (_focusNode.hasFocus) {
       if (_predictions.isNotEmpty) {
-        _showOverlay();
+        _showOverlay(); // Hiển thị popup gợi ý nếu đã có kết quả tìm kiếm
       }
     } else {
-      // Đợi ngắn để cho phép cử chỉ onTap trên item overlay hoàn tất trước khi ẩn
+      // Đợi ngắn 200ms để cho phép cử chỉ onTap trên danh sách gợi ý kịp ghi nhận trước khi đóng popup
       Future.delayed(const Duration(milliseconds: 200), () {
         if (mounted && !_focusNode.hasFocus) {
-          _removeOverlay();
+          _removeOverlay(); // Đóng popup gợi ý
         }
       });
     }
   }
 
+  /// Xử lý khi người dùng thay đổi văn bản trong ô tìm kiếm: debounce 350ms và gọi Google Places API
   void _onTextChanged(String text) {
     widget.onChanged?.call(text);
 
-    _debounceTimer?.cancel();
+    _debounceTimer
+        ?.cancel(); // Hủy bỏ timer debounce trước đó nếu người dùng vẫn đang gõ
 
     final query = text.trim();
     if (query.isEmpty) {
@@ -112,14 +115,14 @@ class _AddressAutocompleteFieldState extends State<AddressAutocompleteField> {
         _hasSearched = false;
         _errorMessage = null;
       });
-      _removeOverlay();
+      _removeOverlay(); // Đóng popup nếu ô nhập trống
       return;
     }
 
-    // Khởi tạo phiên Autocomplete Session mới khi người dùng bắt đầu gõ
+    // Khởi tạo phiên Autocomplete Session mới khi người dùng bắt đầu gõ để gom bill SKU Google Maps
     _sessionToken ??= PlacesService.generateSessionToken();
 
-    // Không gửi request nếu chưa đủ 2 ký tự
+    // Không gửi request nếu chuỗi tìm kiếm chưa đủ 2 ký tự (tiết kiệm API call)
     if (query.length < 2) {
       setState(() {
         _predictions = [];
@@ -132,6 +135,7 @@ class _AddressAutocompleteFieldState extends State<AddressAutocompleteField> {
 
     setState(() => _isLoading = true);
 
+    // Chờ 350ms sau phím gõ cuối cùng mới thực sự gửi request mạng
     _debounceTimer = Timer(const Duration(milliseconds: 350), () async {
       try {
         final results = await PlacesService.getAutocompletePredictions(
@@ -149,7 +153,7 @@ class _AddressAutocompleteFieldState extends State<AddressAutocompleteField> {
         });
 
         if (_focusNode.hasFocus) {
-          _showOverlay();
+          _showOverlay(); // Hiển thị kết quả gợi ý
         }
       } catch (e) {
         if (!mounted) return;
@@ -166,7 +170,9 @@ class _AddressAutocompleteFieldState extends State<AddressAutocompleteField> {
     });
   }
 
+  /// Xử lý khi người dùng bấm chọn một địa điểm trong danh sách gợi ý
   Future<void> _selectPrediction(PlacePrediction prediction) async {
+    // 1. Đóng dropdown và ẩn bàn phím
     _removeOverlay();
     _focusNode.unfocus();
 
@@ -175,6 +181,7 @@ class _AddressAutocompleteFieldState extends State<AddressAutocompleteField> {
       _controller.text = prediction.description;
     });
 
+    // 2. Gọi Place Details API để lấy đầy đủ tọa độ kinh vĩ độ và đơn vị hành chính
     try {
       final details = await PlacesService.getPlaceDetails(
         prediction.placeId,
@@ -199,8 +206,10 @@ class _AddressAutocompleteFieldState extends State<AddressAutocompleteField> {
         });
       }
 
+      // 3. Bắn callback trả về thông tin địa điểm hoàn chỉnh
       widget.onPlaceSelected?.call(selectedLocation);
     } catch (_) {
+      // Fallback nếu gọi Place Details thất bại
       final fallbackLocation = PlaceLocation(
         placeId: prediction.placeId,
         name: prediction.mainText,
@@ -217,11 +226,12 @@ class _AddressAutocompleteFieldState extends State<AddressAutocompleteField> {
 
       widget.onPlaceSelected?.call(fallbackLocation);
     } finally {
-      // Đóng session token sau khi hoàn tất phiên tìm kiếm với Place Details
+      // 4. Kết thúc chu kỳ session token của Google Places API
       _sessionToken = null;
     }
   }
 
+  /// Xóa sạch dữ liệu ô tìm kiếm và đặt lại trạng thái ban đầu
   void _clearInput() {
     _controller.clear();
     _sessionToken = null;
@@ -237,6 +247,7 @@ class _AddressAutocompleteFieldState extends State<AddressAutocompleteField> {
     widget.onChanged?.call('');
   }
 
+  /// Hiển thị dropdown gợi ý trên màn hình
   void _showOverlay() {
     _removeOverlay();
     final overlay = Overlay.of(context, rootOverlay: false);
@@ -244,11 +255,13 @@ class _AddressAutocompleteFieldState extends State<AddressAutocompleteField> {
     overlay.insert(_overlayEntry!);
   }
 
+  /// Đóng dropdown gợi ý và giải phóng bộ nhớ
   void _removeOverlay() {
     _overlayEntry?.remove();
     _overlayEntry = null;
   }
 
+  /// Tạo widget OverlayEntry bám theo vị trí của trường nhập liệu
   OverlayEntry _createOverlayEntry() {
     final renderBox = context.findRenderObject() as RenderBox;
     final size = renderBox.size;
@@ -260,7 +273,10 @@ class _AddressAutocompleteFieldState extends State<AddressAutocompleteField> {
           child: CompositedTransformFollower(
             link: _layerLink,
             showWhenUnlinked: false,
-            offset: Offset(0.0, size.height + 6),
+            offset: Offset(
+              0.0,
+              size.height + 6,
+            ), // Đặt dropdown ngay dưới ô input 6px
             child: Material(
               elevation: 8,
               shadowColor: Colors.black26,
